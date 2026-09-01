@@ -1,0 +1,13 @@
+{
+	"$comment": "The drafted UI locales. `status` is process metadata for the drafting pipeline (machine → reviewed) and is never rendered — the picker shows no beta label by decision. `play` lists the Play Console listing languages each locale's store copy is pasted into.",
+	"source": "en",
+	"locales": {
+		"de": { "endonym": "Deutsch", "play": ["de-DE"], "register": "du", "status": "machine" },
+		"es": { "endonym": "Español", "play": ["es-ES", "es-419"], "register": "tú (neutral, no vosotros/usted)", "status": "machine" },
+		"fr": { "endonym": "Français", "play": ["fr-FR"], "register": "vous", "status": "machine" },
+		"id": { "endonym": "Bahasa Indonesia", "play": ["id"], "register": "Anda", "status": "machine" },
+		"it": { "endonym": "Italiano", "play": ["it-IT"], "register": "tu", "status": "machine" },
+		"pt-BR": { "endonym": "Português (Brasil)", "play": ["pt-BR"], "register": "você", "status": "machine" },
+		"ru": { "endonym": "Русский", "play": ["ru-RU"], "register": "вы (lowercase)", "status": "machine" }
+	}
+}

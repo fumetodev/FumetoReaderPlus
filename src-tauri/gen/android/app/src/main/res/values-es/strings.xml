@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from messages/*.json by scripts/i18n-native-strings.mjs; edit the catalogue, not this file. -->
+<resources>
+    <string name="notif_cancel">Cancelar</string>
+    <string name="notif_model_active_title">Traductor local activo</string>
+    <string name="notif_model_channel_description">Activa mientras el modelo de traducción local Hy-MT2 está cargado en memoria</string>
+    <string name="notif_model_channel_name">Modelo de traducción local</string>
+    <string name="notif_model_loaded_text">Modelo %1$s cargado</string>
+    <string name="notif_stop">Detener</string>
+    <string name="notif_translating_title">Traduciendo: %1$s</string>
+    <string name="notif_translation_channel_description">Muestra el progreso durante la traducción por lotes del manga</string>
+    <string name="notif_translation_channel_name">Progreso de traducción</string>
+</resources>

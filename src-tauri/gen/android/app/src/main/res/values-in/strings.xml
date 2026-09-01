@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from messages/*.json by scripts/i18n-native-strings.mjs; edit the catalogue, not this file. -->
+<resources>
+    <string name="notif_cancel">Batal</string>
+    <string name="notif_model_active_title">Penerjemah lokal aktif</string>
+    <string name="notif_model_channel_description">Aktif selagi model terjemahan Hy-MT2 lokal dimuat dalam memori</string>
+    <string name="notif_model_channel_name">Model terjemahan lokal</string>
+    <string name="notif_model_loaded_text">Model %1$s dimuat</string>
+    <string name="notif_stop">Hentikan</string>
+    <string name="notif_translating_title">Menerjemahkan: %1$s</string>
+    <string name="notif_translation_channel_description">Menampilkan progres selama penerjemahan manga secara batch</string>
+    <string name="notif_translation_channel_name">Progres terjemahan</string>
+</resources>
