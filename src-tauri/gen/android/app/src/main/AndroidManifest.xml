@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+    <application
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.app"
+        android:largeHeap="true"
+        android:usesCleartextTraffic="${usesCleartextTraffic}">
+        <!--
+            largeHeap raises the Java/Dalvik heap limit only. llama.cpp's
+            Hy-MT2 1.8B 1.25-bit model lives in native (mmap'd) memory and is
+            NOT affected by this flag. What largeHeap does buy us is extra
+            headroom for OkHttp download buffers, WebView bitmap caches,
+            and image-processing intermediates — the Java-side allocations
+            that would otherwise compete for system RAM pressure alongside
+            the native model. Supporting mitigation; the foreground service
+            below (InferenceForegroundService) is the primary defense
+            against LMKD eviction and CPU governor downclocking.
+        -->
+
+        <!-- OpenCL for GPU-accelerated on-device translation (optional, not required) -->
+        <uses-native-library android:name="libOpenCL.so" android:required="false" />
+        <!-- Portrait-locked as a pre-playtest stopgap: the reader has no
+             landscape re-fit yet (UX report U2). userPortrait still allows
+             sensor-driven upside-down portrait. Android 16+ ignores this on
+             large screens, which is acceptable for the phone playtest. -->
+        <activity
+            android:screenOrientation="userPortrait"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:launchMode="singleTask"
+			android:windowSoftInputMode="adjustResize"
+            android:label="@string/main_activity_title"
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <provider
+          android:name="androidx.core.content.FileProvider"
+          android:authorities="${applicationId}.fileprovider"
+          android:exported="false"
+          android:grantUriPermissions="true">
+          <meta-data
+            android:name="android.support.FILE_PROVIDER_PATHS"
+            android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- Translation foreground service: keeps process alive during batch translation -->
+        <service
+            android:name=".service.TranslationForegroundService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="On-device ML inference for manga/comic translation. User-initiated batch processing (5-60 min per volume)." />
+        </service>
+
+        <!-- Llama inference foreground service: keeps the ~462 MB Hy-MT2 1.8B
+             1.25-bit model (under 1 GB runtime working set) resident and the CPU governor hot while the user browses
+             manga pages with the local translator active. Distinct from
+             TranslationForegroundService which handles batch-job progress. -->
+        <service
+            android:name=".llama.InferenceForegroundService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the local Hy-MT2 1.8B 1.25-bit translation model loaded while the user reads manga. Short bubble-translation bursts require the CPU governor to stay responsive and the process to avoid LMKD eviction (roughly under 1 GB runtime working set)." />
+        </service>
+    </application>
+</manifest>

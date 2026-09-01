@@ -1,0 +1,387 @@
+@import 'tailwindcss';
+
+@theme {
+	/* Inter was declared here for years but never shipped; the UI has always
+	   rendered in the system stack (Roboto on Android) — say so honestly. */
+	--font-sans: system-ui, -apple-system, 'Noto Sans', sans-serif;
+
+	/* Scheme colors: legacy primary/surface ramps + semantic tonal tokens.
+	   Defaults are the Synthesis scheme; applyColorScheme() overrides all of
+	   them on :root at runtime for the other (generated) schemes. */
+	/* @generated-schemes:start — Synthesis defaults (npm run schemes:generate) */
+	--color-primary-50: #ebffe6;
+	--color-primary-100: #c6ffc5;
+	--color-primary-200: #86fb94;
+	--color-primary-300: #77ed87;
+	--color-primary-400: #69de7b;
+	--color-primary-500: #4cc162;
+	--color-primary-600: #008433;
+	--color-primary-700: #006e29;
+	--color-primary-800: #00531d;
+	--color-primary-900: #003911;
+	--color-surface-50: #f2fced;
+	--color-surface-100: #eaf4e5;
+	--color-surface-200: #dbe5d7;
+	--color-surface-300: #bbcbb7;
+	--color-surface-400: #a0b09d;
+	--color-surface-500: #859583;
+	--color-surface-600: #3c4a3b;
+	--color-surface-700: #232c23;
+	--color-surface-800: #192219;
+	--color-surface-900: #151e15;
+	--color-surface-950: #0d150d;
+	--color-surface-base: #0d150d;
+	--color-surface-container-lowest: #081008;
+	--color-surface-container-low: #151e15;
+	--color-surface-container: #192219;
+	--color-surface-container-high: #232c23;
+	--color-surface-container-highest: #2e372d;
+	--color-on-surface: #dbe5d7;
+	--color-on-surface-variant: #bbcbb7;
+	--color-outline: #859583;
+	--color-outline-variant: #3c4a3b;
+	--color-accent: #69de7b;
+	--color-accent-strong: #008433;
+	--color-on-accent: #003911;
+	--color-on-accent-strong: #c6ffc5;
+	--color-accent-container: #00531d;
+	--color-on-accent-container: #86fb94;
+	/* @generated-schemes:end */
+
+	/* Semantic status colors (scheme-independent; success rides the accent). */
+	--color-danger: #f26d6d;
+	--color-danger-strong: #dc2626;
+	--color-warning: #e8a23d;
+	--color-info: #6aa6f5;
+	--color-success: var(--color-accent);
+	--color-translate: #2dd4bf;
+
+	/* Scrims: exactly two weights app-wide (modal vs menu). */
+	--color-scrim-modal: rgb(0 0 0 / 0.6);
+	--color-scrim-menu: rgb(0 0 0 / 0.35);
+
+	/* Shape scale for synthesis components (additive — Tailwind's default
+	   rounded-* stays untouched so existing surfaces don't shift). */
+	--radius-control: 12px;
+	--radius-card: 16px;
+	--radius-panel: 20px;
+	--radius-sheet: 28px;
+	--radius-pill: 999px;
+
+	/* Exactly three elevation shadows. */
+	--shadow-menu: 0 12px 32px rgb(0 0 0 / 0.45);
+	--shadow-dialog: 0 18px 44px rgb(0 0 0 / 0.55);
+	--shadow-dock: 0 10px 30px rgb(0 0 0 / 0.45);
+
+	/* Motion easings (durations live on :root as --motion-*; JS mirror is
+	   MOTION in src/lib/util/motion.ts). ease-spring is a pre-sampled
+	   fast-spatial spring (ζ≈0.6) — compositor-friendly overshoot for
+	   press-morphs and pop-ins; the un-sampling fallback is the bounce bezier. */
+	--ease-standard: cubic-bezier(0.2, 0, 0, 1);
+	--ease-spring: linear(
+		0, 0.0507 2.11%, 0.1878 4.44%, 0.7714 12.06%, 0.9885 15.19%, 1.1524 18.66%,
+		1.2148 21.35%, 1.2378 24.28%, 1.2205 27.66%, 1.1332 33.48%, 1.0294 41.14%,
+		0.9871 47.42%, 0.9846 53.85%, 1.0021 71.16%, 1
+	);
+	/* Positional slides (segment indicators, thumb tracks): M3E fast-spatial
+	   spring (stiffness 800, ζ 0.8) sampled over --motion-spatial. Overshoot
+	   tops out at 1.5% — travel, not bounce; ease-spring's 24% is for shape. */
+	--ease-spring-spatial: linear(
+		0, 0.0201 2.5%, 0.0716 5%, 0.1436 7.5%, 0.2275 10%, 0.3166 12.5%,
+		0.406 15%, 0.4923 17.5%, 0.573 20%, 0.6467 22.5%, 0.7127 25%,
+		0.7706 27.5%, 0.8205 30%, 0.8705 33%, 0.9107 36%, 0.9509 40%,
+		0.9785 44%, 0.9965 48%, 1.0091 53%, 1.0143 58%, 1.0152 62%,
+		1.0143 66%, 1.0116 72%, 1.0073 80%, 1.0032 90%, 1
+	);
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	overflow: hidden;
+	width: 100%;
+	max-width: 100%;
+	font-size: 18px;
+	background-color: var(--color-surface-950);
+	color: var(--color-surface-100);
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+[data-app-shell],
+[data-mobile-reader-header],
+[data-mobile-reader-tools],
+[data-reader-more-menu],
+[data-reader-pages-panel] {
+	min-width: 0;
+	max-width: 100vw;
+}
+
+[data-mobile-reader-tools] p,
+[data-mobile-reader-tools] label,
+[data-mobile-reader-tools] output,
+[data-reader-more-menu] {
+	overflow-wrap: anywhere;
+}
+
+[data-mobile-reader-tools] input,
+[data-mobile-reader-tools] textarea,
+[data-mobile-reader-tools] select {
+	min-width: 0;
+	max-width: 100%;
+}
+
+#svelte {
+	height: 100%;
+}
+
+/* Android / iOS safe area insets for status bar, notch, nav bar */
+:root {
+	--sat: env(safe-area-inset-top, 0px);
+	--sar: env(safe-area-inset-right, 0px);
+	--sab: env(safe-area-inset-bottom, 0px);
+	--sal: env(safe-area-inset-left, 0px);
+}
+
+/* Layer scale — the app's six z strata. Chrome < menus < dialogs < toasts <
+   tour < crash surface. (Call sites migrate onto these card by card.) */
+:root {
+	--z-chrome: 40;
+	--z-menu: 50;
+	--z-dialog: 60;
+	--z-toast: 70;
+	--z-tour: 80;
+	--z-crash: 90;
+}
+
+/* Motion durations (JS mirror: MOTION in src/lib/util/motion.ts). */
+:root {
+	--motion-press: 100ms;
+	--motion-fast: 120ms;
+	--motion-base: 200ms;
+	--motion-spatial: 300ms;
+}
+
+/* Chrome geometry — every surface that positions itself against the app's
+   bars derives from these two families instead of hard-coding edges. The
+   families are deliberately split: the dock family flips to the floating
+   pill in the dock card, the reader family in the reader-chrome card, and
+   sharing one clearance token would move reader anchors a card early.
+   JS consumers read them via src/lib/ui/chrome-geometry.ts. */
+:root {
+	/* App-shell dock (catalog/tabs/settings) — the floating pill. */
+	--dock-inset-x: 16px;
+	--dock-inset-bottom: 14px;
+	--dock-height: 64px;
+	--dock-radius: 32px;
+	--app-bottom-clearance: calc(var(--sab, 0px) + var(--dock-inset-bottom) + var(--dock-height));
+
+	/* Reader chrome (top bar + bottom actions). The bottom family is aliased
+	   to the dock family — "exact dock format" as a CSS identity, which is
+	   what makes the dock↔reader parity assertions hold by construction. */
+	--reader-top-gap: 12px;
+	--reader-top-inset-x: 12px;
+	--reader-top-height: 60px;
+	--reader-bottom-inset: var(--dock-inset-bottom);
+	--reader-bottom-height: var(--dock-height);
+	--reader-chrome-top: calc(var(--sat, 0px) + var(--reader-top-gap) + var(--reader-top-height));
+	--reader-bottom-clearance: calc(
+		var(--sab, 0px) + var(--reader-bottom-inset) + var(--reader-bottom-height)
+	);
+}
+
+/* The app's one press treatment for plain (non-pill) controls: scale dip on
+   touch. Pill-shaped controls additionally morph radius via --ease-spring
+   (applied per-surface as they are built). The pinned reader-slot contract
+   (transition-[scale,…] duration-100) is this same treatment via utilities. */
+/* Pill-shaped controls additionally morph their radius on press — spring
+   ease on the radius, standard 100ms on everything else, and the list keeps
+   `scale` + 0.1s so pinned press contracts keep reading what they expect. */
+.press-morph {
+	transition:
+		scale 100ms var(--ease-standard),
+		border-radius 200ms var(--ease-spring),
+		background-color 100ms var(--ease-standard),
+		color 100ms var(--ease-standard);
+}
+.press-morph:active {
+	scale: 0.96;
+	border-radius: 18px;
+}
+
+/* The sliding pill behind segmented radiogroups (slidingSelection action,
+   src/lib/util/sliding-selection.ts). The action owns geometry — left/top/
+   width/height plus the animated translateX — this class owns the look.
+   Radius is pinned pill-round so selection never passes through a squared
+   intermediate shape; buttons above it stay transparent and keep press-morph
+   for the label dip. */
+.segment-indicator {
+	position: absolute;
+	left: 0;
+	top: 0;
+	border-radius: var(--segment-radius, var(--radius-pill));
+	background-color: var(--color-primary-600);
+	will-change: transform;
+	pointer-events: none;
+}
+
+.press-feedback {
+	transition:
+		scale var(--motion-press) var(--ease-standard),
+		background-color var(--motion-press) var(--ease-standard);
+}
+
+.press-feedback:active {
+	scale: 0.97;
+}
+
+/* Image arrival: pair with the fadeOnDecode action (src/lib/util/fade-on-decode.ts).
+   Cache-hit images skip the class entirely, so warm paths never dim. */
+.fade-on-decode-pending {
+	opacity: 0;
+}
+
+.fade-on-decode-reveal {
+	opacity: 1;
+	transition: opacity var(--motion-fast) var(--ease-standard);
+}
+
+/* All app views remain touch/wheel scrollable without native scrollbar chrome. */
+* {
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+	display: none;
+	width: 0;
+	height: 0;
+}
+
+/* Native-app feel: no incidental text selection, tap flashes, long-press
+   callouts, or rubber-band overscroll. Form fields and anything marked
+   .allow-select (e.g. error details worth copying into a bug report) keep
+   normal selection behavior. */
+html,
+body {
+	overscroll-behavior: none;
+}
+
+* {
+	-webkit-tap-highlight-color: transparent;
+	-webkit-touch-callout: none;
+}
+
+body {
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+input,
+textarea,
+[contenteditable],
+[contenteditable] *,
+.allow-select,
+.allow-select * {
+	user-select: text;
+	-webkit-user-select: text;
+}
+
+/* Scroll-edge affordance (set by the scrollEdgeFade action): with scrollbars
+   globally hidden, an overflowing panel fades out at its bottom edge while
+   more content sits below the fold. Cleared once scrolled to the end. */
+[data-scroll-edge-fade='true'] {
+	-webkit-mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent);
+	mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent);
+}
+
+/* Reader page-load skeleton: page-shaped shimmer, delayed 150 ms so cached
+   turns never flash a placeholder. Aspect ratio is set inline per page. */
+.reader-page-skeleton {
+	height: 100%;
+	max-height: 100%;
+	max-width: 100%;
+	border-radius: 6px;
+	background: linear-gradient(
+		100deg,
+		var(--color-surface-800) 40%,
+		var(--color-surface-700) 50%,
+		var(--color-surface-800) 60%
+	);
+	background-size: 200% 100%;
+	opacity: 0;
+	animation:
+		reader-skeleton-appear 0.2s ease-out 0.15s forwards,
+		reader-skeleton-shimmer 1.4s linear 0.15s infinite;
+}
+
+@keyframes reader-skeleton-appear {
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes reader-skeleton-shimmer {
+	from {
+		background-position: 200% 0;
+	}
+	to {
+		background-position: -200% 0;
+	}
+}
+
+/* Volume-boundary edge glow: brief pulse on the edge the user paged toward. */
+.reader-boundary-glow {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 56px;
+	pointer-events: none;
+	z-index: 30;
+	opacity: 0;
+	animation: reader-boundary-pulse 0.5s ease-out forwards;
+}
+
+/* Fixed amber rather than a theme token: several color schemes use grayscale
+   primaries, which would render the glow invisible over manga pages. */
+.reader-boundary-glow-left {
+	left: 0;
+	background: linear-gradient(to right, rgba(245, 158, 11, 0.5), transparent);
+}
+
+.reader-boundary-glow-right {
+	right: 0;
+	background: linear-gradient(to left, rgba(245, 158, 11, 0.5), transparent);
+}
+
+@keyframes reader-boundary-pulse {
+	0% {
+		opacity: 0;
+	}
+	25% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+	}
+}
+
+/* Reduced-motion escape hatch: collapse every CSS animation/transition for
+   users who ask the OS for less motion (Android: "Remove animations").
+   Svelte JS-driven transitions are handled separately via motionDuration(). */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}

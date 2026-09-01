@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "hashAlgorithm": "sha256(path NUL bytes NUL, sorted; CSS plus referenced WOFF2 files)",
+  "assets": [
+    { "fontKey": "noto-sans", "package": "@fontsource/noto-sans", "version": "5.2.10", "weights": [400, 700], "sha256": "5b16208990cec4387aa53057924905592a05925e7bfe91a8c56dc078c7f7df54" },
+    { "fontKey": "noto-sans-jp", "package": "@fontsource/noto-sans-jp", "version": "5.2.9", "weights": [400, 700], "sha256": "69ad4544dfcca452bbc2619b2ff1d4be5315cdb61bc7903d65ccad0d6d91b023" },
+    { "fontKey": "noto-sans-sc", "package": "@fontsource/noto-sans-sc", "version": "5.2.9", "weights": [400, 700], "sha256": "d76fffd4e9d6c88cb762d9699bc7c4ebc2ed79cb573357d798ae3c8fd99f50d1" },
+    { "fontKey": "noto-sans-tc", "package": "@fontsource/noto-sans-tc", "version": "5.2.9", "weights": [400, 700], "sha256": "02f7f18c039c68b9f3ba3878e11e0c1caa6ad104a6248d4c3f9fb096d1d3f30b" },
+    { "fontKey": "noto-sans-kr", "package": "@fontsource/noto-sans-kr", "version": "5.2.9", "weights": [400, 700], "sha256": "9d72510ac642c45f9253c58e251e63c1ed0a372948fb1a6c9bedc031bc267212" },
+    { "fontKey": "noto-sans-thai", "package": "@fontsource/noto-sans-thai", "version": "5.2.8", "weights": [400, 700], "sha256": "14cdffff5037b87dcdad2d050332778719d07dceb6761567a79cbe95ba4c75a4" },
+    { "fontKey": "noto-sans-devanagari", "package": "@fontsource/noto-sans-devanagari", "version": "5.2.8", "weights": [400, 700], "sha256": "61fefd8511e75ea20bccf4b6c39462cbb6e0c86d7c50644fab35a3ce5ff640e0" },
+    { "fontKey": "noto-sans-arabic", "package": "@fontsource/noto-sans-arabic", "version": "5.2.10", "weights": [400, 700], "sha256": "1bd1a2926fc7e18cc47137fbe6e58e610cd3c413b2e3e026c7150e5bcf73b172" },
+    { "fontKey": "noto-emoji", "package": "@fontsource/noto-emoji", "version": "5.2.11", "weights": [400, 700], "sha256": "8700675bf2ed5295cb8fe7cf3f4aeb77f44cd3286c0d82fa0ebe87735d8fda94" },
+    { "fontKey": "noto-sans-symbols", "package": "@fontsource/noto-sans-symbols-2", "version": "5.2.8", "weights": [400], "sha256": "fcf4d31eaa79273246dcbb5cc2c282e4f19906f2e9fdde87b550ee092997f3c4" }
+  ]
+}
