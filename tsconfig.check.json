@@ -1,0 +1,27 @@
+{
+	// The config `npm run check` points at. Two subtleties, both discovered
+	// when the foliate-js vendoring forced this file into existence:
+	//
+	// 1. svelte-check resolves --tsconfig RELATIVE TO THE WORKSPACE (./src),
+	//    so the script must pass an absolute path ("$PWD/…") — the old
+	//    "./tsconfig.check.json" reference never resolved and svelte-check
+	//    silently fell back to tsconfig.json.
+	// 2. The include list restates the svelte-kit defaults restricted to
+	//    src/ (matching the check's historical scope — the generated config
+	//    also spans ../tests, which this gate has never checked), minus the
+	//    vendored foliate-js: upstream JS is deliberately unmodified and
+	//    untyped, and `checkJs` floods on it. App-side typing for the vendor
+	//    surface lives in src/lib/book/foliate-js.d.ts. src/lib/paraglide/ is
+	//    excluded for the same reason: it is generated JS (scripts/i18n-compile.mjs)
+	//    and its JSDoc types still flow to importers through allowJs.
+	"extends": "./tsconfig.json",
+	"include": [
+		".svelte-kit/ambient.d.ts",
+		".svelte-kit/non-ambient.d.ts",
+		".svelte-kit/types/**/$types.d.ts",
+		"src/**/*.js",
+		"src/**/*.ts",
+		"src/**/*.svelte"
+	],
+	"exclude": ["node_modules/**", "src/lib/vendor/foliate-js/**", "src/lib/paraglide/**"]
+}

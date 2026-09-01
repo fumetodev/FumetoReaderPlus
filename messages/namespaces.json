@@ -1,0 +1,117 @@
+{
+	"$comment": "Key prefixes → the screen they belong to. `order` is the drafting order (help last, so its prose sees the labels it refers to). `maxLengthRatio` caps a draft at that multiple of the source length (+10 chars); `referenceNamespaces` are labels the model is shown for consistency.",
+	"defaults": {
+		"maxLengthRatio": 2.0
+	},
+	"order": [
+		"common",
+		"shell",
+		"tabs",
+		"catalog",
+		"reader",
+		"sidebar",
+		"header",
+		"settings",
+		"libraries",
+		"conn",
+		"sync",
+		"scan",
+		"import",
+		"job",
+		"translation",
+		"model",
+		"onboarding",
+		"error",
+		"op",
+		"lang",
+		"authors",
+		"help"
+	],
+	"namespaces": {
+		"common": {
+			"hint": "Buttons and words shared by every screen (Cancel, Done, Undo). Short imperatives.",
+			"maxLengthRatio": 1.8
+		},
+		"shell": {
+			"hint": "The app frame: bottom navigation destinations and the crash screen.",
+			"maxLengthRatio": 1.6
+		},
+		"tabs": {
+			"hint": "The Tabs screen: comics kept open, sorted by recent/added/series."
+		},
+		"catalog": {
+			"hint": "The Library (catalog) screen: library toolbar, sort/filter menus, volume cards and their context menus, folder actions, move/delete dialogs, translation dialogs.",
+			"referenceNamespaces": [
+				"common"
+			]
+		},
+		"reader": {
+			"hint": "The comic reader: page chrome, translate menu, overlay box editor and box list sheet, page jump, filmstrip, review reasons.",
+			"referenceNamespaces": [
+				"common"
+			]
+		},
+		"sidebar": {
+			"hint": "The desktop reader's translations side panel (region list, per-box editor, full-page translate)."
+		},
+		"header": {
+			"hint": "The desktop reader's top bar and its menus (reading direction, page turn, overlay toggles)."
+		},
+		"settings": {
+			"hint": "Settings: Display, Translation (providers, models, on-device), Overlay, Libraries, backup/transfer, search index. Field labels, hints and validation messages.",
+			"referenceNamespaces": [
+				"common"
+			]
+		},
+		"libraries": {
+			"hint": "Settings → Libraries: library cards, remote server forms, scan/erase actions."
+		},
+		"conn": {
+			"hint": "Connection errors and hints when a remote library server cannot be reached."
+		},
+		"sync": {
+			"hint": "Progress and outcome messages while indexing a remote library."
+		},
+		"scan": {
+			"hint": "Progress messages while scanning local files."
+		},
+		"import": {
+			"hint": "Importing comic files: progress, per-file results, failures."
+		},
+		"job": {
+			"hint": "Batch (whole-volume) translation jobs: status badges, activity lines, retry/warning messages shown in the Library and Settings."
+		},
+		"translation": {
+			"hint": "Translation service notices."
+		},
+		"model": {
+			"hint": "On-device model variant names and descriptions (Hy-MT2 GGUF)."
+		},
+		"onboarding": {
+			"hint": "The first-run tour: five short pages with a title and one paragraph each."
+		},
+		"error": {
+			"hint": "Friendly error messages shown in toasts and status lines."
+		},
+		"op": {
+			"hint": "Operation status words."
+		},
+		"lang": {
+			"hint": "Language picker extras."
+		},
+		"authors": {
+			"hint": "Author attribution rendered from folder names."
+		},
+		"help": {
+			"hint": "The in-app Help guide: long prose paragraphs and list items describing features. Keep control names EXACTLY as their labels in the referenced namespaces, quoted the same way the source quotes them.",
+			"referenceNamespaces": [
+				"common",
+				"catalog",
+				"reader",
+				"settings",
+				"shell"
+			],
+			"maxLengthRatio": 1.7
+		}
+	}
+}

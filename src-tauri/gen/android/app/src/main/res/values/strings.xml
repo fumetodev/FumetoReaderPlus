@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from messages/*.json by scripts/i18n-native-strings.mjs; edit the catalogue, not this file. -->
+<resources>
+    <string name="app_name">FumetoReaderPlus</string>
+    <string name="main_activity_title">FumetoReaderPlus</string>
+    <string name="notif_cancel">Cancel</string>
+    <string name="notif_model_active_title">Local translator active</string>
+    <string name="notif_model_channel_description">Active while the local Hy-MT2 translation model is loaded in memory</string>
+    <string name="notif_model_channel_name">Local translation model</string>
+    <string name="notif_model_loaded_text">%1$s model loaded</string>
+    <string name="notif_stop">Stop</string>
+    <string name="notif_translating_title">Translating: %1$s</string>
+    <string name="notif_translation_channel_description">Shows progress during batch manga translation</string>
+    <string name="notif_translation_channel_name">Translation progress</string>
+</resources>

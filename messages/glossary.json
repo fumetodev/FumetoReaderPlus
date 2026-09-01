@@ -1,0 +1,166 @@
+{
+	"$comment": "Terms every draft must carry through verbatim, patterns that are never prose, and per-locale preferred/forbidden vocabulary. The validator rejects a draft that drops a neverTranslate term present in its source or that matches a forbidden pattern.",
+	"neverTranslate": [
+		"FumetoReaderPlus",
+		"Fumeto",
+		"OpenRouter",
+		"OpenAI",
+		"Ollama",
+		"LM Studio",
+		"Claude",
+		"Anthropic",
+		"YACReader",
+		"Komga",
+		"Kavita",
+		"Hy-MT2",
+		"PP-OCR",
+		"GGUF",
+		"llama.cpp",
+		"Google Play",
+		"Android",
+		"Gemini",
+		"Qwen",
+		"Together AI",
+		"Fireworks",
+		"Give My Regards to Black Jack",
+		"SHUHO SATO",
+		"CBZ",
+		"CBR",
+		"ZIP",
+		"PDF",
+		"EPUB",
+		"JSON",
+		"API",
+		"URL",
+		"HTTPS",
+		"LLM",
+		"OCR",
+		"SFX",
+		"VPN",
+		"USB",
+		"CPU",
+		"ARM",
+		"NEON",
+		"STQ",
+		"GPU",
+		"NPU",
+		"ChatML"
+	],
+	"verbatimPatterns": [
+		"\\{[A-Za-z_][A-Za-z0-9_]*\\}",
+		"</?(?:em|code|link|br)\\b[^>]*>",
+		"<code>[^<]*</code>",
+		"https?://\\S+",
+		"\\.(?:cbz|cbr|zip|pdf|epub|gguf|json)\\b",
+		"[⋮⚙✎✓✖▣📝🔄🧹📦✏️🗑＋🗀→⇄]"
+	],
+	"locales": {
+		"de": {
+			"preferred": {
+				"library": "Bibliothek",
+				"volume": "Band",
+				"page": "Seite",
+				"overlay": "Overlay",
+				"translation": "Übersetzung",
+				"settings": "Einstellungen"
+			},
+			"forbidden": [
+				"\\bIhnen\\b",
+				"\\bIhre[nrs]?\\b(?=\\s+(?:Bibliothek|Datei|Übersetzung|Einstellung))"
+			]
+		},
+		"es": {
+			"preferred": {
+				"library": "biblioteca",
+				"volume": "volumen",
+				"page": "página",
+				"overlay": "superposición",
+				"settings": "ajustes"
+			},
+			"forbidden": [
+				"\\bvosotros\\b",
+				"\\busted\\b",
+				"\\bustedes\\b"
+			]
+		},
+		"fr": {
+			"preferred": {
+				"library": "bibliothèque",
+				"volume": "volume",
+				"page": "page",
+				"overlay": "calque",
+				"settings": "réglages"
+			},
+			"forbidden": [
+				"\\btu\\b",
+				"\\bton\\b",
+				"\\btes\\b"
+			]
+		},
+		"id": {
+			"preferred": {
+				"library": "pustaka",
+				"volume": "volume",
+				"page": "halaman",
+				"overlay": "lapisan",
+				"settings": "pengaturan"
+			},
+			"forbidden": [
+				"\\bkamu\\b",
+				"\\bkau\\b",
+				"\\bengkau\\b"
+			]
+		},
+		"it": {
+			"preferred": {
+				"library": "libreria",
+				"volume": "volume",
+				"page": "pagina",
+				"overlay": "overlay",
+				"settings": "impostazioni"
+			},
+			"forbidden": [
+				"\\bLei\\b(?!\\s+(?:è|ha)\\s+(?:la|il|una|un)\\b)",
+				"\\bvoi\\b"
+			]
+		},
+		"pt-BR": {
+			"preferred": {
+				"library": "biblioteca",
+				"volume": "volume",
+				"page": "página",
+				"overlay": "sobreposição",
+				"settings": "configurações",
+				"file": "arquivo",
+				"screen": "tela",
+				"user": "usuário"
+			},
+			"forbidden": [
+				"\\btu\\b",
+				"\\bficheiro",
+				"\\becrã",
+				"\\butilizador",
+				"\\brato\\b"
+			]
+		},
+		"ru": {
+			"preferred": {
+				"library": "библиотека",
+				"volume": "том",
+				"page": "страница",
+				"overlay": "наложение",
+				"settings": "настройки"
+			},
+			"forbidden": [
+				"\\bты\\b",
+				"\\bтебе\\b",
+				"\\bтебя\\b",
+				"\\bтвой\\b",
+				"\\bВы\\b",
+				"\\bВам\\b",
+				"\\bВас\\b",
+				"\\bВаш"
+			]
+		}
+	}
+}

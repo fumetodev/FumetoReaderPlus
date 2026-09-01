@@ -1,0 +1,31 @@
+3fc65063d9c356510b86fc2f15ca8aea711bfc47
+# ggml-org/llama.cpp master @ 2026-04-10
+#
+# Custom quantization backport @ 2026-07-12:
+#
+#   #22836 / f6ce77a, 08ff527, 781aadf — STQ1_0 sparse-ternary type,
+#   portable reference path, and ARM NEON vec_dot kernel required by the
+#   official Tencent Hy-MT2-1.8B-1.25Bit GGUF. The three upstream-PR commits
+#   were backported onto this pinned snapshot instead of replacing the entire
+#   vendored tree, keeping the already-verified Android/OpenCL integration and
+#   limiting the custom runtime delta to the 17 quantization files.
+#
+# This snapshot contains the following Gemma 4 fix PRs (verified via
+# `git log --oneline -500 | grep` against the cloned repo before dropping .git):
+#
+#   #21326 — Gemma 4 template parser fix
+#   #21343 — Gemma 4 tokenizer SPE multi-newline fix (closes #21321 <unused24> bug)
+#   #21390 — Gemma 4 final logit softcapping
+#   #21406 — custom newline split for Gemma 4
+#   #21418 — specialized Gemma 4 parser + interleaved thinking support
+#   #21488 — BPE byte token handling for Gemma 4
+#   #21500 — add_bos flag correctly set for Gemma 4
+#   #21513 — KV-cache iSWA attention rotation
+#   #21566 — CUDA buffer overlap fix (pulled in for completeness; not needed for OpenCL)
+#   #21697 — reasoning budget fix (required even when reasoning is disabled —
+#            touches the generic inference loop)
+#   #21704 — better align common parser with the updated official Gemma 4 template
+#   #21739 — make Gemma 4 shared-KV tail attn_k tensors optional on load
+#
+# When bumping this snapshot again, cross-check ggml-org/llama.cpp for any new
+# PRs mentioning "gemma4" / "gemma 4" and add them to this list.
