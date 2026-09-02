@@ -1,0 +1,22 @@
+[
+	{
+		"versionName": "0.6.0",
+		"versionCode": 6000,
+		"uploadedAt": "2026-09-01",
+		"track": "production",
+		"abi": "universal",
+		"buildType": "release",
+		"commit": null,
+		"sha256": "7e520ab311704d5bfeccabf8204ce840c0d570593a94ba9949a26aa394472cf7",
+		"uiLocales": {
+			"en": "source",
+			"de": "machine",
+			"es": "machine",
+			"fr": "machine",
+			"id": "machine",
+			"it": "machine",
+			"pt-BR": "machine",
+			"ru": "machine"
+		}
+	}
+]
