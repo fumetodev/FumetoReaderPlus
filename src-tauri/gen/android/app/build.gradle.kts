@@ -24,53 +24,20 @@ val keyProperties = Properties().apply {
     }
 }
 
-// Keep one authoritative PP-OCRv6 detector model in the repository while also
-// making it available to Android's native ONNX Runtime. Tauri embeds the web
-// assets in its own resource bundle, which Android's AssetManager cannot open,
-// so this generated asset is required by the native session. Generating it at
-// build time avoids checking in a second 62 MB copy of the model.
+// Only the recogniser dictionary is packaged. The detector, recogniser and
+// layout models are downloaded on demand (src/lib/detection/ocr-model-manager.ts)
+// into dataDir/models, where the native engines look before falling back to a
+// packaged asset — 124 MB that every install no longer pays for. The
+// dictionary stays here because it is 75 KB and the recogniser cannot start
+// without it.
 val ppocrNativeAssetsDir = layout.buildDirectory.dir("generated/ppocrNativeAssets")
 val generatePpocrNativeAssets by tasks.registering(Sync::class) {
     from(rootProject.file("../../../static/models")) {
-        include(
-            "ppocr-det-v6-medium.onnx",
-            "ppocr-rec-v6-small.onnx",
-            "ppocrv6_dict.txt",
-        )
+        include("ppocrv6_dict.txt")
     }
     into(ppocrNativeAssetsDir.map { it.dir("models") })
 }
 
-// The bespoke rtmdet-manga layout model (Apache-2.0, ours) is bundled the same
-// way, but the 43 MB binary stays out of git: prefer the local eval-artifacts
-// copy, otherwise fetch from the canonical Hugging Face repo at build time.
-val rtmdetNativeAssetsDir = layout.buildDirectory.dir("generated/rtmdetNativeAssets")
-val rtmdetModelName = "rtmdet-manga-layout-1024.onnx"
-val rtmdetModelBytes = 43_227_772L
-val rtmdetModelUrl =
-    "https://huggingface.co/fumetodev/rtmdet-manga-layout-onnx/resolve/main/$rtmdetModelName"
-val prepareRtmdetNativeAssets by tasks.registering {
-    val outDirProvider = rtmdetNativeAssetsDir.map { it.dir("models") }
-    outputs.dir(rtmdetNativeAssetsDir)
-    doLast {
-        val outDir = outDirProvider.get().asFile
-        outDir.mkdirs()
-        val out = File(outDir, rtmdetModelName)
-        if (out.length() != rtmdetModelBytes) {
-            val local = rootProject.file("../../../artifacts/model-candidates/models/$rtmdetModelName")
-            if (local.isFile && local.length() == rtmdetModelBytes) {
-                local.copyTo(out, overwrite = true)
-            } else {
-                URI(rtmdetModelUrl).toURL().openStream().use { input ->
-                    out.outputStream().use { output -> input.copyTo(output) }
-                }
-            }
-            check(out.length() == rtmdetModelBytes) {
-                "rtmdet model asset has ${out.length()} bytes; expected $rtmdetModelBytes"
-            }
-        }
-    }
-}
 
 android {
     compileSdk = 36
@@ -177,7 +144,6 @@ android {
         buildConfig = true
     }
     sourceSets.getByName("main").assets.srcDir(ppocrNativeAssetsDir)
-    sourceSets.getByName("main").assets.srcDir(rtmdetNativeAssetsDir)
     packaging {
         jniLibs {
             // Exclude the OpenCL ICD Loader stub that CMake copies into the build.
@@ -224,7 +190,6 @@ dependencies {
 
 tasks.named("preBuild").configure {
     dependsOn(generatePpocrNativeAssets)
-    dependsOn(prepareRtmdetNativeAssets)
 }
 
 apply(from = "tauri.build.gradle.kts")

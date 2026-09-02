@@ -3834,6 +3834,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:14:27.304Z"
 	},
+	"ocr_models_missing": {
+		"sourceHash": "6be4b62dc75abc4b",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-02T17:57:45.214Z"
+	},
 	"onboarding_a_fully_translated_page": {
 		"sourceHash": "59b06d3c460f6705",
 		"model": "anthropic/claude-sonnet-5",
@@ -6793,6 +6798,21 @@
 		"sourceHash": "efae277d98982387",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:14:02.946Z"
+	},
+	"settings_translation_vision_models": {
+		"sourceHash": "66c255ca936e0230",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-02T17:57:42.456Z"
+	},
+	"settings_translation_vision_models_desc": {
+		"sourceHash": "399774ac01d3c707",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-02T17:57:42.456Z"
+	},
+	"settings_translation_vision_models_needed": {
+		"sourceHash": "c5126366c25b28a7",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-02T17:57:42.456Z"
 	},
 	"settings_translation_vision_models_only": {
 		"sourceHash": "a6457fac3a70dd72",

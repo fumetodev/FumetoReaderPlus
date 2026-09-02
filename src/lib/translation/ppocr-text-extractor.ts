@@ -19,6 +19,8 @@ import {
 	type PPOcrRecognitionDetection
 } from '$lib/detection/ppocr-detector.js';
 import { initRecognizer, recognizeTextRegions, type RecognitionResult } from '$lib/detection/ppocr-recognizer.js';
+import { areOcrModelsReady } from '$lib/detection/ocr-model-manager.js';
+import * as m from '$lib/paraglide/messages.js';
 import { overrideRecognitionForEval } from '$lib/detection/model-candidate-overrides.js';
 import {
 	classifyRecognizedTextGroup,
@@ -313,6 +315,12 @@ export async function extractTextWithPPOCR(
 		if (options.signal?.aborted) throw new Error('PP-OCR extraction cancelled');
 	};
 	throwIfCancelled();
+	// Every OCR path funnels through here, so one check covers the reader, the
+	// batch job and the revision passes. Without it a missing model surfaces as
+	// a protobuf parse failure from deep inside ONNX Runtime.
+	if (!(await areOcrModelsReady())) {
+		throw new Error(m.ocr_models_missing());
+	}
 	const totalStarted = performance.now();
 	let detectorInitializationMs = 0;
 	let detectionMs = 0;
