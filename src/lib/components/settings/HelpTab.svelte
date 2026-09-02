@@ -759,6 +759,7 @@
 		<div class="px-4 pb-4 pt-2 text-xs leading-relaxed text-surface-300" transition:slide={{ duration: motionDuration(200) }}>
 			<p class="font-medium text-surface-200">{m.help_version_line({ version: APP_VERSION })}</p>
 			<ul class="mt-1 list-disc space-y-1 pl-4">
+				<li>{m.help_the_app_downloads_its_vision()}</li>
 				<li>{m.help_the_whole_app_is()}</li>
 				<li>{m.help_0_7_0_starts_fresh()}</li>
 				<li>{m.help_app_speaks_your_language()}</li>

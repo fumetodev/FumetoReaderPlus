@@ -712,6 +712,7 @@
 	"help_tap_the_translate_action": "Tap the Translate action in the bottom bar. The run continues if you hide the chrome, open the keyboard, or briefly leave the reader without changing its target; the bar shows progress, and tapping it again cancels a cancellable run. Failures stay on the bar until you open and dismiss their details.",
 	"help_teal_balloon_li": "<em>Teal-tinted balloon</em> — tap-to-reveal: the translation could not fit legibly, so tap the balloon to read it in a popover; tap again to dismiss.",
 	"help_text_recognition": "Text recognition:",
+	"help_the_app_downloads_its_vision": "The app is a much smaller download: the text-recognition and layout models are fetched the first time you translate a page, instead of being built into the app",
 	"help_the_app_is_ad": "The app is ad-free and completely free — there are no in-app purchases or subscriptions.",
 	"help_the_app_only_connects": "The app only connects to the internet when you:",
 	"help_the_bottom_bar_s": "The bottom bar's Translate action starts a full-page translation directly (tap again to cancel a running one; failures open a details dialog). The page counter opens the thumbnail filmstrip, and a long-press on it opens the numeric go-to-page dialog. Translation toggles and page actions live in the globe menu; editing happens at the boxes themselves.",
