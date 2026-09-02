@@ -1097,6 +1097,8 @@
 	"notif_translation_channel_description": "Zeigt den Fortschritt bei der Stapelübersetzung von Manga",
 	"notif_translation_channel_name": "Übersetzungsfortschritt",
 	"ocr_models_missing": "Die Vision-Modelle wurden noch nicht herunterladen. Öffne Einstellungen → Übersetzung → Auf dem Gerät und lade sie herunter, versuche es dann erneut.",
+	"ocr_prompt_body": "Um den Text auf einer Seite zu lesen, ist ein einmaliger Download von {size} MB nötig. Danach funktioniert die Übersetzung offline.",
+	"ocr_prompt_title": "Vision-Modelle herunterladen?",
 	"onboarding_a_fully_translated_page": "Eine vollständig übersetzte Seite mit Text, der in die Sprechblasen eingepasst ist",
 	"onboarding_a_reader_and_translator": "Ein Lese- und Übersetzungsprogramm für die Comics, die du bereits besitzt. Diese kurze Tour behandelt die Grundlagen — überspringe sie jederzeit und starte sie später erneut über Einstellungen → Hilfe.",
 	"onboarding_add_a_folder_of": "Füge einen Ordner mit Comics hinzu oder verbinde einen Server, und alles in dieser Tour gilt für deine eigene Bibliothek.",

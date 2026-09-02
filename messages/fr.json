@@ -1097,6 +1097,8 @@
 	"notif_translation_channel_description": "Affiche la progression pendant la traduction par lot du manga",
 	"notif_translation_channel_name": "Progression de la traduction",
 	"ocr_models_missing": "Les modèles de vision n’ont pas encore été téléchargés. Ouvrez Réglages → Traduction → Sur l’appareil et téléchargez-les, puis réessayez.",
+	"ocr_prompt_body": "La lecture du texte d’une page nécessite un téléchargement ponctuel de {size} Mo. Il n’a lieu qu’une seule fois, ensuite la traduction fonctionne hors ligne.",
+	"ocr_prompt_title": "Télécharger les modèles de vision ?",
 	"onboarding_a_fully_translated_page": "Une page entièrement traduite avec le texte ajusté à l’intérieur des bulles",
 	"onboarding_a_reader_and_translator": "Un lecteur et traducteur pour les bandes dessinées que vous possédez déjà. Cette courte visite couvre les bases — passez-la à tout moment, et revoyez-la plus tard depuis Réglages → Aide.",
 	"onboarding_add_a_folder_of": "Ajoutez un dossier de bandes dessinées ou connectez un serveur, et tout ce qui figure dans cette visite s’applique à votre propre bibliothèque.",

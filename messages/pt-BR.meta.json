@@ -3839,6 +3839,16 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-09-02T17:57:39.181Z"
 	},
+	"ocr_prompt_body": {
+		"sourceHash": "84fdcb4d683156b7",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-02T18:17:49.567Z"
+	},
+	"ocr_prompt_title": {
+		"sourceHash": "e00f7cf242cf8038",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-02T18:17:49.567Z"
+	},
 	"onboarding_a_fully_translated_page": {
 		"sourceHash": "59b06d3c460f6705",
 		"model": "anthropic/claude-sonnet-5",

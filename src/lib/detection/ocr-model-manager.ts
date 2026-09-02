@@ -21,6 +21,7 @@ import { writable } from 'svelte/store';
 import { appDataDir, join } from '@tauri-apps/api/path';
 import { exists as fsExists, mkdir as fsMkdir, remove as fsRemove, stat as fsStat } from '@tauri-apps/plugin-fs';
 import { downloadModelFile, cancelDownload as cancelBridgeDownload } from '$lib/translation/llamacpp-bridge.js';
+import { isAndroid } from '$lib/util/platform.js';
 
 export type OcrModelId = 'ppocr-det' | 'ppocr-rec' | 'rtmdet-layout';
 
@@ -78,11 +79,14 @@ let downloadInProgress = false;
 let cancelRequested = false;
 
 /**
- * A plain browser (`npm run dev`) has no Tauri filesystem and serves the models
- * from the frontend bundle, so every readiness question answers "yes" there.
+ * Only Android manages these files. `scripts/prune-android-embed.mjs` strips
+ * the models from the Android web bundle and nothing else does, so a browser
+ * (`npm run dev`) and the desktop build still serve them from `static/models`
+ * and every readiness question answers "yes" there — asking a desktop user to
+ * download files their build already carries would be a bug, not a safeguard.
  */
-function hasTauriFs(): boolean {
-	return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+function modelsAreManagedHere(): boolean {
+	return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window && isAndroid;
 }
 
 /** Absolute path of a model file, downloaded or not. */
@@ -92,7 +96,7 @@ export async function ocrModelPath(filename: string): Promise<string> {
 
 /** The models that still need downloading, in download order. */
 export async function missingOcrModels(): Promise<OcrModelSpec[]> {
-	if (!hasTauriFs()) return [];
+	if (!modelsAreManagedHere()) return [];
 	const missing: OcrModelSpec[] = [];
 	for (const spec of OCR_MODELS) {
 		try {
@@ -112,7 +116,7 @@ export async function areOcrModelsReady(): Promise<boolean> {
 
 /** Bytes already on disk, for the storage line in Settings. */
 export async function installedOcrModelBytes(): Promise<number> {
-	if (!hasTauriFs()) return 0;
+	if (!modelsAreManagedHere()) return 0;
 	let total = 0;
 	for (const spec of OCR_MODELS) {
 		try {

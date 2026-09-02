@@ -1097,6 +1097,8 @@
 	"notif_translation_channel_description": "Shows progress during batch manga translation",
 	"notif_translation_channel_name": "Translation progress",
 	"ocr_models_missing": "The vision models haven't been downloaded yet. Open Settings → Translation → On-Device and download them, then try again.",
+	"ocr_prompt_body": "Reading the text on a page needs a one-time {size} MB download. It happens once, then translation works offline.",
+	"ocr_prompt_title": "Download the vision models?",
 	"onboarding_a_fully_translated_page": "A fully translated page with text fitted inside the speech bubbles",
 	"onboarding_a_reader_and_translator": "A reader and translator for the comics you already own. This short tour covers the basics — skip it any time, and replay it later from Settings → Help.",
 	"onboarding_add_a_folder_of": "Add a folder of comics or connect a server, and everything in this tour applies to your own library.",

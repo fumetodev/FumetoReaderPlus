@@ -17,10 +17,10 @@ import {
 	readerTargetEpoch
 } from '$lib/stores/reader-state.js';
 import { readerPageTranslationController } from '$lib/translation/reader-page-translation-runtime.js';
+import { areOcrModelsReady } from '$lib/detection/ocr-model-manager.js';
+import { openOcrModelPrompt } from '$lib/detection/ocr-model-gate.js';
 
-export function startCurrentPageTranslation(): boolean {
-	const volumeUuid = get(currentVolume)?.volume_uuid;
-	if (!volumeUuid) return false;
+function beginRun(volumeUuid: string): void {
 	if (get(settings).overlayEnabled && !get(isOverlayMode)) isOverlayMode.set(true);
 	void readerPageTranslationController.requestManual({
 		readerSessionId: get(readerSessionId),
@@ -30,5 +30,23 @@ export function startCurrentPageTranslation(): boolean {
 	}).catch(() => {
 		// Reported via the controller snapshot.
 	});
+}
+
+export function startCurrentPageTranslation(): boolean {
+	const volumeUuid = get(currentVolume)?.volume_uuid;
+	if (!volumeUuid) return false;
+	// The page and target are read when the run actually starts, so a download
+	// that takes a minute still translates the page the reader is looking at
+	// rather than the one they tapped on.
+	void (async () => {
+		if (await areOcrModelsReady()) {
+			beginRun(volumeUuid);
+			return;
+		}
+		openOcrModelPrompt(() => {
+			const current = get(currentVolume)?.volume_uuid ?? volumeUuid;
+			beginRun(current);
+		});
+	})();
 	return true;
 }
