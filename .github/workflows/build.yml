@@ -1,9 +1,7 @@
 name: Build & Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  # Desktop bundles are experimental; build them manually when wanted.
   workflow_dispatch:
 
 permissions:
