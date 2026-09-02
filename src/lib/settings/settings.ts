@@ -20,6 +20,7 @@ export const DEFAULT_OPENROUTER_MODEL = 'google/gemini-3.1-flash-lite';
 
 export { SUPPORTED_LANGUAGES, ON_DEVICE_SOURCE_LANGUAGES, ON_DEVICE_TARGET_LANGUAGES, getLanguagePromptName } from './language-prompt-names.js';
 import { ON_DEVICE_TARGET_LANGUAGES, SUPPORTED_LANGUAGES } from './language-prompt-names.js';
+import { setProgressToastsEnabled } from '$lib/stores/toasts.js';
 
 /**
  * A GGUF the user imported from device storage, to run instead of one of the
@@ -222,6 +223,8 @@ export interface FumetoSettings {
 	switchToNewTabsImmediately: boolean;
 	/** Show a dismissible banner when one or more configured local-library paths cannot be reached. */
 	showLibraryAccessWarnings: boolean;
+	/** Libraries: a running scan or sync reports its progress as a notification. Errors always show. */
+	showLibraryScanProgress: boolean;
 
 	// Overlay
 	overlayEnabled: boolean;
@@ -404,6 +407,7 @@ export const DEFAULT_SETTINGS: FumetoSettings = {
 	regionColor: '#3b82f6',
 	switchToNewTabsImmediately: false,
 	showLibraryAccessWarnings: true,
+	showLibraryScanProgress: true,
 
 	overlayEnabled: true,
 	overlayMode: 'bubble-segmentation',
@@ -741,6 +745,10 @@ function createSettingsStore() {
 }
 
 export const settings = createSettingsStore();
+
+// Libraries → Show scan progress drives the toast store directly: the store
+// cannot import settings (settings owns secure storage, which owns the toasts).
+settings.subscribe((current) => setProgressToastsEnabled(current.showLibraryScanProgress));
 
 /**
  * Initialize secure settings — loads the API key from encrypted storage.
