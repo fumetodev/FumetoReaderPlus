@@ -11,7 +11,7 @@
  *   node scripts/i18n-draft.mjs --check                       # release gate, NO network
  *   node scripts/i18n-draft.mjs --mark-reviewed key1,key2 --locale de
  *
- * The key comes from OPENROUTER_API_KEY, or tests/.env when that is unset.
+ * The key comes from OPENROUTER_API_KEY, or .env when that is unset.
  * A draft that fails validation is never written; the run exits 1 unless
  * --allow-partial. See scripts/i18n-draft-core.mjs for every rule.
  */
@@ -64,8 +64,8 @@ function parseArgs(argv) {
 	return options;
 }
 
-/** tests/.env is the repo's home for the OpenRouter key; only read when the environment has none. */
-export function loadEnvFile(file = path.join(ROOT, 'tests/.env'), env = process.env) {
+/** .env is the repo's home for the OpenRouter key; only read when the environment has none. */
+export function loadEnvFile(file = path.join(ROOT, '.env'), env = process.env) {
 	if (env.OPENROUTER_API_KEY || !existsSync(file)) return env;
 	for (const line of readFileSync(file, 'utf8').split('\n')) {
 		const match = /^\s*(?:export\s+)?([A-Z0-9_]+)\s*=\s*(.*?)\s*$/.exec(line);
@@ -156,7 +156,7 @@ export async function main(argv = process.argv.slice(2), { fetchImpl = fetch, lo
 	let apiKey = null;
 	if (options.mode === 'draft') {
 		apiKey = loadEnvFile(envFile, env).OPENROUTER_API_KEY;
-		if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set (environment or tests/.env)');
+		if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set (environment or .env)');
 	}
 
 	for (const locale of locales) {

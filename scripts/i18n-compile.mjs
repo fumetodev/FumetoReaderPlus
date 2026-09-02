@@ -2,7 +2,7 @@
  * Compile `messages/*.json` into `src/lib/paraglide/` outside the Vite plugin.
  *
  * `npm run prepare`, `npm run check` and `npm run test:unit` all need the
- * generated modules to exist before svelte-check / vitest import them, and
+ * generated modules to exist before svelte-check imports them, and
  * none of those runs the Vite plugin. This script is the same compile with
  * the same options (`i18n-compile-options.mjs`).
  *
