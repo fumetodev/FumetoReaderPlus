@@ -7,7 +7,7 @@
 	 */
 	import { fly } from 'svelte/transition';
 	import { motionDuration, exitDuration } from '$lib/util/motion.js';
-	import { toasts, dismissToast } from '$lib/stores/toasts.js';
+	import { toasts, dismissToast, dismissToastByUser } from '$lib/stores/toasts.js';
 	import { renderUserMessage } from '$lib/i18n/user-messages.js';
 	import * as m from '$lib/paraglide/messages.js';
 </script>
@@ -40,7 +40,7 @@
 				type="button"
 				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-surface-400 active:bg-surface-700"
 				aria-label={m.common_dismiss()}
-				onclick={() => dismissToast(toast.id)}
+				onclick={() => dismissToastByUser(toast.id)}
 			>×</button>
 		</div>
 	{/each}

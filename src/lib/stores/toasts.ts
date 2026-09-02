@@ -19,17 +19,53 @@ export interface Toast {
 }
 
 const AUTO_DISMISS_MS = 4000;
+/**
+ * A dismissed progress stream stays quiet while it keeps streaming. Once it
+ * has been silent this long it is a new stream, and shows again.
+ */
+const MUTE_IDLE_MS = 30_000;
 
 export const toasts = writable<Toast[]>([]);
 
 let nextId = 1;
 const timers = new Map<number, ReturnType<typeof setTimeout>>();
 
+/** Which keyed stream a toast id belongs to, for user dismissals. */
+const keyOfToast = new Map<number, string>();
+/** Streams the user closed, by key → time of the last update swallowed. */
+const mutedKeys = new Map<string, number>();
+/** Settings → Libraries → Show scan progress. Errors are never progress. */
+let progressToastsEnabled = true;
+
 export function dismissToast(id: number): void {
 	const timer = timers.get(id);
 	if (timer) clearTimeout(timer);
 	timers.delete(id);
+	keyOfToast.delete(id);
 	toasts.update((list) => list.filter((toast) => toast.id !== id));
+}
+
+/**
+ * The host's close button. Closing a progress stream used to hide one
+ * message and the next event recreated the toast: a scan that reports
+ * every entry re-opened it hundreds of times. A user dismissal now mutes the
+ * rest of that stream; auto-dismiss (a timer) never does.
+ */
+export function dismissToastByUser(id: number): void {
+	const key = keyOfToast.get(id);
+	if (key !== undefined) mutedKeys.set(key, Date.now());
+	dismissToast(id);
+}
+
+export function setProgressToastsEnabled(enabled: boolean): void {
+	progressToastsEnabled = enabled;
+	if (enabled) return;
+	for (const [key, id] of keyedToasts) {
+		if (progressKeys.has(key)) {
+			dismissToast(id);
+			keyedToasts.delete(key);
+		}
+	}
 }
 
 export function pushToast(input: {
@@ -58,7 +94,34 @@ export function pushToast(input: {
  * per event made every progress message flash a full exit/enter cycle.
  */
 const keyedToasts = new Map<string, number>();
-export function pushKeyedToast(key: string, input: { message: ToastText; action?: Toast['action']; tone?: Toast['tone'] }): void {
+/** Keys whose current toast was pushed as a progress update. */
+const progressKeys = new Set<string>();
+export function pushKeyedToast(
+	key: string,
+	input: {
+		message: ToastText;
+		action?: Toast['action'];
+		tone?: Toast['tone'];
+		/** One update of a stream (scan, sync): suppressible by the user and by Settings. */
+		progress?: boolean;
+	}
+): void {
+	if (input.progress && input.tone !== 'error') {
+		if (!progressToastsEnabled) return;
+		const mutedAt = mutedKeys.get(key);
+		if (mutedAt !== undefined) {
+			if (Date.now() - mutedAt < MUTE_IDLE_MS) {
+				mutedKeys.set(key, Date.now());
+				return;
+			}
+			mutedKeys.delete(key);
+		}
+		progressKeys.add(key);
+	} else {
+		// A terminal or error message ends the muted stream.
+		mutedKeys.delete(key);
+		progressKeys.delete(key);
+	}
 	const existing = keyedToasts.get(key);
 	if (existing != null) {
 		let updated = false;
@@ -81,11 +144,19 @@ export function pushKeyedToast(key: string, input: { message: ToastText; action?
 		}
 		// The tracked toast already auto-dismissed; fall through to a fresh one.
 	}
-	keyedToasts.set(key, pushToast(input));
+	const id = pushToast(input);
+	keyedToasts.set(key, id);
+	keyOfToast.set(id, key);
 }
 
+/** The emitter's end of stream: the toast goes, and so does any mute on it. */
 export function dismissKeyedToast(key: string): void {
 	const existing = keyedToasts.get(key);
-	if (existing != null) dismissToast(existing);
+	if (existing != null) {
+		dismissToast(existing);
+		keyOfToast.delete(existing);
+	}
 	keyedToasts.delete(key);
+	progressKeys.delete(key);
+	mutedKeys.delete(key);
 }

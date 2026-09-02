@@ -67,6 +67,7 @@ export class SettingsDraft {
 	restartFinishedVolumes = $state(false);
 	switchToNewTabsImmediately = $state(false);
 	showLibraryAccessWarnings = $state(true);
+	showLibraryScanProgress = $state(true);
 	overlayEnabled = $state(true);
 	overlayMode = $state<'bubble-segmentation' | 'auto-fit' | 'text-replacement'>('bubble-segmentation');
 	overlayAutoGenerate = $state(true);
@@ -133,6 +134,7 @@ export class SettingsDraft {
 		this.restartFinishedVolumes = s.restartFinishedVolumes;
 		this.switchToNewTabsImmediately = s.switchToNewTabsImmediately;
 		this.showLibraryAccessWarnings = s.showLibraryAccessWarnings;
+		this.showLibraryScanProgress = s.showLibraryScanProgress;
 		this.overlayEnabled = s.overlayEnabled;
 		this.overlayMode = s.overlayMode;
 		this.overlayAutoGenerate = s.overlayAutoGenerate;
@@ -186,6 +188,7 @@ export class SettingsDraft {
 			restartFinishedVolumes: this.restartFinishedVolumes,
 			switchToNewTabsImmediately: this.switchToNewTabsImmediately,
 			showLibraryAccessWarnings: this.showLibraryAccessWarnings,
+			showLibraryScanProgress: this.showLibraryScanProgress,
 			overlayEnabled: this.overlayEnabled,
 			overlayMode: this.overlayMode,
 			overlayAutoGenerate: this.overlayAutoGenerate,

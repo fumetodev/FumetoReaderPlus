@@ -569,6 +569,16 @@
 		{/if}
 	</div>
 
+	<!-- Scan notifications -->
+	<div data-settings-anchor="scan-progress">
+		<Switch
+			bind:checked={draft.showLibraryScanProgress}
+			dataTestid="show-library-scan-progress"
+			label={m.settings_libraries_scan_progress_label()}
+			sublabel={m.settings_libraries_scan_progress_sublabel()}
+		/>
+	</div>
+
 	<!-- Storage durability -->
 	<div data-settings-anchor="storage">
 		<h3 class="mb-3 block text-sm font-medium text-surface-300">{m.libraries_storage_title()}</h3>
