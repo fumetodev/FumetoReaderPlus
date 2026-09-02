@@ -1097,6 +1097,8 @@
 	"notif_translation_channel_description": "Mostra o progresso durante a tradução em lote de mangás",
 	"notif_translation_channel_name": "Progresso da tradução",
 	"ocr_models_missing": "Os modelos de visão ainda não foram baixados. Abra Configurações → Tradução → No dispositivo e baixe-os, depois tente novamente.",
+	"ocr_prompt_body": "Ler o texto de uma página precisa de um download único de {size} MB. Isso acontece uma vez e depois a tradução funciona offline.",
+	"ocr_prompt_title": "Baixar os modelos de visão?",
 	"onboarding_a_fully_translated_page": "Uma página totalmente traduzida com texto ajustado dentro dos balões de fala",
 	"onboarding_a_reader_and_translator": "Um leitor e tradutor para os quadrinhos que você já possui. Este breve tour cobre o básico — pule a qualquer momento e assista de novo depois em Configurações → Ajuda.",
 	"onboarding_add_a_folder_of": "Adicione uma pasta de quadrinhos ou conecte um servidor, e tudo neste tour se aplica à sua própria biblioteca.",

@@ -1097,6 +1097,8 @@
 	"notif_translation_channel_description": "Mostra l'avanzamento durante la traduzione batch dei fumetti",
 	"notif_translation_channel_name": "Avanzamento traduzione",
 	"ocr_models_missing": "I modelli di visione non sono ancora stati scaricati. Apri Impostazioni → Traduzione → Sul dispositivo e scaricali, poi riprova.",
+	"ocr_prompt_body": "Per leggere il testo di una pagina serve un download unico di {size} MB. Avviene una sola volta, poi la traduzione funziona offline.",
+	"ocr_prompt_title": "Scaricare i modelli di visione?",
 	"onboarding_a_fully_translated_page": "Una pagina completamente tradotta con il testo inserito nelle nuvolette",
 	"onboarding_a_reader_and_translator": "Un lettore e traduttore per i fumetti che possiedi già. Questo breve tour illustra le basi — saltalo quando vuoi, e riguardalo più tardi da Impostazioni → Aiuto.",
 	"onboarding_add_a_folder_of": "Aggiungi una cartella di fumetti o collega un server, e tutto ciò che vedi in questo tour si applica alla tua libreria.",

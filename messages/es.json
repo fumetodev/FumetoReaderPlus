@@ -1097,6 +1097,8 @@
 	"notif_translation_channel_description": "Muestra el progreso durante la traducción por lotes del manga",
 	"notif_translation_channel_name": "Progreso de traducción",
 	"ocr_models_missing": "Todavía no se han descargado los modelos de visión. Abre Ajustes → Traducción → En el dispositivo y descárgalos, luego inténtalo de nuevo.",
+	"ocr_prompt_body": "Leer el texto de una página necesita una descarga única de {size} MB. Ocurre una sola vez y después la traducción funciona sin conexión.",
+	"ocr_prompt_title": "¿Descargar los modelos de visión?",
 	"onboarding_a_fully_translated_page": "Una página totalmente traducida con el texto ajustado dentro de los bocadillos",
 	"onboarding_a_reader_and_translator": "Un lector y traductor para los cómics que ya tienes. Este breve recorrido cubre lo básico. Puedes saltártelo en cualquier momento y volver a verlo después desde Ajustes → Ayuda.",
 	"onboarding_add_a_folder_of": "Añade una carpeta de cómics o conecta un servidor, y todo lo que aparece en este recorrido se aplicará a tu propia biblioteca.",
