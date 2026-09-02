@@ -712,6 +712,7 @@
 	"help_tap_the_translate_action": "Tocca l'azione Traduci nella barra inferiore. L'elaborazione continua se nascondi i controlli, apri la tastiera o esci brevemente dal lettore senza cambiare la sua destinazione; la barra mostra l'avanzamento e toccarla di nuovo annulla un'elaborazione annullabile. Gli errori rimangono sulla barra finché non apri e chiudi i loro dettagli.",
 	"help_teal_balloon_li": "<em>Nuvoletta color verde acqua</em> — tocca per rivelare: la traduzione non entrava in modo leggibile, quindi tocca la nuvoletta per leggerla in un popover; tocca di nuovo per chiuderlo.",
 	"help_text_recognition": "Riconoscimento del testo:",
+	"help_the_app_downloads_its_vision": "L'app è un download molto più leggero: i modelli di riconoscimento del testo e del layout vengono scaricati la prima volta che traduci una pagina, invece di essere integrati nell'app",
 	"help_the_app_is_ad": "L'app è priva di pubblicità e completamente gratuita: non ci sono acquisti in-app né abbonamenti.",
 	"help_the_app_only_connects": "L'app si connette a internet solo quando:",
 	"help_the_bottom_bar_s": "L'azione Traduci della barra inferiore avvia direttamente una traduzione a pagina intera (tocca di nuovo per annullarne una in corso; gli errori aprono una finestra di dettaglio). Il contatore di pagine apre la filmstrip delle miniature, e tenerlo premuto apre la finestra numerica per andare a una pagina. Le opzioni di traduzione e le azioni sulla pagina si trovano nel menu del globo; la modifica avviene direttamente sui riquadri.",
