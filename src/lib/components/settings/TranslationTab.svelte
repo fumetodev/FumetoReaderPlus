@@ -2,7 +2,7 @@
 	import * as m from '$lib/paraglide/messages.js';
 	import { getLanguageDisplayName } from '$lib/i18n/language-names.js';
 	import RichMessage from '$lib/components/ui/RichMessage.svelte';
-	import { settingsDraft as draft } from './settings-state.svelte.js';
+	import { settingsDraft as draft, registerEditorCommit, flushPendingApply } from './settings-state.svelte.js';
 	import Switch from '$lib/components/ui/Switch.svelte';
 	import { slidingSelection } from '$lib/util/sliding-selection.js';
 	import { randomUUID } from '$lib/util/uuid.js';
@@ -67,11 +67,23 @@
 		'claude': 'Claude',
 	};
 
-	// Stage any open provider edits (incl. the API-key draft) before unmount —
-	// tab switches and dialog close must never drop typed keys.
+	// The open provider row is an editor the draft cannot see into: its key and
+	// model are staged only when it collapses. Leaving Settings commits it
+	// through the flush, so a key typed and never collapsed by hand is saved.
+	$effect(() => registerEditorCommit(() => {
+		if (editingProviderIndex === null) return false;
+		collapseProvider();
+		return true;
+	}));
+
+	// Belt and braces for a teardown that did not come through the flush (a tab
+	// switch inside Settings): stage, then apply now rather than trusting a
+	// watch effect that may already be inactive.
 	$effect(() => {
 		return () => {
-			if (editingProviderIndex !== null) collapseProvider();
+			if (editingProviderIndex === null) return;
+			collapseProvider();
+			void flushPendingApply();
 		};
 	});
 
