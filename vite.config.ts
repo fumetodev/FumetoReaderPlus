@@ -6,11 +6,9 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { paraglideOptions, pseudolocaleRequested } from './scripts/i18n-compile-options.mjs';
-import { writePseudolocale } from './scripts/i18n-pseudolocale.mjs';
 
 // The pseudolocale project reads messages/en-XA.json; generate it before the
 // plugin compiles (the CLI script does the same).
-if (pseudolocaleRequested()) writePseudolocale();
 
 // Single source of truth for the user-visible version (review B7 — the
 // hand-maintained constant in version.ts had drifted from package.json).
@@ -49,7 +47,6 @@ export default defineConfig({
 	define: {
 		__APP_VERSION__: JSON.stringify(pkg.version),
 		__APP_BUILD_MONTH__: JSON.stringify(buildMonth),
-		// NOTE: every global added here must also be stubbed in vitest.config.ts,
 		// or unit tests that transitively import build-info.ts fail to compile.
 		__APP_COMMIT__: JSON.stringify(appCommit),
 		__APP_COMMIT_DATE__: JSON.stringify(appCommitDate),
