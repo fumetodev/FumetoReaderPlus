@@ -12,6 +12,15 @@ Free, no ads, no accounts, no analytics. GPL-3.0.
 [**Get it on Google Play**](https://play.google.com/store/apps/details?id=com.fumeto.reader) ·
 [GitHub releases](https://github.com/fumetodev/FumetoReaderPlus/releases) (APK, works with [Obtainium](https://github.com/ImranR98/Obtainium))
 
+## Install with Obtainium
+
+[Obtainium](https://github.com/ImranR98/Obtainium) can track this repository and keep the app
+updated: add `https://github.com/fumetodev/FumetoReaderPlus` as an app and set its APK filter to
+`arm64\.apk$`.
+
+Builds from Google Play and from GitHub are signed with different keys, so moving from one to the
+other means uninstalling first (local library data is lost in the process).
+
 ## What it does
 
 - **Read** CBZ/CBR/PDF archives and EPUB books, imported locally or served from
