@@ -1,5 +1,6 @@
 package com.fumeto.reader
 
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
@@ -52,6 +53,34 @@ class MainActivity : TauriActivity() {
 
     @JavascriptInterface
     fun isDebugBuild(): Boolean = BuildConfig.DEBUG
+
+    /**
+     * Which orientations the Activity may take. The manifest locks the app to
+     * portrait (`userPortrait`) because the catalog, tabs and settings are
+     * portrait layouts. The reader lifts that to `fullUser` for as long as it
+     * is on screen, which hands the decision to the device's own auto-rotate
+     * setting: rotation locked stays put, rotation on follows the sensor.
+     * `configChanges` keeps a turn from recreating the Activity — the WebView
+     * is resized in place, onConfigurationChanged re-applies the insets, and
+     * the frontend re-fits the page. The frontend restates the policy on every
+     * view change and on teardown, so leaving the reader always lands back in
+     * portrait.
+     *
+     * Android 16+ ignores orientation restrictions on large screens, so on a
+     * tablet every view already rotates and this is a no-op either way.
+     */
+    @JavascriptInterface
+    fun setOrientationPolicy(policy: String) {
+      val requested = when (policy) {
+        "user" -> ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+        else -> ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+      }
+      // JavascriptInterface calls arrive on the WebView's bridge thread.
+      runOnUiThread {
+        if (isFinishing || isDestroyed) return@runOnUiThread
+        if (requestedOrientation != requested) requestedOrientation = requested
+      }
+    }
 
     /**
      * User-visible drop folder for comics: the app-specific EXTERNAL dir
