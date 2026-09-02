@@ -62,6 +62,7 @@
 	import { ensureStoragePersistence } from '$lib/storage/durability.js';
 	import { reportRemoteSyncFailure, reportRemoteSyncOutcome } from '$lib/stores/remote-sync-status.js';
 	import { installWindowInsetAdapter } from '$lib/insets/window-insets.js';
+	import { installReaderOrientationPolicy } from '$lib/reader/reader-orientation.js';
 	import { installTranslationConfigGuard } from '$lib/translation/translation-config-guard.js';
 	import type { MobileDestination } from '$lib/navigation/mobile-navigation.js';
 	import { catalogController } from '$lib/controllers/catalog-controller.js';
@@ -82,6 +83,7 @@
 	let uninstallPageBenchmarkNavigation: (() => void) | null = null;
 	let previousAppView: import('$lib/types/index.js').AppView = 'catalog';
 	let uninstallInsetAdapter: (() => void) | null = null;
+	let uninstallOrientationPolicy: (() => void) | null = null;
 	let uninstallTranslationConfigGuard: (() => void) | null = null;
 	let uninstallMobileUiFixtureHost: (() => void) | null = null;
 	let stopCatalogMigration: (() => void) | null = null;
@@ -275,6 +277,8 @@
 		// choice mid-run the affected jobs stop instead of quietly carrying on.
 		uninstallTranslationConfigGuard = installTranslationConfigGuard();
 		if (isMobile) uninstallInsetAdapter = installWindowInsetAdapter();
+		// The reader may rotate with the device; every other view stays portrait.
+		if (isMobile) uninstallOrientationPolicy = installReaderOrientationPolicy();
 		if (includesDebugMobileUiFixtures && isMobile && window.__fumeto_android?.isDebugBuild?.() === true) {
 			const { installMobileUiFixtureHost } = await import('$lib/debug/mobile-ui-fixture-host.js');
 			uninstallMobileUiFixtureHost = installMobileUiFixtureHost();
@@ -574,6 +578,8 @@
 		tabsController.destroy();
 		uninstallInsetAdapter?.();
 		uninstallInsetAdapter = null;
+		uninstallOrientationPolicy?.();
+		uninstallOrientationPolicy = null;
 		uninstallMobileUiFixtureHost?.();
 		uninstallMobileUiFixtureHost = null;
 		uninstallOcrBenchmarkHost?.();
