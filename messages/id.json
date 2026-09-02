@@ -707,6 +707,7 @@
 	"help_tap_the_translate_action": "Ketuk tindakan Terjemahkan di bilah bawah. Proses akan berlanjut jika Anda menyembunyikan antarmuka, membuka papan ketik, atau sebentar meninggalkan pembaca tanpa mengubah targetnya; bilah menunjukkan progres, dan mengetuknya lagi akan membatalkan proses yang dapat dibatalkan. Kegagalan akan tetap ada di bilah hingga Anda membuka dan menutup detailnya.",
 	"help_teal_balloon_li": "<em>Balon berwarna teal</em> — ketuk untuk menampilkan: terjemahan tidak dapat ditampilkan dengan jelas, jadi ketuk balon untuk membacanya di popover; ketuk lagi untuk menutupnya.",
 	"help_text_recognition": "Pengenalan teks:",
+	"help_the_app_downloads_its_vision": "Ukuran unduhan aplikasi jauh lebih kecil: model pengenalan teks dan tata letak diunduh saat pertama kali Anda menerjemahkan sebuah halaman, bukan sudah tertanam di dalam aplikasi",
 	"help_the_app_is_ad": "Aplikasi ini bebas iklan dan sepenuhnya gratis — tidak ada pembelian dalam aplikasi atau langganan.",
 	"help_the_app_only_connects": "Aplikasi hanya terhubung ke internet saat Anda:",
 	"help_the_bottom_bar_s": "Tindakan Terjemahkan pada bilah bawah memulai terjemahan halaman penuh secara langsung (ketuk lagi untuk membatalkan proses yang sedang berjalan; kegagalan akan membuka dialog detail). Penghitung halaman membuka filmstrip thumbnail, dan menekan lama padanya membuka dialog buka-ke-halaman numerik. Sakelar terjemahan dan tindakan halaman berada di menu globe; pengeditan dilakukan langsung pada kotak.",

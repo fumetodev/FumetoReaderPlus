@@ -712,6 +712,7 @@
 	"help_tap_the_translate_action": "Toque na ação Traduzir na barra inferior. A execução continua se você ocultar a interface, abrir o teclado ou saltar brevemente do leitor sem alterar o destino; a barra mostra o progresso, e tocá-la novamente cancela uma execução cancelável. As falhas permanecem na barra até você abrir e descartar os detalhes.",
 	"help_teal_balloon_li": "<em>Balão com tom azul-petróleo</em> — toque para revelar: a tradução não coube de forma legível, então toque no balão para lê-la em uma janela flutuante; toque novamente para descartar.",
 	"help_text_recognition": "Reconhecimento de texto:",
+	"help_the_app_downloads_its_vision": "O aplicativo é um download muito menor: os modelos de reconhecimento de texto e de layout são baixados na primeira vez que você traduz uma página, em vez de já vir integrados no aplicativo",
 	"help_the_app_is_ad": "O aplicativo não tem anúncios e é totalmente gratuito — não há compras nem assinaturas dentro do aplicativo.",
 	"help_the_app_only_connects": "O aplicativo só se conecta à internet quando você:",
 	"help_the_bottom_bar_s": "A ação Traduzir da barra inferior inicia diretamente uma tradução de página inteira (toque novamente para cancelar uma tradução em andamento; falhas abrem uma caixa de diálogo com detalhes). O contador de páginas abre a fita de miniaturas, e tocar e segurar nele abre a caixa de diálogo numérica para ir a uma página. As alternâncias de tradução e as ações de página ficam no menu do globo; a edição acontece nas próprias caixas.",

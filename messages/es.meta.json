@@ -2859,6 +2859,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T14:58:49.759Z"
 	},
+	"help_the_app_downloads_its_vision": {
+		"sourceHash": "ff5c27b29815be43",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-02T18:26:04.620Z"
+	},
 	"help_the_app_is_ad": {
 		"sourceHash": "1fca17cd0c81c303",
 		"model": "anthropic/claude-sonnet-5",
