@@ -28,19 +28,25 @@ let mkdirFn: ((path: string | URL, options?: Record<string, unknown>) => Promise
 let existsFn: ((path: string | URL, options?: Record<string, unknown>) => Promise<boolean>) | null = null;
 let BaseDirectory: Record<string, number> | null = null;
 
+/** Resolves once initSecureStorage() has settled; null until it is first called. */
+let initPromise: Promise<void> | null = null;
+
 /** Initialize filesystem access for device key storage. Call once on startup. */
-export async function initSecureStorage(): Promise<void> {
-	try {
-		const fs = await import('@tauri-apps/plugin-fs');
-		writeTextFile = fs.writeTextFile;
-		readTextFile = fs.readTextFile;
-		mkdirFn = fs.mkdir;
-		existsFn = fs.exists;
-		BaseDirectory = fs.BaseDirectory as unknown as Record<string, number>;
-		fsReady = true;
-	} catch {
-		fsReady = false;
-	}
+export function initSecureStorage(): Promise<void> {
+	initPromise ??= (async () => {
+		try {
+			const fs = await import('@tauri-apps/plugin-fs');
+			writeTextFile = fs.writeTextFile;
+			readTextFile = fs.readTextFile;
+			mkdirFn = fs.mkdir;
+			existsFn = fs.exists;
+			BaseDirectory = fs.BaseDirectory as unknown as Record<string, number>;
+			fsReady = true;
+		} catch {
+			fsReady = false;
+		}
+	})();
+	return initPromise;
 }
 
 /**
@@ -74,6 +80,10 @@ async function readDeviceKeyFromFile(): Promise<DeviceKeyRead> {
 	if (typeof window === 'undefined' || !('__TAURI_INTERNALS__' in window)) {
 		return { status: 'absent' };
 	}
+	// A read that overtakes startup (an automatic translation of the restored
+	// page fires before the fs plugin is wired) waits for it instead of
+	// reporting the key unreadable — which a caller then reported as "no key".
+	if (initPromise) await initPromise;
 	if (!fsReady || !readTextFile || !existsFn || !BaseDirectory) {
 		// On a real host this is NOT "absent": we have not looked. It is the case
 		// that actually fires in the field, when something reaches here before
@@ -425,7 +435,13 @@ export async function loadProviderApiKey(providerId: string): Promise<string> {
 		const ciphertext = combined.slice(12);
 		const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesKey, ciphertext);
 		return new TextDecoder().decode(decrypted);
-	} catch {
+	} catch (error) {
+		// An unreadable device key is not "no key stored": swallowing it here
+		// made the reader say "API key not configured" for a key that is on
+		// disk, and re-entering one under a fresh device key is what turns the
+		// outage into a permanent loss. Say what actually happened.
+		if (error instanceof SecureStorageUnavailableError) throw error;
+		console.warn(`[secure-storage] stored key for ${providerId} could not be decrypted`);
 		return '';
 	}
 }
