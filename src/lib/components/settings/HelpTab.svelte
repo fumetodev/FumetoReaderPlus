@@ -759,6 +759,9 @@
 		<div class="px-4 pb-4 pt-2 text-xs leading-relaxed text-surface-300" transition:slide={{ duration: motionDuration(200) }}>
 			<p class="font-medium text-surface-200">{m.help_version_line({ version: APP_VERSION })}</p>
 			<ul class="mt-1 list-disc space-y-1 pl-4">
+				<li>{m.help_turn_the_phone_sideways()}</li>
+				<li>{m.help_scan_progress_messages_can_be()}</li>
+				<li>{m.help_fixed_an_api_key_typed()}</li>
 				<li>{m.help_the_app_downloads_its_vision()}</li>
 				<li>{m.help_the_whole_app_is()}</li>
 				<li>{m.help_0_7_0_starts_fresh()}</li>

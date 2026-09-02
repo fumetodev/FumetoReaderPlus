@@ -2154,6 +2154,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:03:42.031Z"
 	},
+	"help_fixed_an_api_key_typed": {
+		"sourceHash": "d67dbe4647135aea",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-02T22:44:43.016Z"
+	},
 	"help_folder_context_menu_and": {
 		"sourceHash": "ddb848828fb23b9a",
 		"model": "anthropic/claude-sonnet-5",
@@ -2664,6 +2669,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:03:42.031Z"
 	},
+	"help_scan_progress_messages_can_be": {
+		"sourceHash": "0774dad4328e90a7",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-02T22:44:43.016Z"
+	},
 	"help_screenshots_credit": {
 		"sourceHash": "9124fe1ae13ea243",
 		"model": "anthropic/claude-sonnet-5",
@@ -3033,6 +3043,11 @@
 		"sourceHash": "1b3fc736f2a64b25",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-31T18:46:41.865Z"
+	},
+	"help_turn_the_phone_sideways": {
+		"sourceHash": "6d04d86b5463650c",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-02T22:44:43.016Z"
 	},
 	"help_two_main_pipelines": {
 		"sourceHash": "ca19e82993c642fa",
