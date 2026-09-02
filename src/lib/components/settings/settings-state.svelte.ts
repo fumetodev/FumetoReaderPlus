@@ -279,9 +279,38 @@ export function scheduleApply(): void {
 	}, APPLY_DEBOUNCE_MS);
 }
 
-/** Flush a pending debounce and wait for all applies to settle. */
+/**
+ * Inline editors that hold edits the draft has not seen yet (the provider row
+ * stages its key and model only when it collapses) register here, so leaving
+ * Settings stages them before the flush. Returns the unregister function.
+ * A hook returns true when it staged something.
+ */
+const editorCommitHooks = new Set<() => boolean>();
+
+export function registerEditorCommit(hook: () => boolean): () => void {
+	editorCommitHooks.add(hook);
+	return () => {
+		editorCommitHooks.delete(hook);
+	};
+}
+
+function commitOpenEditors(): boolean {
+	let staged = false;
+	for (const hook of editorCommitHooks) if (hook()) staged = true;
+	return staged;
+}
+
+/**
+ * Flush a pending debounce and wait for all applies to settle.
+ *
+ * Open editors are committed first. Every exit path flushed BEFORE the surface
+ * tore the tabs down, and the provider row only staged its API key in its own
+ * teardown — after the flush, into a panel that was no longer active — so a
+ * key typed and never collapsed by hand was applied by nobody.
+ */
 export function flushPendingApply(): Promise<void> {
-	if (applyTimer !== null) return applyDraftNow();
+	const staged = commitOpenEditors();
+	if (staged || applyTimer !== null) return applyDraftNow();
 	return applyChain;
 }
 
