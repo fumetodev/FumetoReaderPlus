@@ -754,15 +754,29 @@ const activeAndroidDownloadCallbackIds = new Set<string>();
 let downloadCancelRequested = false;
 
 /**
- * Download a GGUF model file.
+ * Download a model file.
  * Android: via Kotlin OkHttp bridge with __llama_progress callback.
  * Desktop: via fetch with streaming progress.
+ *
+ * `onProgress` diverts reporting to the caller and leaves
+ * `ggufDownloadProgress` untouched. Without it, a second downloader (the OCR
+ * models) would drive the GGUF store, and the settings UI would animate a
+ * progress bar on whichever Hy-MT2 row was last selected.
  */
-export async function downloadModelFile(url: string, destPath: string): Promise<void> {
+export async function downloadModelFile(
+	url: string,
+	destPath: string,
+	options: { onProgress?: (downloadedBytes: number, totalBytes: number) => void } = {}
+): Promise<void> {
+	const { onProgress } = options;
+	const publish = (state: GgufDownloadState) => {
+		if (!onProgress) ggufDownloadProgress.set(state);
+	};
 	// A fresh download is not cancelled; clearing here keeps a later genuine
 	// failure from being reported as a cancellation.
 	downloadCancelRequested = false;
-	ggufDownloadProgress.set({
+	onProgress?.(0, 0);
+	publish({
 		status: 'downloading',
 		error: undefined,
 		progress: { downloadedBytes: 0, totalBytes: 0 }
@@ -796,7 +810,8 @@ export async function downloadModelFile(url: string, destPath: string): Promise<
 
 				// Report progress every ~1 MB
 				if (downloadedBytes % (1024 * 1024) < value.byteLength) {
-					ggufDownloadProgress.set({
+					onProgress?.(downloadedBytes, totalBytes);
+					publish({
 						status: 'downloading',
 						error: undefined,
 						progress: { downloadedBytes, totalBytes }
@@ -814,7 +829,7 @@ export async function downloadModelFile(url: string, destPath: string): Promise<
 
 			await writeFile(destPath, fullData);
 
-			ggufDownloadProgress.set({
+			publish({
 				status: 'completed',
 				error: undefined,
 				progress: undefined
@@ -824,12 +839,12 @@ export async function downloadModelFile(url: string, destPath: string): Promise<
 			desktopDownloadAbort = null;
 			const msg = err instanceof Error ? err.message : 'Download failed';
 			if (msg.toLowerCase().includes('abort')) {
-				ggufDownloadProgress.set({ status: 'idle', error: undefined, progress: undefined });
+				publish({ status: 'idle', error: undefined, progress: undefined });
 				// Cancellation is not transport success. Propagate it so callers
 				// cannot validate or delete a previous model after an aborted copy.
 				throw err;
 			} else {
-				ggufDownloadProgress.set({ status: 'error', error: msg, progress: undefined });
+				publish({ status: 'error', error: msg, progress: undefined });
 				throw err;
 			}
 		}
@@ -844,8 +859,11 @@ export async function downloadModelFile(url: string, destPath: string): Promise<
 
 	// Multi-GB GGUF downloads intentionally have no wall-clock deadline. They
 	// remain explicitly cancellable through cancelDownload().
-	const { callbackId, promise } = invokeCallback(null, 'GGUF model download', (id) => {
+	const { callbackId, promise } = invokeCallback(null, 'Model download', (id) => {
 		activeAndroidDownloadCallbackIds.add(id);
+		// Registered before the transfer starts so the first tick cannot land on
+		// the default GGUF store when a caller supplied its own reporter.
+		if (onProgress) registerProgressHandler(id, onProgress);
 		bridge.downloadModel(url, destPath, id);
 	});
 
@@ -855,7 +873,7 @@ export async function downloadModelFile(url: string, destPath: string): Promise<
 		if (parsed.error) {
 			throw new Error(parsed.error);
 		}
-		ggufDownloadProgress.set({
+		publish({
 			status: 'completed',
 			error: undefined,
 			progress: undefined
@@ -865,7 +883,7 @@ export async function downloadModelFile(url: string, destPath: string): Promise<
 		// synchronously, but this rejection lands a microtask later and used to
 		// overwrite it with a red "Download cancelled" under the variant picker
 		// — for an action the user themselves took.
-		ggufDownloadProgress.set(
+		publish(
 			downloadCancelRequested
 				? { status: 'idle', error: undefined, progress: undefined }
 				: {
@@ -877,6 +895,7 @@ export async function downloadModelFile(url: string, destPath: string): Promise<
 		throw err;
 	} finally {
 		activeAndroidDownloadCallbackIds.delete(callbackId);
+		unregisterProgressHandler(callbackId);
 	}
 }
 

@@ -706,6 +706,32 @@ internal class NativePPOcrDetectorEngine(context: Context) : AutoCloseable {
         }
     }
 
+    /**
+     * The detector model as downloaded by the app (ocr-model-manager.ts writes
+     * it to Tauri's appDataDir()/models, which is this process's
+     * dataDir/models). Size and digest are both checked here because a
+     * half-written file left by a killed download is exactly the case this
+     * guards.
+     */
+    private fun downloadedModelFile(
+        cancellation: PPOcrOperationCancellationToken,
+    ): File? {
+        val downloaded = File(appContext.dataDir, "models/${File(MODEL_ASSET_PATH).name}")
+        if (!downloaded.isFile || downloaded.length() != MODEL_BYTES) return null
+        return if (sha256(downloaded, cancellation) == MODEL_SHA256) downloaded else null
+    }
+
+    /** The packaged asset, with a message that names the fix when it is absent. */
+    private fun openPackagedModel(): java.io.InputStream = try {
+        appContext.assets.open(MODEL_ASSET_PATH)
+    } catch (error: java.io.IOException) {
+        throw IllegalStateException(
+            "The text-detection model has not been downloaded yet " +
+                "(Settings -> Translation -> On-Device).",
+            error,
+        )
+    }
+
     private fun prepareModelFile(
         cancellation: PPOcrOperationCancellationToken,
     ): ModelFile = synchronized(modelFileLock) {
@@ -719,6 +745,14 @@ internal class NativePPOcrDetectorEngine(context: Context) : AutoCloseable {
                 return@synchronized ModelFile(cached, cacheHit = true, preparationMs = nowMs() - started)
             }
             processCachedModelPath = null
+        }
+
+        // A downloaded model outranks the packaged asset and is used in place:
+        // it already lives on the filesystem, so copying it into the code cache
+        // would only spend another 62 MB to say the same thing.
+        downloadedModelFile(cancellation)?.let { downloaded ->
+            processCachedModelPath = downloaded.absolutePath
+            return@synchronized ModelFile(downloaded, cacheHit = true, preparationMs = nowMs() - started)
         }
 
         val modelDirectory = File(appContext.codeCacheDir, "ppocr-native").apply {
@@ -740,7 +774,7 @@ internal class NativePPOcrDetectorEngine(context: Context) : AutoCloseable {
         temporary.delete()
         val digest = MessageDigest.getInstance("SHA-256")
         try {
-            appContext.assets.open(MODEL_ASSET_PATH).use { input ->
+            openPackagedModel().use { input ->
                 FileOutputStream(temporary).use { output ->
                     val chunk = ByteArray(1024 * 1024)
                     while (true) {

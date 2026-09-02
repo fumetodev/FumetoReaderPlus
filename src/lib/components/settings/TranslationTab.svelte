@@ -8,6 +8,7 @@
 	import { randomUUID } from '$lib/util/uuid.js';
 	import { ggufDownloadState, downloadHyMT2Model, cancelModelDownload as cancelGgufDownload, deleteHyMT2Model, isModelDownloaded, HYMT2_VARIANTS, BUNDLED_HYMT2_VARIANTS, bundledSpec, type HyMT2Variant, type BundledHyMT2Variant } from '$lib/translation/gguf-model-manager.js';
 	import { modelMemoryAdvice, readDeviceMemory } from '$lib/device/device-memory.js';
+	import { ocrModelDownloadState, downloadOcrModels, cancelOcrModelDownload, deleteOcrModels, areOcrModelsReady, OCR_MODELS_TOTAL_BYTES } from '$lib/detection/ocr-model-manager.js';
 
 	// Read once — the same advice the future Pro purchase flow must show
 	// BEFORE purchase, so a 4 GB device learns its limits before paying.
@@ -323,6 +324,23 @@
 		custom: false
 	});
 	let hyMT2Backend = $state('unknown');
+
+	// Vision models (PP-OCR detector + recogniser, rtmdet layout). Downloaded
+	// on demand; the readiness flag drives the card below and nothing else, so
+	// a failed probe simply shows the download button again.
+	let ocrModelsReady = $state(false);
+	const ocrModelsTotalMB = Math.round(OCR_MODELS_TOTAL_BYTES / 1024 / 1024);
+
+	async function refreshOcrModels(): Promise<void> {
+		ocrModelsReady = await areOcrModelsReady().catch(() => false);
+	}
+
+	$effect(() => {
+		// Re-probe whenever a transfer settles, so Ready/Download flips without
+		// leaving the tab.
+		const status = $ocrModelDownloadState.status;
+		if (status === 'idle' || status === 'completed') untrack(() => { void refreshOcrModels(); });
+	});
 
 	async function refreshHyMT2Downloaded(): Promise<void> {
 		const next: Record<HyMT2Variant, boolean> = {
@@ -1323,6 +1341,63 @@
 		<p class="mt-1.5 text-[11px] text-surface-500">
 			{m.settings_translation_pp_ocrv6_medium_detection()}
 		</p>
+
+		<div class="mt-3 rounded-lg border border-surface-700 bg-surface-800/50 px-3 py-2.5" data-ocr-models-card>
+			<div class="flex items-center justify-between gap-3">
+				<div class="min-w-0">
+					<p class="text-xs font-semibold text-surface-100">{m.settings_translation_vision_models()}</p>
+					<p class="mt-0.5 text-[11px] text-surface-400">{ocrModelsTotalMB} MB</p>
+				</div>
+				<div class="flex shrink-0 flex-col items-stretch justify-center gap-2">
+					{#if $ocrModelDownloadState.status === 'downloading'}
+						<button
+							type="button"
+							onclick={() => cancelOcrModelDownload()}
+							class="rounded-full bg-surface-700 px-3 py-1.5 text-[11px] font-medium text-surface-300 transition-colors hover:bg-surface-600"
+						>
+							{m.common_cancel()}
+						</button>
+					{:else if ocrModelsReady}
+						<span class="rounded-full bg-green-600/20 px-3 py-1 text-center text-[11px] font-medium text-green-400">{m.settings_models_ready()}</span>
+						<button
+							type="button"
+							onclick={async () => { await deleteOcrModels(); await refreshOcrModels(); }}
+							class="rounded-full bg-red-600/20 px-3 py-1.5 text-[11px] font-medium text-red-400 transition-colors hover:bg-red-600/30"
+							data-testid="ocr-models-delete"
+						>
+							{m.settings_models_delete()}
+						</button>
+					{:else}
+						<button
+							type="button"
+							onclick={async () => { await downloadOcrModels().catch(() => undefined); await refreshOcrModels(); }}
+							class="rounded-full bg-primary-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-700"
+							data-testid="ocr-models-download"
+						>
+							{m.settings_models_download()}
+						</button>
+					{/if}
+				</div>
+			</div>
+			{#if $ocrModelDownloadState.status === 'downloading' && $ocrModelDownloadState.progress}
+				{@const pct = $ocrModelDownloadState.progress.totalBytes > 0
+					? Math.round(($ocrModelDownloadState.progress.downloadedBytes / $ocrModelDownloadState.progress.totalBytes) * 100)
+					: 0}
+				<div class="mt-2 h-1.5 w-full rounded-full bg-surface-700">
+					<div class="h-1.5 rounded-full bg-primary-500 transition-all" style="width: {pct}%"></div>
+				</div>
+				<p class="mt-1 text-[11px] text-surface-500">
+					{m.settings_translation_download_progress({ done: ($ocrModelDownloadState.progress.downloadedBytes / 1024 / 1024) | 0, total: ($ocrModelDownloadState.progress.totalBytes / 1024 / 1024) | 0, pct })}
+				</p>
+			{/if}
+			{#if $ocrModelDownloadState.status === 'error'}
+				<p class="mt-1.5 text-[11px] text-red-400">{$ocrModelDownloadState.error}</p>
+			{/if}
+			<p class="mt-1.5 text-[11px] italic text-surface-500">{m.settings_translation_vision_models_desc()}</p>
+			{#if !ocrModelsReady}
+				<p class="mt-1 text-[11px] text-amber-400/90">{m.settings_translation_vision_models_needed()}</p>
+			{/if}
+		</div>
 	</div>
 
 	<div class="border-t border-surface-700"></div>

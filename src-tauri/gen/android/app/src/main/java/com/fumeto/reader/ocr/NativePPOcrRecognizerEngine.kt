@@ -778,6 +778,26 @@ internal class NativePPOcrRecognizerEngine(context: Context) : AutoCloseable {
         }
     }
 
+    /** See NativePPOcrDetectorEngine.downloadedModelFile. */
+    private fun downloadedModelFile(
+        cancellation: PPOcrOperationCancellationToken,
+    ): File? {
+        val downloaded = File(appContext.dataDir, "models/${File(MODEL_ASSET_PATH).name}")
+        if (!downloaded.isFile || downloaded.length() != MODEL_BYTES) return null
+        return if (sha256(downloaded, cancellation) == MODEL_SHA256) downloaded else null
+    }
+
+    /** The packaged asset, with a message that names the fix when it is absent. */
+    private fun openPackagedModel(): java.io.InputStream = try {
+        appContext.assets.open(MODEL_ASSET_PATH)
+    } catch (error: java.io.IOException) {
+        throw IllegalStateException(
+            "The text-recognition model has not been downloaded yet " +
+                "(Settings -> Translation -> On-Device).",
+            error,
+        )
+    }
+
     private fun prepareAssets(
         cancellation: PPOcrOperationCancellationToken,
     ): PreparedAssets = synchronized(assetLock) {
@@ -815,6 +835,19 @@ internal class NativePPOcrRecognizerEngine(context: Context) : AutoCloseable {
             processCachedModelPath = null
         }
 
+        // Same precedence as the detector: a downloaded model is used where it
+        // lies. The dictionary stays a packaged asset — it is 75 KB.
+        downloadedModelFile(cancellation)?.let { downloaded ->
+            processCachedModelPath = downloaded.absolutePath
+            return@synchronized PreparedAssets(
+                downloaded,
+                dictionary,
+                modelCacheHit = true,
+                modelPreparationMs = nowMs() - modelStarted,
+                dictionaryPreparationMs = dictionaryPreparationMs,
+            )
+        }
+
         val modelDirectory = File(appContext.codeCacheDir, "ppocr-native").apply {
             if (!exists() && !mkdirs()) throw IllegalStateException("Unable to create recognizer model cache")
         }
@@ -840,7 +873,7 @@ internal class NativePPOcrRecognizerEngine(context: Context) : AutoCloseable {
         temporary.delete()
         val digest = MessageDigest.getInstance("SHA-256")
         try {
-            appContext.assets.open(MODEL_ASSET_PATH).use { source ->
+            openPackagedModel().use { source ->
                 FileOutputStream(temporary).use { destinationStream ->
                     val chunk = ByteArray(1024 * 1024)
                     while (true) {
