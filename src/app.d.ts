@@ -20,6 +20,12 @@ declare global {
 			getExternalComicsDir?(): string;
 			/** The UI locale the WebView renders in, restated at boot and on change, for notification text. Arrives with the native localization step. */
 			setUiLocale?(tag: string): void;
+			/**
+			 * `'user'` lets the device's auto-rotate setting decide (fullUser);
+			 * anything else restores the manifest's portrait lock. The reader
+			 * holds `'user'` while it is on screen (`reader-orientation.ts`).
+			 */
+			setOrientationPolicy?(policy: 'portrait' | 'user'): void;
 		};
 		__fumeto_back_handler?: () => boolean;
 	}

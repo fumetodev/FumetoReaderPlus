@@ -29,10 +29,13 @@
 
         <!-- OpenCL for GPU-accelerated on-device translation (optional, not required) -->
         <uses-native-library android:name="libOpenCL.so" android:required="false" />
-        <!-- Portrait-locked as a pre-playtest stopgap: the reader has no
-             landscape re-fit yet (UX report U2). userPortrait still allows
+        <!-- Portrait is the default for the catalog, tabs and settings, which
+             are portrait layouts. The reader lifts it to fullUser while it is on
+             screen (AndroidBridge.setOrientationPolicy, driven by the frontend's
+             appView), so a phone with auto-rotate on reads in landscape and one
+             with rotation locked stays put. userPortrait still allows
              sensor-driven upside-down portrait. Android 16+ ignores this on
-             large screens, which is acceptable for the phone playtest. -->
+             large screens, where every view rotates regardless. -->
         <activity
             android:screenOrientation="userPortrait"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
