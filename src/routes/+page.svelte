@@ -68,6 +68,8 @@
 	import { tabsController } from '$lib/controllers/tabs-controller.js';
 	import { scheduleCatalogV16Migration } from '$lib/db/catalog-migration.js';
 	import { scheduleVolumePagesMigration } from '$lib/db/volume-pages-migration.js';
+	import OcrModelSheet from '$lib/components/detection/OcrModelSheet.svelte';
+	import { dismissOcrModelPrompt } from '$lib/detection/ocr-model-gate.js';
 	import { dismissReaderDisclosure, readerDisclosure } from '$lib/reader/reader-disclosure.js';
 	import { appWorkCoordinator } from '$lib/work-coordination/work-coordinator.js';
 	import { mobileReaderUi } from '$lib/reader/mobile-reader-ui.js';
@@ -319,6 +321,10 @@
 		if (isMobile) {
 			window.addEventListener('keydown', handleWindowKeydown, true);
 			(window as any).__fumeto_back_handler = (): boolean => {
+				// A root-level modal takes Back ahead of every view branch:
+				// otherwise the press switches the view underneath the open
+				// dialog, and from the catalog root it would exit the app.
+				if (dismissOcrModelPrompt()) return false;
 				// Close overlays in priority order
 				if (get(appView) === 'reader') {
 					handleReaderBack();
@@ -699,6 +705,7 @@
 	{#if isMobile}
 		<ToastHost />
 	{/if}
+	<OcrModelSheet />
 	{#if isMobile && ($appView === 'catalog' || $appView === 'tabs' || $appView === 'settings')}
 		<!-- One dock, three destinations. Settings is a peer view now — the
 		     dialog-era second bar instance is gone. -->
