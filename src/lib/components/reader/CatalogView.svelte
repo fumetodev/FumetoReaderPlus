@@ -296,7 +296,7 @@
 	// reflowing the header (the message stream replaces one keyed toast).
 	$effect(() => {
 		if (!isMobile) return;
-		if (scanMessage) pushKeyedToast('library-scan', { message: scanMessage });
+		if (scanMessage) pushKeyedToast('library-scan', { message: scanMessage, progress: true });
 		else dismissKeyedToast('library-scan');
 	});
 	let libraryPathValid = $state(true);
