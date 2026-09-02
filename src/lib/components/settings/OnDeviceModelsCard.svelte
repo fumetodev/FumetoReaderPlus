@@ -6,6 +6,7 @@
 	import { unloadModel as unloadHyMT2Model } from '$lib/translation/llamacpp-bridge.js';
 	import { isAndroid } from '$lib/util/platform.js';
 	import { modelMemoryAdvice, readDeviceMemory, type MemoryAdvice } from '$lib/device/device-memory.js';
+	import { installedOcrModelBytes, ocrModelDownloadState } from '$lib/detection/ocr-model-manager.js';
 	import { untrack } from 'svelte';
 
 	// Read once: total RAM doesn't change, and the advice must be identical
@@ -133,8 +134,22 @@
 		];
 	});
 
+	// The vision models live outside this card's rows but occupy the same
+	// storage the line below reports, so a user reading "downloaded now" gets
+	// the whole figure rather than only the translation half.
+	let ocrModelsMB = $state(0);
+
+	async function refreshOcrModelBytes(): Promise<void> {
+		ocrModelsMB = Math.round((await installedOcrModelBytes().catch(() => 0)) / 1024 / 1024);
+	}
+
+	$effect(() => {
+		const status = $ocrModelDownloadState.status;
+		if (status === 'idle' || status === 'completed') untrack(() => { void refreshOcrModelBytes(); });
+	});
+
 	let totalDownloadedMB = $derived(
-		rows.filter((row) => row.ready).reduce((sum, row) => sum + row.sizeMB, 0)
+		rows.filter((row) => row.ready).reduce((sum, row) => sum + row.sizeMB, 0) + ocrModelsMB
 	);
 
 	function formatMB(mb: number): string {
