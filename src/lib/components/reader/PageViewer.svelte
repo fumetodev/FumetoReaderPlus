@@ -46,6 +46,7 @@
 		type ReaderAutoTranslationRunContext,
 		type ReaderAutoTranslationTarget
 	} from '$lib/translation/reader-auto-translation-scheduler.js';
+	import { readerPageTranslationController } from '$lib/translation/reader-page-translation-runtime.js';
 	import { queueTabPreview } from '$lib/tabs/tab-preview-queue.js';
 	import { mobileReaderUi } from '$lib/reader/mobile-reader-ui.js';
 	import { playReaderHaptic } from '$lib/reader/reader-haptics.js';
@@ -1040,6 +1041,14 @@
 		});
 	}
 
+	// A manual attempt that failed leaves its chip up until the reader dismisses
+	// it. An automatic run that then supplies the page makes that chip a lie —
+	// "failed", with the translation on screen — so the success retires it.
+	function retireSupersededManualFailure(target: Readonly<ReaderAutoTranslationTarget>): void {
+		if (readerPageTranslationController.inspect().phase !== 'failed') return;
+		readerPageTranslationController.acknowledgeTerminalState(target);
+	}
+
 	async function runAutomaticPageTranslation(
 		target: Readonly<ReaderAutoTranslationTarget>,
 		context: ReaderAutoTranslationRunContext
@@ -1127,6 +1136,7 @@
 							currentProgressiveTarget()
 						);
 						if (!committed) throw autoTranslationAbortError();
+						if (!result.partialFailure) retireSupersededManualFailure(target);
 						if (result.partialFailure) {
 							// Committed above: the rollback in the catch is a no-op, so
 							// the translated overlays stay while the failure surfaces.
@@ -1173,6 +1183,7 @@
 				);
 				if (activeAutoTranslationRunId === runId && autoTranslationTargetIsCurrent(target)) {
 					setCurrentPageTranslationPayload(result.pageTranslation, result.overlayData);
+					retireSupersededManualFailure(target);
 				}
 			}
 		} finally {
