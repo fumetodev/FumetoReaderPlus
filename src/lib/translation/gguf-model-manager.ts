@@ -46,7 +46,7 @@ export interface GgufDownloadState {
  * unpinned `main` URL could silently start serving files the kernel cannot
  * load. Pin bumps are deliberate, verified changes.
  */
-export type BundledHyMT2Variant = 'stock' | 'manga-v2' | 'manga-v3' | 'manga-v4';
+export type BundledHyMT2Variant = 'stock' | 'manga-v2' | 'manga-v3' | 'manga-v5';
 export type HyMT2Variant = BundledHyMT2Variant | 'custom';
 
 export interface HyMT2VariantSpec {
@@ -113,24 +113,25 @@ export const HYMT2_VARIANTS: Record<HyMT2Variant, HyMT2VariantSpec> = {
 		quantLabel: 'Q4_K_M',
 		description: () => m.model_variant_manga_v3_description()
 	},
-	'manga-v4': {
+	'manga-v5': {
 		kind: 'bundled',
-		filename: 'Manga-v4-Q4_K_M.gguf',
-		// Internal tag v4.3; the repo file keeps that name. English-only like v2:
-		// v2's recipe with recogniser-shaped input in the mix, so it degrades more
-		// gracefully on OCR damage and inverts benefactive/passive/causative
-		// direction less often. v4.1/v4.2/v4cpo were never shipped.
-		url: 'https://huggingface.co/fumetodev/Hy-MT2-1.8B-JP-Manga-Finetune-v4-GGUF/resolve/89ce8423001d4157c036fc1638e046e75dc63678/manga-v43-Q4_K_M.gguf',
-		// Byte-identical in SIZE to v2's quant (same architecture, same quant
-		// type, same tensor shapes) — that is expected, not a copy-paste. The
-		// files differ; the filename above keeps them apart on disk.
+		filename: 'Manga-v5-Q4_K_M.gguf',
+		// Internal tag v7.2. REPLACES v4 (internal v4.3) the way v2 replaced v1:
+		// same architecture, quant and size, strictly preferred by the blind judge
+		// (fewer hard errors than v2 on held-out archives) and it no longer reads
+		// short katakana names as sound effects. English-only like v2 and v4;
+		// trained on the re-OCR'd corpus with an image-grounded teacher.
+		url: 'https://huggingface.co/fumetodev/Hy-MT2-1.8B-JP-Manga-Finetune-v5-GGUF/resolve/06835446f0d993f79c2aad22396e2cdd7b39efc7/manga-v5-Q4_K_M.gguf',
+		// Byte-identical in SIZE to v2's and v4's quants (same architecture, same
+		// quant type, same tensor shapes) — expected, not a copy-paste. The files
+		// differ; the filename above keeps them apart on disk.
 		sizeBytes: 1_133_080_512,
-		label: 'Hy-MT2 1.8B manga-tuned v4 (Q4_K_M)',
-		title: () => m.model_variant_manga_v4_title(),
-		modelName: 'Hy-MT2-1.8B-finetuned-v4',
+		label: 'Hy-MT2 1.8B manga-tuned v5 (Q4_K_M)',
+		title: () => m.model_variant_manga_v5_title(),
+		modelName: 'Hy-MT2-1.8B-finetuned-v5',
 		sizeLabel: '~1.13GB',
 		quantLabel: 'Q4_K_M',
-		description: () => m.model_variant_manga_v4_description()
+		description: () => m.model_variant_manga_v5_description()
 	},
 	custom: {
 		kind: 'custom',
@@ -148,7 +149,7 @@ export const HYMT2_VARIANTS: Record<HyMT2Variant, HyMT2VariantSpec> = {
 };
 
 /** The bundled variants, in picker order. `custom` is deliberately excluded. */
-export const BUNDLED_HYMT2_VARIANTS = ['stock', 'manga-v2', 'manga-v3', 'manga-v4'] as const;
+export const BUNDLED_HYMT2_VARIANTS = ['stock', 'manga-v2', 'manga-v3', 'manga-v5'] as const;
 
 export function isBundledVariant(variant: HyMT2Variant): variant is BundledHyMT2Variant {
 	return HYMT2_VARIANTS[variant].kind === 'bundled';
@@ -173,7 +174,8 @@ export function bundledSpec(
  *
  * `manga-v1` is accepted and mapped forward: v2 supersedes it at the same file
  * size and speed, so a profile written before the swap keeps its "upgraded
- * model" choice instead of silently falling back to stock.
+ * model" choice instead of silently falling back to stock. `manga-v4` maps to
+ * `manga-v5` for the same reason (2026-09-03 swap).
  *
  * `custom` degrades to stock unless a custom model is actually registered.
  * Deleting a custom model would otherwise leave the picker with no row checked
@@ -182,7 +184,7 @@ export function bundledSpec(
 export function activeHyMT2Variant(): HyMT2Variant {
 	const stored = get(settings) as { hyMT2Variant?: string; customModel?: unknown };
 	const value = stored.hyMT2Variant;
-	if (value === 'manga-v4') return 'manga-v4';
+	if (value === 'manga-v5' || value === 'manga-v4') return 'manga-v5';
 	if (value === 'manga-v3') return 'manga-v3';
 	if (value === 'manga-v2' || value === 'manga-v1') return 'manga-v2';
 	if (value === 'custom' && stored.customModel) return 'custom';
@@ -198,6 +200,7 @@ export const HYMT2_MODEL_SIZE_BYTES = bundledSpec('stock').sizeBytes;
 // Missing files are ignored.
 // Add new entries here when swapping to a future model, newest-first.
 export const LEGACY_MODEL_FILENAMES = [
+	'Manga-v4-Q4_K_M.gguf', // superseded by manga-v5 at the same size; reclaims 1.13 GB
 	'Manga-v1-Q4_K_M.gguf', // superseded by manga-v2 at the same size; reclaims 1.13 GB
 	'gemma-4-E4B-it-Q4_0.gguf', // immediately previous model; remove only after Hy-MT2 succeeds
 	'translategemma-4b-it.Q5_K_M.gguf', // pre-2026 Q5_K_M quant

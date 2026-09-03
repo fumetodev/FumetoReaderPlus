@@ -298,7 +298,7 @@ export interface FumetoSettings {
 	 * `customModel` is populated; `activeHyMT2Variant()` degrades it to 'stock'
 	 * otherwise, so deleting the file cannot leave the picker unchecked.
 	 */
-	hyMT2Variant: 'stock' | 'manga-v2' | 'manga-v3' | 'manga-v4' | 'custom';
+	hyMT2Variant: 'stock' | 'manga-v2' | 'manga-v3' | 'manga-v5' | 'custom';
 	/**
 	 * The user's imported on-device model, if any. Absent until an import
 	 * succeeds; cleared when it is deleted.
@@ -629,6 +629,11 @@ export function migratePersistedSettings(rawValue: unknown): SettingsMigrationRe
 		if ((parsed.hyMT2Variant as string) === 'manga-v1') {
 			parsed.hyMT2Variant = 'manga-v2';
 			needsSave = true;
+		}
+		// Same mechanism for the 2026-09-03 swap: v5 replaces v4 at identical
+		// size and speed, so a stored 'manga-v4' keeps its upgraded choice.
+		if ((parsed.hyMT2Variant as string) === 'manga-v4') {
+			parsed.hyMT2Variant = 'manga-v5';
 		}
 
 		// Migration: the overlay-mode selector was removed 2026-07-22 and
