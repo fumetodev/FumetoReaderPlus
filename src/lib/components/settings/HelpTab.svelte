@@ -767,7 +767,7 @@
 				<li>{m.help_0_7_0_starts_fresh()}</li>
 				<li>{m.help_app_speaks_your_language()}</li>
 				<li>{m.help_translucent_text_over_art()}</li>
-				<li>{m.help_manga_v4_on_device_model()}</li>
+				<li>{m.help_manga_v5_on_device_model()}</li>
 				<li>{m.help_on_device_speed_from_cores()}</li>
 				<li>{m.help_long_strip_reader_mode()}</li>
 				<li>{m.help_upgraded_translation_model_v3()}</li>

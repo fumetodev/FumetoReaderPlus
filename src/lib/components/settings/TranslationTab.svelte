@@ -332,7 +332,7 @@
 		stock: false,
 		'manga-v2': false,
 		'manga-v3': false,
-		'manga-v4': false,
+		'manga-v5': false,
 		custom: false
 	});
 	let hyMT2Backend = $state('unknown');
@@ -359,7 +359,7 @@
 			stock: false,
 			'manga-v2': false,
 			'manga-v3': false,
-			'manga-v4': false,
+			'manga-v5': false,
 			custom: false
 		};
 		for (const variant of Object.keys(HYMT2_VARIANTS) as HyMT2Variant[]) {
