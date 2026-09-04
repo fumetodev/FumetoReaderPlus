@@ -22,6 +22,7 @@ import { appDataDir, join } from '@tauri-apps/api/path';
 import { exists as fsExists, mkdir as fsMkdir, remove as fsRemove, stat as fsStat } from '@tauri-apps/plugin-fs';
 import { downloadModelFile, cancelDownload as cancelBridgeDownload } from '$lib/translation/llamacpp-bridge.js';
 import { isAndroid } from '$lib/util/platform.js';
+import * as m from '$lib/paraglide/messages.js';
 
 export type OcrModelId = 'ppocr-det' | 'ppocr-rec' | 'rtmdet-layout';
 
@@ -189,7 +190,7 @@ export async function downloadOcrModels(): Promise<void> {
 
 		ocrModelDownloadState.set({ status: 'completed', error: undefined, progress: undefined });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Download failed';
+		const message = error instanceof Error ? error.message : m.ocr_download_failed();
 		// A cancel is the user's own action, not a failure to report back to them.
 		ocrModelDownloadState.set(
 			cancelRequested || /cancel/i.test(message)
