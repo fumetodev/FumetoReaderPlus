@@ -1,6 +1,6 @@
 [package]
 name = "fumeto-reader-plus"
-version = "0.7.2"
+version = "0.7.3"
 description = "FumetoReaderPlus manga and comic reader with AI translation"
 authors = ["FumetoDev"]
 license = "GPL-3.0-only"
