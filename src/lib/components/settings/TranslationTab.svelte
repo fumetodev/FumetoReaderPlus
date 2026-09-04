@@ -1358,7 +1358,7 @@
 			<div class="flex items-center justify-between gap-3">
 				<div class="min-w-0">
 					<p class="text-xs font-semibold text-surface-100">{m.settings_translation_vision_models()}</p>
-					<p class="mt-0.5 text-[11px] text-surface-400">{ocrModelsTotalMB} MB</p>
+					<p class="mt-0.5 text-[11px] text-surface-400">{m.settings_translation_vision_models_size({ size: ocrModelsTotalMB })}</p>
 				</div>
 				<div class="flex shrink-0 flex-col items-stretch justify-center gap-2">
 					{#if $ocrModelDownloadState.status === 'downloading'}
