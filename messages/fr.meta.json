@@ -2219,6 +2219,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:21:35.870Z"
 	},
+	"help_if_v4_was_your_on": {
+		"sourceHash": "579f0ac331d899ea",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-04T16:28:14.599Z"
+	},
 	"help_in_paged_mode_pinch": {
 		"sourceHash": "c7cf3b46b496cd4d",
 		"model": "anthropic/claude-sonnet-5",
@@ -2903,6 +2908,11 @@
 		"sourceHash": "572bbe8fec25ed7a",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:21:35.870Z"
+	},
+	"help_the_on_device_manga_translation": {
+		"sourceHash": "e033494746223dcc",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-04T16:28:14.599Z"
 	},
 	"help_the_openrouter_ai_homepage": {
 		"sourceHash": "c47901f37c7875fc",
