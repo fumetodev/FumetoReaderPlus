@@ -27,14 +27,14 @@
 		stock: m.settings_models_on_device_translation_compact(),
 		'manga-v2': m.settings_models_on_device_translation_manga(),
 		'manga-v3': m.settings_models_on_device_translation_manga_2(),
-		'manga-v4': m.settings_models_on_device_translation_manga_v4()
+		'manga-v5': m.settings_models_on_device_translation_manga_v5()
 	};
 
 	let downloaded = $state<Record<BundledHyMT2Variant, boolean>>({
 		stock: false,
 		'manga-v2': false,
 		'manga-v3': false,
-		'manga-v4': false
+		'manga-v5': false
 	});
 
 	async function refreshDownloaded(): Promise<void> {
@@ -45,7 +45,7 @@
 			stock: false,
 			'manga-v2': false,
 			'manga-v3': false,
-			'manga-v4': false
+			'manga-v5': false
 		};
 		for (const variant of BUNDLED_HYMT2_VARIANTS) {
 			next[variant] = await isModelDownloaded(variant).catch(() => false);
