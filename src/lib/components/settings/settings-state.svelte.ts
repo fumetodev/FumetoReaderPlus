@@ -122,7 +122,9 @@ export class SettingsDraft {
 		// written by the import flow, not edited here, and an open dialog's
 		// draft does not re-hydrate from store writes. The custom row reads it
 		// straight from the settings store so an import updates the UI live.
-		this.hyMT2Variant = (s.hyMT2Variant as string) === 'manga-v1' ? 'manga-v2' : (s.hyMT2Variant ?? 'stock');
+		this.hyMT2Variant = (s.hyMT2Variant as string) === 'manga-v1' ? 'manga-v2'
+			: (s.hyMT2Variant as string) === 'manga-v4' ? 'manga-v5'
+			: (s.hyMT2Variant ?? 'stock');
 		this.onDeviceTemperature = s.onDeviceTemperature ?? ON_DEVICE_TEMPERATURE_DEFAULT;
 		this.backgroundTranslation = s.backgroundTranslation;
 		this.localProviderConcurrency = s.localProviderConcurrency;

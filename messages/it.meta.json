@@ -2334,10 +2334,10 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:03:39.893Z"
 	},
-	"help_manga_v4_on_device_model": {
-		"sourceHash": "10b646e1871bfaa6",
+	"help_manga_v5_on_device_model": {
+		"sourceHash": "69fc92858dfe523a",
 		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-31T18:46:35.342Z"
+		"draftedAt": "2026-09-03T05:50:14.761Z"
 	},
 	"help_mode_1_li": {
 		"sourceHash": "920b241bf3e9313c",
@@ -3789,15 +3789,15 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:59:30.232Z"
 	},
-	"model_variant_manga_v4_description": {
-		"sourceHash": "d9297b0fe412f32e",
+	"model_variant_manga_v5_description": {
+		"sourceHash": "a6cfe93b20ce0b33",
 		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-27T23:59:30.232Z"
+		"draftedAt": "2026-09-03T05:50:11.389Z"
 	},
-	"model_variant_manga_v4_title": {
-		"sourceHash": "f57ce55a8cbc6b88",
+	"model_variant_manga_v5_title": {
+		"sourceHash": "7e8c488cd05d53cb",
 		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-27T23:59:30.232Z"
+		"draftedAt": "2026-09-03T05:50:11.389Z"
 	},
 	"model_variant_stock_description": {
 		"sourceHash": "332a98c42092dafa",
@@ -5499,10 +5499,10 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:56:56.840Z"
 	},
-	"settings_models_on_device_translation_manga_v4": {
-		"sourceHash": "445ae45f40261316",
+	"settings_models_on_device_translation_manga_v5": {
+		"sourceHash": "1036d5b34dada994",
 		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-27T23:56:56.840Z"
+		"draftedAt": "2026-09-03T05:50:07.186Z"
 	},
 	"settings_models_on_device_translation_your": {
 		"sourceHash": "af53244465d87174",
@@ -5610,9 +5610,9 @@
 		"draftedAt": "2026-08-27T23:56:56.840Z"
 	},
 	"settings_search_hymt2_model_keywords": {
-		"sourceHash": "ca6b7303e75e4482",
+		"sourceHash": "10c4567a103e7fb9",
 		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-27T23:56:56.840Z"
+		"draftedAt": "2026-09-03T05:50:07.186Z"
 	},
 	"settings_search_hymt2_model_label": {
 		"sourceHash": "e8238bc35e30f47c",
