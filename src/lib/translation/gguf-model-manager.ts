@@ -121,7 +121,7 @@ export const HYMT2_VARIANTS: Record<HyMT2Variant, HyMT2VariantSpec> = {
 		// (fewer hard errors than v2 on held-out archives) and it no longer reads
 		// short katakana names as sound effects. English-only like v2 and v4;
 		// trained on the re-OCR'd corpus with an image-grounded teacher.
-		url: 'https://huggingface.co/fumetodev/Hy-MT2-1.8B-JP-Manga-Finetune-v5-GGUF/resolve/06835446f0d993f79c2aad22396e2cdd7b39efc7/manga-v5-Q4_K_M.gguf',
+		url: 'https://huggingface.co/fumetodev/Hy-MT2-1.8B-JP-Manga-Finetune-v5-GGUF/resolve/a5f1fccab4022b8bc05abefa46a4f215e23f0a66/manga-v5-Q4_K_M.gguf',
 		// Byte-identical in SIZE to v2's and v4's quants (same architecture, same
 		// quant type, same tensor shapes) — expected, not a copy-paste. The files
 		// differ; the filename above keeps them apart on disk.
