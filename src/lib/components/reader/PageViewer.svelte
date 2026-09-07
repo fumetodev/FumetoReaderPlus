@@ -16,7 +16,8 @@
 	import LongStripViewer from './LongStripViewer.svelte';
 	import ReaderActionRow from './ReaderActionRow.svelte';
 	import ReaderIconButton from './ReaderIconButton.svelte';
-	import { currentPageIndex, pageDimensions, currentVolume, currentPageInfo, isDrawingMode, isOverlayMode, readingDirection, nextPage, prevPage, overlayFontScale, pageRotation, readerSessionId, readerTargetEpoch, readerBoundaryBump, rotateCurrentPage, recordCommittedPage, resetRotationForReaderMode } from '$lib/stores/reader-state.js';
+	import { currentPageIndex, pageDimensions, currentVolume, currentPageInfo, isDrawingMode, isOverlayMode, readingDirection, nextPage, prevPage, firstPage, lastPage, overlayFontScale, pageRotation, readerSessionId, readerTargetEpoch, readerBoundaryBump, rotateCurrentPage, recordCommittedPage, resetRotationForReaderMode } from '$lib/stores/reader-state.js';
+	import { toggleFullScreen } from '$lib/panzoom/util.js';
 	import { clearPageData, loadPageData, currentPageOverlay, currentPageTranslation, setCurrentPageTranslationPayload, readCurrentPageTranslationPayload, compareAndSetCurrentPageTranslationPayload, isPageTranslating } from '$lib/stores/translation-state.js';
 	import { sidebarOpen, editOverlayBoxId, isOverlayEditMode, movingBoxId, resizingBoxId, selectedOverlayBoxId, overlayConfirmHandler, overlayCancelHandler, readerBarsVisible, pageThumbnailScrubberOpen } from '$lib/stores/ui-state.js';
 	import { settings } from '$lib/settings/settings.js';
@@ -910,6 +911,8 @@
 
 
 	let viewportEl: HTMLDivElement | undefined = $state();
+	/** The strip surface, for keyboard paging while long-strip mode is active. */
+	let longStripViewer: ReturnType<typeof LongStripViewer> | undefined = $state();
 	let imageUrl = $state<string | null>(null);
 	let pageWidth = $state(0);
 	let pageHeight = $state(0);
@@ -1710,6 +1713,16 @@
 
 		const rtl = $readingDirection === 'rtl';
 
+		// Reading-order paging (Space/PageDown forward, Shift+Space/PageUp back)
+		// is not mirrored for RTL the way the arrows are: "forward" is a
+		// direction through the book, not across the screen. In long-strip
+		// mode the same keys scroll the strip by most of a viewport.
+		const pageForward = (forward: boolean) => {
+			if (longStripActive) longStripViewer?.scrollByViewport(forward ? 1 : -1);
+			else if (forward) nextPage();
+			else prevPage();
+		};
+
 		switch (e.key) {
 			case 'ArrowLeft':
 				if ($isDrawingMode) break;
@@ -1720,6 +1733,40 @@
 				if ($isDrawingMode) break;
 				rtl ? prevPage() : nextPage();
 				e.preventDefault();
+				break;
+			case ' ':
+				if ($isDrawingMode) break;
+				// A focused control keeps Space as its activation key.
+				if (target.closest('button, a, select, [role="button"]')) break;
+				pageForward(!e.shiftKey);
+				e.preventDefault();
+				break;
+			case 'PageDown':
+				if ($isDrawingMode) break;
+				pageForward(true);
+				e.preventDefault();
+				break;
+			case 'PageUp':
+				if ($isDrawingMode) break;
+				pageForward(false);
+				e.preventDefault();
+				break;
+			case 'Home':
+				if ($isDrawingMode) break;
+				firstPage();
+				e.preventDefault();
+				break;
+			case 'End':
+				if ($isDrawingMode) break;
+				lastPage();
+				e.preventDefault();
+				break;
+			case 'f':
+			case 'F':
+				if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+					void toggleFullScreen();
+					e.preventDefault();
+				}
 				break;
 			case 'Escape':
 				if ($isDrawingMode) {
@@ -2071,6 +2118,9 @@
 		if (!isMobile) {
 			window.addEventListener('keydown', handleKeydown);
 			window.addEventListener('wheel', wheelHandler, { capture: true, passive: false });
+			// The catalog stays mounted behind the reader, so the card that was
+			// clicked would otherwise keep focus and swallow Space as a click.
+			viewportEl?.focus({ preventScroll: true });
 		}
 	});
 
@@ -2131,12 +2181,13 @@
 	});
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions (The page viewport is a mouse/touch gesture surface; reader navigation has separate keyboard controls.) -->
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex (The page viewport is a mouse/touch gesture surface; reader navigation has separate keyboard controls. On desktop it takes programmatic focus so the paging keys work right after a volume is opened by mouse.) -->
 <div
 	bind:this={viewportEl}
-	class="relative w-full overflow-hidden bg-surface-950"
+	class="relative w-full overflow-hidden bg-surface-950 outline-none"
 	style="height: 100%;"
 	role="presentation"
+	tabindex={isMobile ? undefined : -1}
 		aria-label={m.reader_manga_page_viewer()}
 		data-reader-page-viewer
 		data-auto-translation-phase={autoTranslationSchedulerState.phase}
@@ -2148,6 +2199,7 @@
 >
 	{#if longStripActive}
 		<LongStripViewer
+			bind:this={longStripViewer}
 			{pageSource}
 			ontap={() => { if (isMobile) applyReaderTouchDecision('toggle-controls'); }}
 		/>
