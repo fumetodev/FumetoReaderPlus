@@ -16,22 +16,12 @@
  *   node scripts/collect-android-artifact.mjs [--artifact <path>] [--all] [--force]
  */
 
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { BlobReader, ZipReader } from '@zip.js/zip.js';
 import { inspectPpocrCandidateArtifact, sha256File } from './ppocr-candidate-artifact.mjs';
 import { artifactFileName, detectAbi, readTauriProperties } from './release-metadata.mjs';
-
-/** The UI locales this build ships (en + the drafted ones), with each draft's process status, for the ledger. */
-function uiLocalesOf(root) {
-	try {
-		const locales = JSON.parse(fs.readFileSync(path.join(root, 'messages/locales.json'), 'utf8')).locales;
-		return { en: 'source', ...Object.fromEntries(Object.entries(locales).map(([tag, info]) => [tag, info.status ?? 'machine'])) };
-	} catch {
-		return { en: 'source' };
-	}
-}
+import { gitValue, readFixtureClaim, uiLocalesOf } from './release-provenance.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const outputsRoot = path.join(root, 'src-tauri/gen/android/app/build/outputs');
@@ -116,27 +106,6 @@ function readArtifactIdentity(file) {
 	};
 }
 
-function gitValue(arguments_) {
-	try {
-		return execFileSync('git', arguments_, { cwd: root, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-	} catch {
-		return '';
-	}
-}
-
-/**
- * The fixture flag is a build-time env var, and the frontend it controls is
- * embedded inside libapp_lib.so rather than shipped as a loose asset, so it
- * cannot be read back out of the artifact cheaply. Report what the environment
- * said and label it as such — release-android.mjs pins the var to '0' for the
- * builds that matter, and the About line inside the app is the runtime proof.
- */
-function readFixtureClaim() {
-	const value = process.env.VITE_FUMETO_DEBUG_UI_FIXTURES;
-	if (value === undefined) return { fixtures: null, fixturesSource: 'unknown' };
-	return { fixtures: value === '1', fixturesSource: 'build-env' };
-}
-
 async function collect(sourceFile, options) {
 	const resolved = path.resolve(sourceFile);
 	if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
@@ -176,7 +145,7 @@ async function collect(sourceFile, options) {
 	fs.mkdirSync(destinationRoot, { recursive: true });
 	fs.copyFileSync(resolved, destination);
 
-	const commit = gitValue(['rev-parse', 'HEAD']);
+	const commit = gitValue(root, ['rev-parse', 'HEAD']);
 	const manifest = {
 		kind: 'fumeto-android-artifact',
 		schemaVersion: 1,
@@ -192,7 +161,7 @@ async function collect(sourceFile, options) {
 		signingCertificateSha256: identity.signingCertificateSha256,
 		...readFixtureClaim(),
 		commit: commit || null,
-		commitDirty: commit ? gitValue(['status', '--porcelain=v1', '--untracked-files=all']) !== '' : null,
+		commitDirty: commit ? gitValue(root, ['status', '--porcelain=v1', '--untracked-files=all']) !== '' : null,
 		gradleSource: path.relative(root, resolved),
 		uiLocales: uiLocalesOf(root)
 	};
