@@ -19,6 +19,7 @@ import {
 } from '$lib/settings/settings.js';
 import { appWorkCoordinator } from '$lib/work-coordination/work-coordinator.js';
 import { RECOVERED_DOWNLOADS_COLLECTION_ID } from '$lib/stores/catalog-state.js';
+import { distinctKeys } from '$lib/db/unique-keys.js';
 import {
 	beginLoading,
 	errorSnapshot,
@@ -104,7 +105,7 @@ function immediateLocalChild(folderPath: string | undefined, currentSubfolder: s
  * Library-wide facts the navigation query needs but must not depend on:
  * per-collection counts plus which libraries serve from the projected
  * (`catalog_rows`) path. Computed by its own liveQuery so switching folders
- * does not re-run index-state reads, two `uniqueKeys()` walks and 2×L counts
+ * does not re-run index-state reads, two distinct-key walks and 2×L counts
  * that have nothing to do with the location being entered.
  */
 interface CollectionFacts {
@@ -673,8 +674,8 @@ export class CatalogController {
 			states.filter((state) => state.completeness === 'ready').map((state) => state.library_id)
 		);
 		const [projectedKeys, legacyKeys] = await Promise.all([
-			this.database.catalog_rows.orderBy('library_id').uniqueKeys(),
-			this.database.volumes.orderBy('library_id').uniqueKeys(),
+			distinctKeys<string>(this.database.catalog_rows.orderBy('library_id')),
+			distinctKeys<string>(this.database.volumes.orderBy('library_id')),
 		]);
 		const libraryIds = new Set<string>([
 			...states.map((state) => state.library_id),
