@@ -166,7 +166,7 @@ class NativePPOcrDetectorBridge(
     ) {
         runAsync(callbackId, "materialize-wasm-model") { cancellation ->
             // Android builds prune the PP-OCR det/rec models from the WebView
-            // embed (scripts/prune-android-embed.mjs); the WASM fallback loads
+            // embed (scripts/prune-embed.mjs); the WASM fallback loads
             // this APK-asset copy from the app data directory instead, which is
             // inside the Tauri fs scope ($APPDATA/**).
             val assetPath = when (component) {
