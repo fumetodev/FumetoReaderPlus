@@ -56,6 +56,7 @@ export class SettingsDraft {
 	hyMT2Variant = $state<FumetoSettings['hyMT2Variant']>('stock');
 	onDeviceTemperature = $state(ON_DEVICE_TEMPERATURE_DEFAULT);
 	backgroundTranslation = $state(false);
+	desktopUpdateCheck = $state(true);
 	localProviderConcurrency = $state(1);
 	debugLogging = $state(false);
 
@@ -127,6 +128,7 @@ export class SettingsDraft {
 			: (s.hyMT2Variant ?? 'stock');
 		this.onDeviceTemperature = s.onDeviceTemperature ?? ON_DEVICE_TEMPERATURE_DEFAULT;
 		this.backgroundTranslation = s.backgroundTranslation;
+		this.desktopUpdateCheck = s.desktopUpdateCheck ?? true;
 		this.localProviderConcurrency = s.localProviderConcurrency;
 		this.debugLogging = s.debugLogging;
 		this.uiLocale = s.uiLocale ?? 'system';
@@ -179,6 +181,7 @@ export class SettingsDraft {
 			onDeviceSourceLang: this.onDeviceSourceLang,
 			onDeviceTargetLang: this.onDeviceTargetLang,
 			backgroundTranslation: this.backgroundTranslation,
+			desktopUpdateCheck: this.desktopUpdateCheck,
 			localProviderConcurrency: Math.max(1, Math.min(8, this.localProviderConcurrency || 1)),
 			debugLogging: this.debugLogging,
 			uiLocale: this.uiLocale,

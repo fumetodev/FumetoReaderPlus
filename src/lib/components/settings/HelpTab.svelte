@@ -17,6 +17,9 @@
 	import HelpFigureTranslateMenu from './help/HelpFigureTranslateMenu.svelte';
 	import HelpFigureMoreMenu from './help/HelpFigureMoreMenu.svelte';
 	import HelpFigureCatalogCard from './help/HelpFigureCatalogCard.svelte';
+	import Switch from '$lib/components/ui/Switch.svelte';
+	import { settingsDraft as draft, applyDraftNow } from './settings-state.svelte.js';
+	import { cachedUpdateState, checkForDesktopUpdate, type LatestRelease } from '$lib/update/update-check.js';
 
 	// Build provenance for the About footer. The Android bridge is installed
 	// before the WebView loads, and this component only ever mounts client-side,
@@ -24,6 +27,29 @@
 	const buildInfo = getBuildInfo();
 	const buildLine = formatBuildLine(buildInfo);
 	const buildIsNonProduction = isNonProductionBuild(buildInfo);
+
+	// Desktop only: the new-version line, seeded from the cache so a check that
+	// ran at startup shows here without another request. The button asks the
+	// release feed regardless of the daily interval and of the switch below it.
+	type UpdateFooterState =
+		| { status: 'idle' | 'checking' | 'failed' }
+		| { status: 'update' | 'current'; latest: LatestRelease };
+	let updateState = $state<UpdateFooterState>(
+		isMobile ? { status: 'idle' } : (cachedUpdateState(buildInfo.version) ?? { status: 'idle' })
+	);
+
+	async function runManualUpdateCheck(): Promise<void> {
+		updateState = { status: 'checking' };
+		const outcome = await checkForDesktopUpdate({ manual: true });
+		updateState = outcome.status === 'update' || outcome.status === 'current'
+			? { status: outcome.status, latest: outcome.latest }
+			: { status: 'failed' };
+	}
+
+	function toggleAutomaticUpdateCheck(): void {
+		draft.desktopUpdateCheck = !draft.desktopUpdateCheck;
+		void applyDraftNow();
+	}
 
 	// Top-level accordion
 	let expandedSection = $state<string | null>(null);
@@ -946,6 +972,39 @@
 	>
 		{buildLine}
 	</p>
+	{#if !isMobile}
+		<!-- New-version check (desktop): the AppImage has no store to tell it
+		     about a release, so About can ask, and the switch turns the daily
+		     automatic check off for anyone who would rather it never asked. -->
+		<div class="mt-3 flex flex-col items-center gap-2" data-help-update-check>
+			{#if updateState.status === 'update'}
+				{@const latest = updateState.latest}
+				<p class="text-xs text-primary-300">{m.help_about_update_available({ version: latest.version })}</p>
+				<button
+					type="button"
+					onclick={() => void openExternal(latest.assetUrl ?? latest.releaseUrl)}
+					class="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-700"
+				>
+					{m.shell_update_download()}
+				</button>
+			{:else if updateState.status === 'current'}
+				<p class="text-xs text-surface-500">{m.help_about_up_to_date()}</p>
+			{:else if updateState.status === 'failed'}
+				<p class="text-xs text-red-400">{m.help_about_update_check_failed()}</p>
+			{/if}
+			<button
+				type="button"
+				onclick={runManualUpdateCheck}
+				disabled={updateState.status === 'checking'}
+				class="rounded-lg border border-surface-700 px-3 py-1.5 text-xs text-surface-300 transition-colors hover:bg-surface-800 disabled:cursor-not-allowed disabled:opacity-50"
+			>
+				{m.help_about_check_updates()}
+			</button>
+			<div class="w-full max-w-xs text-left">
+				<Switch checked={draft.desktopUpdateCheck} onchange={toggleAutomaticUpdateCheck} label={m.help_about_update_check_automatic()} />
+			</div>
+		</div>
+	{/if}
 	<p class="mt-2 text-xs text-surface-400">
 		<RichMessage message={m.help_developed_by({ developer: APP_DEVELOPER })} links={{ developer: () => void openExternal(APP_GITHUB) }} linkClass="text-primary-400 underline hover:text-primary-300" />
 	</p>
