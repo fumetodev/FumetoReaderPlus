@@ -209,6 +209,11 @@ jobs:
       # linuxdeploy and its plugins are AppImages themselves, and a container
       # has no FUSE.
       APPIMAGE_EXTRACT_AND_RUN: '1'
+      # The runner sets HOME to /github/home inside the container while root's
+      # passwd entry says /root; rustup refuses that mismatch unless told where
+      # to live. Both point under the runner's HOME so the caches line up.
+      CARGO_HOME: /github/home/.cargo
+      RUSTUP_HOME: /github/home/.rustup
     defaults:
       run:
         shell: bash
