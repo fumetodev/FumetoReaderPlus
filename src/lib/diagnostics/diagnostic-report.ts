@@ -23,6 +23,15 @@ export interface DiagnosticDevice {
 	/** Parsed out of the UA when present — the WebView build is the thing that varies. */
 	webViewVersion?: string;
 	androidVersion?: string;
+	/** The WebKit build, which is what varies on the desktop (WebKitGTK). */
+	webKitVersion?: string;
+	/** `Android 14`, `linux x86_64 desktop`; only when the host is known. */
+	platform?: string;
+	/** Bytes, from the desktop shell; absent where the page cannot know. */
+	totalMemoryBytes?: number | null;
+	availableMemoryBytes?: number | null;
+	/** Whether the desktop build runs from an AppImage — the fact, never the path. */
+	appImage?: boolean;
 	language: string;
 	screen: { width: number; height: number; dpr: number };
 	viewport: { width: number; height: number };
@@ -56,6 +65,25 @@ export function parseAndroidVersion(userAgent: string): string | undefined {
 	return /Android\s+([\d.]+)/u.exec(userAgent)?.[1];
 }
 
+/** `AppleWebKit/605.1.15` — on the desktop the WebKitGTK build behind the page. */
+export function parseWebKitVersion(userAgent: string): string | undefined {
+	return /AppleWebKit\/([\d.]+)/u.exec(userAgent)?.[1];
+}
+
+/** One line naming the engine: an Android WebView is a Chrome build, a desktop shell a WebKit one. */
+export function describeWebView(device: Pick<DiagnosticDevice, 'webViewVersion' | 'webKitVersion' | 'platform'>): string {
+	if (device.webViewVersion) return `Chrome/${device.webViewVersion}`;
+	if (device.webKitVersion) {
+		const desktop = device.platform?.endsWith('desktop');
+		return `${desktop ? 'WebKitGTK ' : ''}AppleWebKit/${device.webKitVersion}`;
+	}
+	return 'unknown';
+}
+
+function formatGiB(bytes: number): string {
+	return `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
+}
+
 /** Short, human-typeable, and unique enough to match a report to a conversation. */
 export function makeReportId(random: () => number = Math.random): string {
 	return `r-${Math.floor(random() * 0xffffff).toString(16).padStart(6, '0')}`;
@@ -76,13 +104,22 @@ export function buildDiagnosticReport(input: DiagnosticInput): string {
 		`id:       ${input.reportId}`,
 		`at:       ${input.at}`,
 		`build:    ${formatBuildLine(input.build)}`,
-		`android:  ${device.androidVersion ?? 'unknown'}`,
-		`webview:  ${device.webViewVersion ?? 'unknown'}`,
+		`platform: ${device.platform ?? (device.androidVersion ? `Android ${device.androidVersion}` : 'unknown')}`,
+		`webview:  ${describeWebView(device)}`,
 		`screen:   ${device.screen.width}x${device.screen.height} @${device.screen.dpr}`
 			+ ` · viewport ${device.viewport.width}x${device.viewport.height}`,
 		`locale:   ${device.language}`,
 		`bridges:  ${bridgeSummary(input.bridges)}`
 	];
+
+	if (typeof device.totalMemoryBytes === 'number') {
+		const parts = [`${formatGiB(device.totalMemoryBytes)} total`];
+		if (typeof device.availableMemoryBytes === 'number') parts.push(`${formatGiB(device.availableMemoryBytes)} available`);
+		lines.push(`memory:   ${parts.join(' · ')}`);
+	}
+	if (device.appImage !== undefined) {
+		lines.push(`appimage: ${device.appImage ? 'yes' : 'no'}`);
+	}
 
 	if (input.lastJob) {
 		const job = input.lastJob;
