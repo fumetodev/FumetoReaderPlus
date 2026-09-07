@@ -4,11 +4,12 @@
  * The PP-OCR detector and recogniser and the rtmdet layout model used to ride
  * inside the APK as packaged assets, which cost 124 MB of install for every
  * user — including the ones who only ever read comics. They are fetched on
- * demand instead, into the one directory both sides of the bridge already
- * agree on: Tauri's `appDataDir()` is `/data/user/0/<pkg>/` on Android, so
- * `appDataDir()/models/` is Kotlin's `context.dataDir/models/`. The native
- * engines look there first and fall back to a packaged asset, so a build that
- * still bundles one keeps working.
+ * demand instead, into the one directory every engine already agrees on:
+ * Tauri's `appDataDir()/models/`. On Android that is Kotlin's
+ * `context.dataDir/models/`, where the native engines look first and fall
+ * back to a packaged asset, so a build that still bundles one keeps working.
+ * On desktop the ONNX Runtime WASM sessions read the same directory through
+ * the fs plugin, so the desktop bundle need not carry the models either.
  *
  * Integrity is checked twice on purpose. This module compares the exact byte
  * count, which catches a truncated transfer or a captive-portal error page;
@@ -21,7 +22,7 @@ import { writable } from 'svelte/store';
 import { appDataDir, join } from '@tauri-apps/api/path';
 import { exists as fsExists, mkdir as fsMkdir, remove as fsRemove, stat as fsStat } from '@tauri-apps/plugin-fs';
 import { downloadModelFile, cancelDownload as cancelBridgeDownload } from '$lib/translation/llamacpp-bridge.js';
-import { isAndroid } from '$lib/util/platform.js';
+import { isAndroid, isTauriHost } from '$lib/util/platform.js';
 import * as m from '$lib/paraglide/messages.js';
 
 export type OcrModelId = 'ppocr-det' | 'ppocr-rec' | 'rtmdet-layout';
@@ -41,6 +42,31 @@ export interface OcrModelSpec {
 
 const HF = 'https://huggingface.co';
 
+/**
+ * The layout model is published as two exports that differ only in input
+ * size, both at the same pinned commit. The Android engine runs the 1024
+ * export and checks its sha256 natively. Everywhere else the ONNX Runtime
+ * WASM tier is wired to 960 (see candidates/rtmdet-manga-segmenter.ts): it
+ * agrees with the 1024 export on 96 % of balloons and runs 14 % faster, which
+ * matters on a single-threaded WASM session. That tier resolves the file by
+ * the fixed device name `rtmdet-manga-layout.onnx`, so that is the name it is
+ * saved under; the hosted name carries the input size. The 960 file's LFS
+ * sha256 is 5b3135c6b038926d7291629e4dca6fbeeec68e4710537f2a65b20d695942d60e.
+ */
+const RTMDET_LAYOUT_MODEL: OcrModelSpec = isAndroid
+	? {
+			id: 'rtmdet-layout',
+			filename: 'rtmdet-manga-layout-1024.onnx',
+			url: `${HF}/fumetodev/rtmdet-manga-layout-onnx/resolve/10b9004ebfc773896dec5ceab9df6a8d259caad9/rtmdet-manga-layout-1024.onnx`,
+			sizeBytes: 43_227_772
+		}
+	: {
+			id: 'rtmdet-layout',
+			filename: 'rtmdet-manga-layout.onnx',
+			url: `${HF}/fumetodev/rtmdet-manga-layout-onnx/resolve/10b9004ebfc773896dec5ceab9df6a8d259caad9/rtmdet-manga-layout-960.onnx`,
+			sizeBytes: 43_206_748
+		};
+
 export const OCR_MODELS: readonly OcrModelSpec[] = [
 	{
 		id: 'ppocr-det',
@@ -54,12 +80,7 @@ export const OCR_MODELS: readonly OcrModelSpec[] = [
 		url: `${HF}/fumetodev/PP-OCRv6_small_rec_manga_ONNX/resolve/1ef01f78c59f6f66389c9722fd2d0ab761680ea9/ppocr-rec-v6-small-manga.onnx`,
 		sizeBytes: 21_143_614
 	},
-	{
-		id: 'rtmdet-layout',
-		filename: 'rtmdet-manga-layout-1024.onnx',
-		url: `${HF}/fumetodev/rtmdet-manga-layout-onnx/resolve/10b9004ebfc773896dec5ceab9df6a8d259caad9/rtmdet-manga-layout-1024.onnx`,
-		sizeBytes: 43_227_772
-	}
+	RTMDET_LAYOUT_MODEL
 ] as const;
 
 export const OCR_MODELS_TOTAL_BYTES = OCR_MODELS.reduce((total, spec) => total + spec.sizeBytes, 0);
@@ -80,14 +101,15 @@ let downloadInProgress = false;
 let cancelRequested = false;
 
 /**
- * Only Android manages these files. `scripts/prune-android-embed.mjs` strips
- * the models from the Android web bundle and nothing else does, so a browser
- * (`npm run dev`) and the desktop build still serve them from `static/models`
- * and every readiness question answers "yes" there — asking a desktop user to
- * download files their build already carries would be a bug, not a safeguard.
+ * Every Tauri host manages these files: the Android WebView and the desktop
+ * shell both own an app-data directory the engines read from, and neither
+ * shipped bundle is meant to carry the models. A plain browser (`npm run dev`)
+ * has no such directory and serves them from `static/models` instead, so
+ * every readiness question answers "yes" there — offering a download the page
+ * has nowhere to store would be a bug, not a safeguard.
  */
 function modelsAreManagedHere(): boolean {
-	return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window && isAndroid;
+	return isTauriHost;
 }
 
 /** Absolute path of a model file, downloaded or not. */
