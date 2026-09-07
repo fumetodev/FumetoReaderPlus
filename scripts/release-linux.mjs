@@ -72,6 +72,27 @@ function installVendoredGtkHook() {
 	console.log(`  -> ${destination}`);
 }
 
+/**
+ * linuxdeploy strips every bundled library with the `strip` it carries, and
+ * that binary predates the relocation format newer toolchains emit, so on a
+ * distribution past the release floor it aborts the bundle ("unknown type
+ * section .relr.dyn"). Such a host only ever produces a smoke artifact, so the
+ * strip is skipped there. The floor host, where the release AppImage is
+ * built, keeps stripping. An explicit NO_STRIP in the environment always wins.
+ */
+function stripEnvironment() {
+	if (process.env.NO_STRIP !== undefined) return {};
+	const probe = spawnSync('ldd', ['--version'], { encoding: 'utf8' });
+	const match = /(\d+)\.(\d+)/.exec(probe.stdout?.split('\n')[0] ?? '');
+	if (!match) return {};
+	const [major, minor] = [Number(match[1]), Number(match[2])];
+	if (major > 2 || (major === 2 && minor > 35)) {
+		console.log(`  host glibc ${major}.${minor} is above the 2.35 floor: NO_STRIP=true (smoke artifact only)`);
+		return { NO_STRIP: 'true' };
+	}
+	return {};
+}
+
 try {
 	step('Preflight', process.execPath, [path.join(root, 'scripts/release-preflight.mjs')]);
 	installVendoredGtkHook();
@@ -79,7 +100,7 @@ try {
 		'Build',
 		'npm',
 		['exec', '--', 'tauri', 'build', '--bundles', 'appimage', ...forwarded],
-		releaseEnvironment
+		{ ...releaseEnvironment, ...stripEnvironment() }
 	);
 	// The web half of the audit: the embedded build/ must carry no development-only marker.
 	step('Audit', process.execPath, [path.join(root, 'scripts/audit-overlay-release.mjs')]);
