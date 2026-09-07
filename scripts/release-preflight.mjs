@@ -11,6 +11,9 @@
  * Deliberately not wired into `build:android` — the daily debug loop stays
  * fast and unchecked.
  *
+ * Shared by both release ladders (`release:android` and `release:linux`): the
+ * version and the tag are the same on both, so every check applies to both.
+ *
  *   node scripts/release-preflight.mjs
  */
 
@@ -117,11 +120,14 @@ if (properties && versionCode !== null && properties.versionCode !== versionCode
 }
 
 // The version/ledger/worktree checks above say the build is TRACEABLE. Nothing
-// said it WORKS: preflight ran no tests and no typecheck, and release:android
-// runs none either, so the whole ladder could ship a red suite. These two are
-// seconds against a ~20-minute build, and they are the difference between
+// said it WORKS: preflight ran no tests and no typecheck, and the release
+// scripts run none either, so the whole ladder could ship a red suite — or a
+// locale whose draft is behind its English source, which the draft check
+// refuses unless the staleness is acknowledged. These are seconds against a
+// ~20-minute build, and they are the difference between an artifact that is
+// merely traceable and one that is known to be good.
 
-for (const [label, script] of [['typecheck', 'check']]) {
+for (const [label, script] of [['i18n drafts', 'i18n:draft:check'], ['typecheck', 'check']]) {
 	try {
 		execFileSync('npm', ['run', script], { cwd: root, stdio: 'pipe' });
 		pass(`${label} green`);

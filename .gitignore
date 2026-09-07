@@ -21,6 +21,9 @@ target/
 .externalNativeBuild/
 *.apk
 *.aab
+# Bundled AppImages, and the tree `--appimage-extract` unpacks one into
+*.AppImage
+squashfs-root/
 
 # Downloaded Hy-MT2 inference weights. Keep llama.cpp vocabulary fixtures.
 **/Hy-MT2*.gguf
