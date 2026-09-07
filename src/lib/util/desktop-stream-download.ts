@@ -3,24 +3,24 @@
  *
  * The on-device translation models are 460 MB to 1.1 GB. Collecting a whole
  * response in JavaScript before one write is an allocation of that size in
- * the web process, which is exactly what gets a WebKit page killed. Chunks
- * go from the HTTP plugin's response stream straight to a file handle from
- * the fs plugin, so the page's memory stays flat for the length of the
- * transfer.
+ * the web process, which is exactly what gets a WebKit page killed — and the
+ * HTTP plugin's response stream turned out to hold several copies of the
+ * body in that process as well. The transfer therefore runs in the shell
+ * (`download_to_file`): chunks go from the socket straight to the file, only
+ * progress reports cross into the page, and its memory stays flat for the
+ * length of the transfer.
  *
  * The bytes land in `<dest>.part` and are renamed into place only after the
  * last one, so an interrupted download is never mistaken for a finished
  * model by the size check on the next launch. Failure and cancellation both
  * close the handle and remove the partial file. A cancellation always
  * rejects with an AbortError whose message says "abort": callers key on that
- * word to report "idle" rather than a failure, and the HTTP plugin's own
- * mid-stream error text ("Request cancelled") does not contain it.
+ * word to report "idle" rather than a failure.
  *
  * Android never reaches this module; its downloads run in Kotlin.
  */
 
-import { fetch as httpFetch } from '@tauri-apps/plugin-http';
-import { open, remove, rename, type FileHandle } from '@tauri-apps/plugin-fs';
+import { Channel, invoke } from '@tauri-apps/api/core';
 
 export interface DesktopDownloadOptions {
 	onProgress?: (downloadedBytes: number, totalBytes: number) => void;
@@ -55,6 +55,14 @@ export function contentLengthOf(header: string | null): number {
 	return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
+let lastDownloadId = 0;
+
+/** Distinct per transfer so a cancel reaches the right one. */
+function nextDownloadId(): number {
+	lastDownloadId += 1;
+	return lastDownloadId;
+}
+
 function abortError(): Error {
 	return new DOMException('Download aborted', 'AbortError');
 }
@@ -63,18 +71,6 @@ function throwIfAborted(signal?: AbortSignal): void {
 	if (signal?.aborted) throw abortError();
 }
 
-/**
- * Writes every byte of `chunk`. The fs plugin's `write` is one `write(2)`
- * call underneath and may return short, so loop on the remainder.
- */
-async function writeFully(file: FileHandle, chunk: Uint8Array): Promise<void> {
-	let offset = 0;
-	while (offset < chunk.byteLength) {
-		const written = await file.write(offset === 0 ? chunk : chunk.subarray(offset));
-		if (written <= 0) throw new Error('Download failed: the file write made no progress');
-		offset += written;
-	}
-}
 
 /**
  * Downloads `url` to `destPath`, streaming to disk. Resolves with the byte
@@ -88,48 +84,25 @@ export async function downloadToFileDesktop(
 	options: DesktopDownloadOptions = {}
 ): Promise<DesktopDownloadResult> {
 	const { onProgress, signal } = options;
-	const partialPath = partialPathFor(destPath);
+	throwIfAborted(signal);
 	const started = performance.now();
-	let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
-	let file: FileHandle | null = null;
-	let partialWritten = false;
-
+	const id = nextDownloadId();
+	const progress = new Channel<{ downloadedBytes: number; totalBytes: number }>();
+	progress.onmessage = (report) => {
+		onProgress?.(report.downloadedBytes, report.totalBytes);
+	};
+	const cancel = () => {
+		void invoke('download_cancel', { id }).catch(() => undefined);
+	};
+	signal?.addEventListener('abort', cancel, { once: true });
 	try {
-		throwIfAborted(signal);
-		// Model hosts answer with a redirect to a CDN; follow a few.
-		const response = await httpFetch(url, { method: 'GET', signal, maxRedirections: 5 });
-		if (!response.ok) throw new Error(`Download failed: HTTP ${response.status}`);
-		const totalBytes = contentLengthOf(response.headers.get('content-length'));
-		if (!response.body) throw new Error('Download failed: the response carried no body');
-		reader = response.body.getReader();
-
-		file = await open(partialPath, { write: true, create: true, truncate: true });
-		partialWritten = true;
-		let downloaded = 0;
-		let reported = 0;
-		for (;;) {
-			throwIfAborted(signal);
-			const { done, value } = await reader.read();
-			if (done) break;
-			if (!value?.byteLength) continue;
-			await writeFully(file, value);
-			downloaded += value.byteLength;
-			if (crossedProgressStep(reported, downloaded)) {
-				reported = downloaded;
-				onProgress?.(downloaded, totalBytes);
-			}
-		}
-		await file.close();
-		file = null;
-		throwIfAborted(signal);
-		await rename(partialPath, destPath);
-		partialWritten = false;
-		onProgress?.(downloaded, totalBytes || downloaded);
-		return { bytes: downloaded, ms: performance.now() - started };
+		const bytes = await invoke<number>('download_to_file', { id, url, destPath, onProgress: progress });
+		return { bytes, ms: performance.now() - started };
 	} catch (error) {
-		if (reader) await reader.cancel().catch(() => undefined);
-		if (file) await file.close().catch(() => undefined);
-		if (partialWritten) await remove(partialPath).catch(() => undefined);
-		throw signal?.aborted ? abortError() : error;
+		const message = error instanceof Error ? error.message : String(error);
+		if (signal?.aborted || /abort/i.test(message)) throw abortError();
+		throw new Error(message);
+	} finally {
+		signal?.removeEventListener('abort', cancel);
 	}
 }

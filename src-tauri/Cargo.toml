@@ -37,3 +37,8 @@ tauri-plugin-opener = "2"
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri = { version = "2.10.0", features = ["devtools"] }
 tauri-plugin-fs = { version = "2.5", features = ["watch"] }
+# Model downloads stream to disk from the shell (src/download.rs). The
+# versions match what tauri-plugin-http already resolves, so nothing is built twice.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
+tokio = { version = "1", features = ["fs", "io-util"] }
+futures-util = "0.3"
