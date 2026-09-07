@@ -24,6 +24,7 @@ import {
 	type NativePPOcrConfig,
 	type NativePPOcrDetection
 } from './native-ppocr-detector.js';
+import { ortWasmBaseUrl } from './ort-wasm-paths.js';
 import { groupRawTextComponents } from './ppocr-grouping.js';
 import { loadPPOcrWasmModelBuffer } from './ppocr-wasm-model-loader.js';
 
@@ -306,7 +307,7 @@ export async function initDetectorWasm(): Promise<void> {
 
 	loading = (async () => {
 		ort = await import('onnxruntime-web/wasm');
-		ort.env.wasm.wasmPaths = `${window.location.origin}/wasm/`;
+		ort.env.wasm.wasmPaths = ortWasmBaseUrl();
 		ort.env.wasm.proxy = false;
 		ort.env.wasm.numThreads = 1;
 

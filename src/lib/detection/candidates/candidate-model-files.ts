@@ -16,6 +16,7 @@
 
 import { exists as fsExists, readFile } from '@tauri-apps/plugin-fs';
 import { appDataDir, join } from '@tauri-apps/api/path';
+import { ortWasmBaseUrl } from '../ort-wasm-paths.js';
 
 export type CandidateModelId =
 	| 'manga-ocr'
@@ -122,7 +123,7 @@ const sessions = new Map<string, OrtSession>();
 async function ort(): Promise<OrtModule> {
 	if (ortModule) return ortModule;
 	ortModule = await import('onnxruntime-web/wasm');
-	ortModule.env.wasm.wasmPaths = `${window.location.origin}/wasm/`;
+	ortModule.env.wasm.wasmPaths = ortWasmBaseUrl();
 	ortModule.env.wasm.proxy = false;
 	// Threads need SharedArrayBuffer (cross-origin isolation); ort falls back
 	// to 1 silently when unavailable, so this is a free upside on devices
