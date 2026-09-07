@@ -38,6 +38,8 @@
 	} from '$lib/reader/overlay-planning-status.js';
 	import type { OverlayItemV2, OverlayManualConstraintsV2, PageTranslationEntry, TranslationRegion, Translation } from '$lib/types/index.js';
 	import { overlayItemBaseRect, pageOverlayRepository, validateOverlayManualConstraints } from '$lib/overlay-layout/index.js';
+	import { areOcrModelsReady } from '$lib/detection/ocr-model-manager.js';
+	import { openOcrModelPrompt } from '$lib/detection/ocr-model-gate.js';
 
 	interface Props {
 	}
@@ -294,6 +296,12 @@
 	}
 
 	async function handleTranslateRegion(region: TranslationRegion) {
+		if (!(await areOcrModelsReady())) {
+			openOcrModelPrompt(() => {
+				void handleTranslateRegion(region);
+			});
+			return;
+		}
 		const vol = $currentVolume;
 		if (!vol) return;
 		const targetEpoch = readerTargetEpoch;
@@ -396,6 +404,15 @@
 	async function handleTranslateFullPage() {
 		const vol = $currentVolume;
 		if (!vol) return;
+		// Same gate as the mobile bar: the vision models download on first use
+		// here too, and a page run that starts without them fails deep inside
+		// the detector instead of asking. The sheet resumes this action.
+		if (!(await areOcrModelsReady())) {
+			openOcrModelPrompt(() => {
+				void handleTranslateFullPage();
+			});
+			return;
+		}
 		translationError = null;
 		if ($settings.overlayEnabled && !$isOverlayMode) isOverlayMode.set(true);
 		const target = {
