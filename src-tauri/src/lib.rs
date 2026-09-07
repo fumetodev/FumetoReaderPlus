@@ -1,6 +1,8 @@
 #[cfg(not(mobile))]
 pub mod desktop;
 #[cfg(not(mobile))]
+mod download;
+#[cfg(not(mobile))]
 mod llama;
 #[cfg(not(mobile))]
 mod manga_guidance;
@@ -27,6 +29,8 @@ pub fn run() {
         llama::llama_cancel,
         desktop::desktop_system_info,
         desktop::perf_log,
+        download::download_to_file,
+        download::download_cancel,
     ]);
 
     builder
