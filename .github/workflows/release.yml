@@ -326,7 +326,9 @@ jobs:
           # One pass over the disassembly, counted by awk: a `grep -q` that
           # stops early would kill objdump with SIGPIPE and, under pipefail,
           # turn a found zmm into a "not found".
-          for binary in squashfs-root/usr/bin/*; do
+          # Only the app binary carries llama.cpp; the other entries in usr/bin
+          # (xdg-open and friends) are scripts that objdump cannot read.
+          for binary in squashfs-root/usr/bin/fumeto-reader-plus; do
             COUNTS=$(objdump -d "$binary" | awk '/zmm/ { z++ } /ymm/ { y++ } END { print z + 0, y + 0 }')
             ZMM=${COUNTS% *}
             YMM=${COUNTS#* }
