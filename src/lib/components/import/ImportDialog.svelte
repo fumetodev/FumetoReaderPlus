@@ -3,14 +3,17 @@
 	import { renderUserMessage } from '$lib/i18n/user-messages.js';
 	import { motionDuration, exitDuration } from '$lib/util/motion.js';
 	import { fade, scale } from 'svelte/transition';
-	import { importDialogOpen, isImporting, importProgressMessage } from '$lib/stores/ui-state.js';
-	import { openReader } from '$lib/stores/reader-state.js';
+	import { onMount } from 'svelte';
+	import { importDialogOpen, isImporting, importProgressMessage, settingsDialogOpen } from '$lib/stores/ui-state.js';
+	import { appView, openReader } from '$lib/stores/reader-state.js';
 	import { importArchive, importToLibrary } from '$lib/import/import-service.js';
 	import { resolveDisplayName } from '$lib/util/file-utils.js';
 	import { db } from '$lib/db/index.js';
 	import { open } from '@tauri-apps/plugin-dialog';
+	import { readDir, stat } from '@tauri-apps/plugin-fs';
+	import { join } from '@tauri-apps/api/path';
 	import { filePathToFile } from '$lib/import/tauri-file-bridge.js';
-	import { isMobile } from '$lib/util/platform.js';
+	import { isDesktopTauri, isMobile } from '$lib/util/platform.js';
 	import { settings, isLocalLibrary } from '$lib/settings/settings.js';
 	import { recallLocalTarget, rememberLocalTarget, selectedLibraryId } from '$lib/stores/catalog-state.js';
 	import { get } from 'svelte/store';
@@ -319,6 +322,96 @@
 		dragOver = false;
 		handleDroppedFiles(e.dataTransfer?.files ?? null);
 	}
+
+	function extensionOf(name: string): string {
+		return name.split('.').pop()?.toLowerCase() || '';
+	}
+
+	/**
+	 * Files dropped from the desktop arrive as paths. A dropped folder
+	 * contributes its supported files one level deep — a whole library tree
+	 * belongs in Settings → Libraries, not in a single import — while a
+	 * dropped file is passed through as-is so an unsupported one is named in
+	 * the same message the file dialog would produce.
+	 */
+	async function expandDroppedPaths(paths: string[]): Promise<string[]> {
+		const files: string[] = [];
+		for (const path of paths) {
+			try {
+				const info = await stat(path);
+				if (!info.isDirectory) {
+					files.push(path);
+					continue;
+				}
+				for (const entry of await readDir(path)) {
+					if (!entry.isFile || !supportedExtensions.includes(extensionOf(entry.name))) continue;
+					files.push(await join(path, entry.name));
+				}
+			} catch (err) {
+				console.error('Dropped item could not be read:', err);
+			}
+		}
+		return files;
+	}
+
+	/** Desktop shell: paths from the window's native drop go through the file-dialog pipeline. */
+	async function handleDroppedPaths(paths: string[]): Promise<void> {
+		const filePaths = await expandDroppedPaths(paths);
+		const files: File[] = [];
+		for (const path of filePaths) {
+			try {
+				files.push(await filePathToFile(path));
+			} catch (err) {
+				console.error(`Failed to read file: ${path}`, err);
+			}
+		}
+		if (files.length === 0) {
+			errorMessage = m.import_no_files();
+			return;
+		}
+		await handleFilesArray(files);
+	}
+
+	// The desktop shell delivers OS drag-and-drop through its own event stream
+	// (HTML5 drop events carry no files there); the handlers above stay for a
+	// plain browser. One listener for the app's lifetime: a drop on the
+	// library opens this dialog with the files, a drop while it is open feeds
+	// the drop zone. Android never registers it.
+	onMount(() => {
+		if (!isDesktopTauri) return;
+		let unlisten: (() => void) | null = null;
+		let disposed = false;
+		void import('@tauri-apps/api/webview')
+			.then(({ getCurrentWebview }) => getCurrentWebview().onDragDropEvent((event) => {
+				const payload = event.payload;
+				if (payload.type === 'leave') {
+					dragOver = false;
+					return;
+				}
+				const acceptsDrop = !get(isImporting) && importResult === null && !get(settingsDialogOpen)
+					&& (get(importDialogOpen) || get(appView) === 'catalog');
+				if (!acceptsDrop) return;
+				if (payload.type !== 'drop') {
+					if (get(importDialogOpen)) dragOver = true;
+					return;
+				}
+				dragOver = false;
+				if (payload.paths.length === 0) return;
+				importDialogOpen.set(true);
+				void handleDroppedPaths(payload.paths);
+			}))
+			.then((stop) => {
+				if (disposed) stop();
+				else unlisten = stop;
+			})
+			.catch((err) => {
+				console.warn('Drag-and-drop events are unavailable:', err);
+			});
+		return () => {
+			disposed = true;
+			unlisten?.();
+		};
+	});
 
 	function handleDragOver(e: DragEvent) {
 		e.preventDefault();
