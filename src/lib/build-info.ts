@@ -20,7 +20,10 @@
  * so the two can never disagree about what the build is.
  */
 
-export type BuildType = 'debug' | 'release' | 'unknown';
+import { isTauriHost } from './util/platform.js';
+
+/** `desktop` is the Tauri desktop shell, which has no debug/release split the page can see. */
+export type BuildType = 'debug' | 'release' | 'desktop' | 'unknown';
 
 export interface BuildInfo {
 	/** Semver from package.json, e.g. `0.2.1`. */
@@ -29,7 +32,7 @@ export interface BuildInfo {
 	commit: string;
 	/** Committer date (ISO 8601), or `unknown`. */
 	commitDate: string;
-	/** Gradle build type, resolved at runtime. `unknown` off-Android. */
+	/** Gradle build type, resolved at runtime; `desktop` in the desktop shell, `unknown` in a browser. */
 	buildType: BuildType;
 	/** Whether the debug UI fixture host was compiled into this bundle. */
 	fixtures: boolean;
@@ -55,6 +58,8 @@ function resolveBuildType(): BuildType {
 		// The bridge is a JS interface into Kotlin; a throw here must not take
 		// the About screen down with it.
 	}
+	// No Android bridge but a Tauri host: the desktop shell.
+	if (isTauriHost) return 'desktop';
 	return 'unknown';
 }
 
@@ -80,8 +85,10 @@ export function formatBuildLine(info: BuildInfo): string {
 /**
  * True when the build is anything other than a clean consumer release. The
  * About line is tinted on this so a debug or fixture-carrying build announces
- * itself instead of looking identical to a shippable one.
+ * itself instead of looking identical to a shippable one. The desktop shell
+ * is a consumer build in its own right.
  */
 export function isNonProductionBuild(info: BuildInfo): boolean {
-	return info.buildType !== 'release' || info.fixtures || info.pseudolocale || info.commit.endsWith('-dirty');
+	const consumerBuild = info.buildType === 'release' || info.buildType === 'desktop';
+	return !consumerBuild || info.fixtures || info.pseudolocale || info.commit.endsWith('-dirty');
 }

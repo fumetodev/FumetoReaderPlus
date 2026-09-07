@@ -80,6 +80,7 @@
 	import { readerPageJump } from '$lib/reader/reader-page-jump.js';
 	import { activeRegionDrawSession, finishRegionDrawSession, highlightedDrawRegionIds, syncRegionDrawTarget } from '$lib/regions/region-draw-session.js';
 	import { announceDesktopUpdateIfAvailable } from '$lib/update/update-check.js';
+	import { primeDesktopSystemInfo } from '$lib/device/desktop-system-info.js';
 
 	let uninstallOcrBenchmarkHost: (() => void) | null = null;
 	let uninstallModelCandidateEvalApi: (() => void) | null = null;
@@ -465,6 +466,9 @@
 			// Note: --sat and --sab are injected by MainActivity.kt via WindowInsetsCompat
 		}
 
+		// The desktop shell answers memory and CPU facts the page cannot read
+		// itself; ask once, before anything that gives RAM advice can run.
+		if (!isMobile) await primeDesktopSystemInfo();
 		// Load API key from encrypted storage (+ migrate from plaintext if needed)
 		await initSecureSettings();
 		// Do not delay the first frame while the one-time provider download cache
