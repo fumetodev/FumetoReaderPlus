@@ -624,7 +624,7 @@ export function checkEngines({ ciPin, packages }) {
 }
 
 function ciNodePin() {
-	const workflow = readFileSync(path.join(ROOT, '.github/workflows/build.yml'), 'utf8');
+	const workflow = readFileSync(path.join(ROOT, '.github/workflows/release.yml'), 'utf8');
 	const match = /node-version:\s*['"]?(\d+)/.exec(workflow);
 	return match ? Number(match[1]) : Number(process.versions.node.split('.')[0]);
 }
