@@ -1699,10 +1699,35 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:21:35.870Z"
 	},
+	"help_about_check_updates": {
+		"sourceHash": "31eaced1f83b9e7a",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:24:12.710Z"
+	},
 	"help_about_released": {
 		"sourceHash": "10ed696cfe57aa67",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:21:35.870Z"
+	},
+	"help_about_up_to_date": {
+		"sourceHash": "cc6dea6f21516422",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:24:12.710Z"
+	},
+	"help_about_update_available": {
+		"sourceHash": "461b2e0e6488883c",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:24:12.710Z"
+	},
+	"help_about_update_check_automatic": {
+		"sourceHash": "978612089448b22a",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:24:12.710Z"
+	},
+	"help_about_update_check_failed": {
+		"sourceHash": "f5192d6f9d9c3640",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:24:12.710Z"
 	},
 	"help_about_version": {
 		"sourceHash": "1a911130bbaf4eb5",
@@ -2059,6 +2084,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:21:35.870Z"
 	},
+	"help_fig_returns_desktop": {
+		"sourceHash": "2e0152e9284289e4",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:24:12.710Z"
+	},
 	"help_fig_returns_to_wherever_you": {
 		"sourceHash": "763c7a5da6f04b2e",
 		"model": "anthropic/claude-sonnet-5",
@@ -2243,6 +2273,11 @@
 		"sourceHash": "f11c5c9405e0ca91",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:21:35.870Z"
+	},
+	"help_intro_desktop": {
+		"sourceHash": "310818cc08e1433a",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:24:12.710Z"
 	},
 	"help_key_like_password": {
 		"sourceHash": "9705e2018b50724e",
@@ -3769,6 +3804,16 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:17:42.717Z"
 	},
+	"libraries_watch_active": {
+		"sourceHash": "c99cc559c88c6b88",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:24:01.899Z"
+	},
+	"libraries_watch_failed": {
+		"sourceHash": "90e03f97d9ff3dd6",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:24:01.899Z"
+	},
 	"model_variant_custom_description": {
 		"sourceHash": "edc79b34e108cb3e",
 		"model": "anthropic/claude-sonnet-5",
@@ -3914,6 +3959,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:19:27.252Z"
 	},
+	"onboarding_import_desktop": {
+		"sourceHash": "2e0407eec2e75473",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:24:07.260Z"
+	},
 	"onboarding_intro_aria": {
 		"sourceHash": "b021111489f840d5",
 		"model": "anthropic/claude-sonnet-5",
@@ -3949,6 +3999,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:19:27.252Z"
 	},
+	"onboarding_reader_desktop": {
+		"sourceHash": "dedf8cf57e1ad607",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:24:07.260Z"
+	},
 	"onboarding_reader_showing_a_manga": {
 		"sourceHash": "b656384867a77947",
 		"model": "anthropic/claude-sonnet-5",
@@ -3983,6 +4038,11 @@
 		"sourceHash": "914b805393d44e21",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:19:27.252Z"
+	},
+	"onboarding_translate_desktop": {
+		"sourceHash": "c4d39d5517d9c7e0",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:24:07.260Z"
 	},
 	"onboarding_welcome_to_app_name": {
 		"sourceHash": "d9d9ca395a89c5c9",
@@ -6364,6 +6424,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:17:27.919Z"
 	},
+	"settings_translation_cpu_stq_desktop": {
+		"sourceHash": "5a614ff260f99b47",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:23:59.251Z"
+	},
 	"settings_translation_currently_run": {
 		"sourceHash": "8b234288f2f4b32a",
 		"model": "anthropic/claude-sonnet-5",
@@ -6973,6 +7038,16 @@
 		"sourceHash": "7c49afffd7f71e9f",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:52:33.712Z"
+	},
+	"shell_update_available": {
+		"sourceHash": "357a19c7401261f0",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:23:57.117Z"
+	},
+	"shell_update_download": {
+		"sourceHash": "41533734a5a7b89d",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T17:23:57.117Z"
 	},
 	"sidebar_add_all_to_overlay": {
 		"sourceHash": "b01c97ac16fed394",
