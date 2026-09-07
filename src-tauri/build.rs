@@ -28,7 +28,42 @@ fn main() {
                 // fallback is equally fast for our short-prompt translation
                 // workload. Mirror this flag in llama-bridge/CMakeLists.txt for
                 // the Android gradle path, which is a separate build system.
-                .define("GGML_OPENMP", "OFF");
+                .define("GGML_OPENMP", "OFF")
+                // Only the library is linked. Under the cmake crate llama.cpp
+                // sees itself as a standalone checkout and would otherwise
+                // configure and compile `common/` and `tools/` (llama-bench,
+                // the HTTP client and its OpenSSL probe) that nothing here uses.
+                .define("LLAMA_BUILD_COMMON", "OFF")
+                .define("LLAMA_BUILD_TOOLS", "OFF")
+                .define("LLAMA_OPENSSL", "OFF");
+
+            // Portable x86-64 instruction-set baseline. ggml defaults to
+            // `-march=native`, so a release built on a machine with AVX-512
+            // emits AVX-512 code and crashes with SIGILL on the far more
+            // common AVX2-only CPU. Every flag is pinned explicitly because
+            // ggml's own per-ISA defaults flip to OFF whenever the build is a
+            // cross build or SOURCE_DATE_EPOCH is set, which would silently
+            // produce a plain-SSE2 (several times slower) library instead.
+            // The list is mirrored by `desktop::cpu_missing_features`, which
+            // refuses to load a model on a CPU that lacks any of these.
+            let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+            if target_arch == "x86_64" {
+                cmake_cfg
+                    .define("GGML_NATIVE", "OFF")
+                    .define("GGML_SSE42", "ON")
+                    .define("GGML_AVX", "ON")
+                    .define("GGML_AVX2", "ON")
+                    .define("GGML_FMA", "ON")
+                    .define("GGML_F16C", "ON")
+                    .define("GGML_BMI2", "ON")
+                    .define("GGML_AVX_VNNI", "OFF")
+                    .define("GGML_AVX512", "OFF")
+                    .define("GGML_AVX512_VBMI", "OFF")
+                    .define("GGML_AVX512_VNNI", "OFF")
+                    .define("GGML_AVX512_BF16", "OFF")
+                    // The tinyBLAS matmul kernels for the baseline above.
+                    .define("GGML_LLAMAFILE", "ON");
+            }
 
             // Enable Metal GPU acceleration on macOS
             if cfg!(target_os = "macos") {
