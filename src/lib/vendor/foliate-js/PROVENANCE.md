@@ -13,7 +13,24 @@ Fixed-layout/comic EPUBs deliberately do NOT use foliate: they route through
 the native comic import pipeline (spine-ordered page extraction) so OCR
 translation works on them.
 
-## Upstream files (unmodified except one prepended line)
+## Local patch: sections as `srcdoc` where blob frames are opaque
+
+`paginator.js` and `epub.js` carry one functional change on top of upstream,
+plus the new file `blob-source-registry.js` (not upstream). On WebKitGTK inside
+the Linux desktop build's custom URL scheme, an iframe loaded from a `blob:`
+URL is a cross-origin frame — `contentDocument` is null — and the page's
+content security policy blocks fetching the URL back, so upstream's renderer
+cannot lay a section out. The loader now records the text behind each section
+URL in the registry, and the paginator probes once whether blob frames expose
+their document; where they do not, it inlines the section as `srcdoc` with a
+`<base>` pointing at the blob URL and waits for the second load event (the
+first belongs to the initial about:blank document). Engines where blob frames
+work keep upstream's `src` path byte-for-byte. When updating from upstream,
+re-apply: the registry import and three call sites in `epub.js` (creation,
+unload, destroy) and the `srcdocFor` helper plus the `load()` branch in
+`paginator.js`.
+
+## Upstream files (unmodified except one prepended line and the patch above)
 
 Each carries a single prepended `// @ts-nocheck` banner — the ONLY
 modification. It is required because the app's adapter imports pull these
