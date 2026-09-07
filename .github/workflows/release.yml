@@ -45,6 +45,9 @@ jobs:
     outputs:
       # Empty when this run only builds release candidates.
       tag: ${{ steps.resolve.outputs.tag }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Resolve the release tag
         id: resolve
@@ -101,6 +104,9 @@ jobs:
     needs: release-draft
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -203,6 +209,9 @@ jobs:
       # linuxdeploy and its plugins are AppImages themselves, and a container
       # has no FUSE.
       APPIMAGE_EXTRACT_AND_RUN: '1'
+    defaults:
+      run:
+        shell: bash
     steps:
       # Before the checkout: the checkout action needs git, and the caches
       # need zstd. xdg-utils and desktop-file-utils are hard requirements of
