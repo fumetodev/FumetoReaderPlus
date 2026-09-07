@@ -20,6 +20,7 @@ import type { FumetoDB } from './schema.js';
 import type { PageDimensions, VolumeFiles, VolumePageRecord } from '$lib/types/index.js';
 import { appWorkCoordinator } from '$lib/work-coordination/work-coordinator.js';
 import { naturalCompare } from '$lib/util/natural-sort.js';
+import { distinctKeys } from './unique-keys.js';
 
 export interface VolumePagesMigrationOptions {
 	signal?: AbortSignal;
@@ -144,7 +145,7 @@ export async function sweepOrphanVolumePages(
 	database: FumetoDB = db,
 	isImportInFlight: (volumeUuid: string) => boolean = isVolumeImportInFlight
 ): Promise<number> {
-	const pageOwners = (await database.volume_pages.orderBy('volume_uuid').uniqueKeys()) as string[];
+	const pageOwners = await distinctKeys<string>(database.volume_pages.orderBy('volume_uuid'));
 	let swept = 0;
 	for (const owner of pageOwners) {
 		const baseUuid = owner.split('!')[0];
