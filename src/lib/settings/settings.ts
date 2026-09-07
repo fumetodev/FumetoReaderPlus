@@ -327,6 +327,10 @@ export interface FumetoSettings {
 	/** Enable Android foreground service for background batch translation */
 	backgroundTranslation: boolean;
 
+	// Desktop
+	/** Ask the release feed for a newer version once a day (Linux desktop only; the manual check ignores this). */
+	desktopUpdateCheck: boolean;
+
 	// Local provider concurrency
 	/** Max concurrent requests to local LLM providers (default 1). LM Studio supports 4+. */
 	localProviderConcurrency: number;
@@ -429,6 +433,8 @@ export const DEFAULT_SETTINGS: FumetoSettings = {
 	onDeviceTargetLang: 'en',
 
 	backgroundTranslation: false,
+
+	desktopUpdateCheck: true,
 
 	localProviderConcurrency: 1,
 
