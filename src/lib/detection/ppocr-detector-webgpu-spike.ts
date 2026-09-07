@@ -8,6 +8,7 @@
  */
 
 import type { DetectedTextRegion } from '$lib/types/index.js';
+import { ortWasmBaseUrl } from './ort-wasm-paths.js';
 import {
 	detectTextRegionsWithRawWasm,
 	extractBoxesFromProbMap,
@@ -17,7 +18,6 @@ import {
 	PPOCR_DETECTOR_TARGET_SIZE
 } from './ppocr-detector.js';
 
-const WASM_ASSET_PATH = '/wasm/';
 /** Version fingerprint verified against every bundled static/wasm runtime asset. */
 export const PPOCR_WEBGPU_BUNDLED_RUNTIME_VERSION = '1.27.0';
 
@@ -300,8 +300,7 @@ export async function initPPOCRDetectorWebGPU(): Promise<PPOCRWebGPUSessionMetri
 			} finally {
 				runtimeImportMs = now() - runtimeImportStarted;
 			}
-			const origin = typeof window !== 'undefined' ? window.location.origin : '';
-			runtime.env.wasm.wasmPaths = `${origin}${WASM_ASSET_PATH}`;
+			runtime.env.wasm.wasmPaths = ortWasmBaseUrl();
 			runtime.env.wasm.proxy = false;
 			runtime.env.wasm.numThreads = 1;
 			const runtimeVersion = runtime.env.versions.web;
