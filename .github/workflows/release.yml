@@ -1,0 +1,343 @@
+name: Release
+
+# One workflow for every release artefact. A `v*` tag push opens ONE draft
+# release from the tag's annotation, and the two build jobs upload into it in
+# parallel. Manual dispatch either re-uploads into an existing release
+# (`release_tag` set — the tag must already have one) or, with the input left
+# empty, builds release-candidate artefacts that are attached to the workflow
+# run only: no tag, no draft, no versionCode spent.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing release tag to upload into (leave empty to build release-candidate artefacts only)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+# Two runs for one tag must not interleave their uploads; the second waits
+# rather than cancelling a build that may already be attaching assets.
+concurrency:
+  group: release-${{ github.event_name == 'push' && github.ref_name || inputs.release_tag || github.run_id }}
+  cancel-in-progress: false
+
+env:
+  # A release artefact must never carry the debug UI fixture host or the layout
+  # gate's pseudolocale. Pinned rather than merely unset so nothing inherited
+  # can leak in; scripts/audit-overlay-release.mjs proves it on the web build.
+  VITE_FUMETO_DEBUG_UI_FIXTURES: '0'
+  VITE_FUMETO_PSEUDOLOCALE: '0'
+
+jobs:
+  release-draft:
+    name: Draft release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      # Empty when this run only builds release candidates.
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - name: Resolve the release tag
+        id: resolve
+        env:
+          INPUT_TAG: ${{ inputs.release_tag }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            TAG="$GITHUB_REF_NAME"
+          else
+            TAG="$INPUT_TAG"
+          fi
+          if [ -z "$TAG" ]; then
+            echo "::notice::No release tag: building release-candidate artefacts for this run only."
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.resolve.outputs.tag != ''
+
+      - name: Create the draft release once
+        if: steps.resolve.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "A release for $TAG exists; the build jobs upload into it."
+            exit 0
+          fi
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "::error::No release exists for $TAG. Push the tag (which drafts one) or create the release first."
+            exit 1
+          fi
+          # The checkout stores the pushed commit under the tag's name, which
+          # drops an annotated tag's message. Re-fetch the tag object itself so
+          # the annotation can become the release notes.
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          git tag -l --format='%(contents:body)' "$TAG" > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            git tag -l --format='%(contents)' "$TAG" > notes.md
+          fi
+          VERSION="${TAG#v}"
+          VERSION="${VERSION%%-vc*}"
+          gh release create "$TAG" --draft --verify-tag \
+            --title "FumetoReaderPlus $VERSION" \
+            --notes-file notes.md \
+            --repo "$GITHUB_REPOSITORY"
+
+  apk:
+    name: Android APK
+    needs: release-draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 24: .npmrc sets engine-strict=true, and the dependency tree's
+      # `engines.node` ranges admit 22/24/26 but reject 20, 23 and 25, so a
+      # single unsatisfied range fails `npm ci` outright — which is what broke
+      # the v0.5.0 and v0.5.1 tag builds on Node 20:
+      #   @asamuzakjp/css-color  ^22.13.0 || >=24.0.0
+      #   jsdom                  ^22.22.2 || ^24.15.0 || >=26.0.0
+      # jsdom's range excludes 23 and 25 entirely, so this must not float to
+      # `latest` without rechecking. scripts/i18n-gate.mjs reads this pin.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # JDK 21 exactly — newer JDKs are not supported by this Gradle.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+      - name: Install NDK
+        run: sdkmanager "ndk;29.0.13846066"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            src-tauri/gen/android/.cxx
+          key: android-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/llama-bridge/llama.cpp-version.txt') }}
+
+      - run: npm ci
+
+      # Distribution keystore (NOT the Play upload key) from repo secrets.
+      - name: Write signing config
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          mkdir -p src-tauri/gen/android/keystore
+          echo "$KEYSTORE_BASE64" | base64 -d > src-tauri/gen/android/keystore/github-distribution.jks
+          cat > src-tauri/gen/android/app/key.properties <<EOF
+          storeFile=../keystore/github-distribution.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      # Direct build — release:android is the local ladder (preflight demands a
+      # clean worktree and the versionCode ledger); CI only needs the artifact.
+      - name: Build APK
+        env:
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/29.0.13846066
+        run: npx tauri android build --apk --target aarch64
+
+      - name: Rename artifact
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          # Gradle writes to the universal path even for a single-ABI build.
+          cp src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk \
+             "fumeto-${VERSION}-arm64.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: fumeto-*.apk
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload to the release
+        if: needs.release-draft.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-draft.outputs.tag }}
+        run: gh release upload "$TAG" fumeto-*.apk --clobber --repo "$GITHUB_REPOSITORY"
+
+  appimage:
+    name: Linux AppImage
+    needs: release-draft
+    runs-on: ubuntu-latest
+    # Bundled inside Ubuntu 22.04 so the AppImage links against glibc 2.35 and
+    # that release's WebKitGTK — the oldest floor the Linux build promises. The
+    # container, not the runner image, is what fixes the floor.
+    container: ubuntu:22.04
+    timeout-minutes: 60
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      # linuxdeploy and its plugins are AppImages themselves, and a container
+      # has no FUSE.
+      APPIMAGE_EXTRACT_AND_RUN: '1'
+    steps:
+      # Before the checkout: the checkout action needs git, and the caches
+      # need zstd. xdg-utils and desktop-file-utils are hard requirements of
+      # the bundler, libglib2.0-bin supplies glib-compile-schemas for the GTK
+      # hook, and gh comes from GitHub's own apt repository.
+      - name: Install build dependencies
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y ca-certificates curl gnupg git build-essential cmake pkg-config file patchelf \
+            xdg-utils desktop-file-utils zstd \
+            libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev librsvg2-common libglib2.0-bin
+          install -d -m 755 /etc/apt/keyrings
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+            -o /etc/apt/keyrings/githubcli-archive-keyring.gpg
+          chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+            > /etc/apt/sources.list.d/github-cli.list
+          apt-get update
+          apt-get install -y gh
+
+      - uses: actions/checkout@v4
+
+      # The container runs as root while the workspace belongs to the runner
+      # user. Without this git refuses to read the checkout, and the commit
+      # stamp Vite bakes into About would read "unknown".
+      - name: Trust the checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # Same Node pin as the APK job, for the same engines reason.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # A cache hit still rebuilds the vendored llama.cpp: a fresh checkout's
+      # mtimes make CMake reconfigure it. Accepted; the crates are the win.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: appimage-jammy-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/llama-bridge/llama.cpp-version.txt') }}
+
+      - run: npm ci
+
+      # The bundler downloads linuxdeploy's GTK hook from its upstream branch
+      # head only when the cache lacks one. Seeding the cache with the vendored
+      # copy (its display-backend line patched) pins the build to it.
+      - name: Pin the GTK bundler hook
+        run: |
+          if [ -f src-tauri/linuxdeploy/linuxdeploy-plugin-gtk.sh ]; then
+            mkdir -p ~/.cache/tauri
+            cp src-tauri/linuxdeploy/linuxdeploy-plugin-gtk.sh ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
+            chmod +x ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
+          else
+            echo "::warning::src-tauri/linuxdeploy/linuxdeploy-plugin-gtk.sh is absent; the bundler will download the upstream hook."
+          fi
+
+      - name: Build AppImage
+        run: npx tauri build --bundles appimage --ci
+
+      # The web half of the release audit, on the build/ that was embedded.
+      - name: Audit the embedded web build
+        run: node scripts/audit-overlay-release.mjs
+
+      - name: Name the artefact
+        id: artefact
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./package.json').version")
+          cp "src-tauri/target/release/bundle/appimage/FumetoReaderPlus_${VERSION}_amd64.AppImage" \
+             "fumeto-${VERSION}-x86_64.AppImage"
+          sha256sum "fumeto-${VERSION}-x86_64.AppImage" > "fumeto-${VERSION}-x86_64.AppImage.sha256"
+          cat "fumeto-${VERSION}-x86_64.AppImage.sha256"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      # What the artefact promises, checked on the artefact itself: nothing in
+      # it needs a glibc newer than 2.35, the statically linked llama.cpp holds
+      # no AVX-512 (zmm) code but does hold AVX2 (ymm), the bundled GTK hook is
+      # the vendored one, and the bundler did not fetch its own copy.
+      - name: Check the compatibility floor
+        env:
+          VERSION: ${{ steps.artefact.outputs.version }}
+        run: |
+          set -euo pipefail
+          chmod +x "fumeto-${VERSION}-x86_64.AppImage"
+          "./fumeto-${VERSION}-x86_64.AppImage" --appimage-extract > /dev/null
+          # objdump fails on anything that is not a dynamic ELF object, and a
+          # scan is allowed to skip those; only an empty result is an error.
+          find squashfs-root -type f \( -name '*.so' -o -name '*.so.*' -o -path 'squashfs-root/usr/bin/*' -o -path 'squashfs-root/usr/libexec/*' \) -print0 \
+            | xargs -0 -n 1 objdump -T 2> /dev/null \
+            | grep -oE 'GLIBC_[0-9]+\.[0-9]+' | sort -V | uniq > glibc-versions.txt || true
+          MAX_GLIBC=$(tail -n 1 glibc-versions.txt)
+          [ -n "$MAX_GLIBC" ] || { echo "::error::No GLIBC version symbols found; the scan is not looking at the binaries."; exit 1; }
+          echo "glibc floor: $MAX_GLIBC"
+          HIGHEST=$(printf '%s\n' "$MAX_GLIBC" GLIBC_2.35 | sort -V | tail -n 1)
+          [ "$HIGHEST" = GLIBC_2.35 ] || { echo "::error::$MAX_GLIBC exceeds the GLIBC_2.35 floor; the build did not happen on the floor."; exit 1; }
+          # One pass over the disassembly, counted by awk: a `grep -q` that
+          # stops early would kill objdump with SIGPIPE and, under pipefail,
+          # turn a found zmm into a "not found".
+          for binary in squashfs-root/usr/bin/*; do
+            COUNTS=$(objdump -d "$binary" | awk '/zmm/ { z++ } /ymm/ { y++ } END { print z + 0, y + 0 }')
+            ZMM=${COUNTS% *}
+            YMM=${COUNTS#* }
+            if [ "$ZMM" -ne 0 ]; then
+              echo "::error::$binary contains AVX-512 (zmm) code; GGML_NATIVE leaked the build host's ISA."; exit 1
+            fi
+            if [ "$YMM" -eq 0 ]; then
+              echo "::error::$binary contains no AVX2 (ymm) code; the x86-64 baseline flags did not apply."; exit 1
+            fi
+            echo "$binary: zmm 0, ymm $YMM"
+          done
+          ls -la ~/.cache/tauri
+          if [ -f src-tauri/linuxdeploy/linuxdeploy-plugin-gtk.sh ]; then
+            # A fixed-string match for the literal shell line; no expansion wanted.
+            # shellcheck disable=SC2016
+            grep -qF 'GDK_BACKEND="${GDK_BACKEND:-x11}"' squashfs-root/apprun-hooks/*.sh \
+              || { echo "::error::The bundled GTK hook lacks the patched GDK_BACKEND line."; exit 1; }
+            cmp src-tauri/linuxdeploy/linuxdeploy-plugin-gtk.sh ~/.cache/tauri/linuxdeploy-plugin-gtk.sh \
+              || { echo "::error::The bundler replaced the vendored GTK hook in its cache."; exit 1; }
+            echo "GTK hook: vendored copy bundled"
+          else
+            echo "::warning::No vendored GTK hook to check against."
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: |
+            fumeto-*.AppImage
+            fumeto-*.AppImage.sha256
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload to the release
+        if: needs.release-draft.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-draft.outputs.tag }}
+        run: gh release upload "$TAG" fumeto-*.AppImage fumeto-*.AppImage.sha256 --clobber --repo "$GITHUB_REPOSITORY"
