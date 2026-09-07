@@ -208,6 +208,26 @@ pub fn nvidia_driver_present() -> bool {
     false
 }
 
+/// Whether the kernel exposes a DRM render node. WebKitGTK's DMA-BUF renderer
+/// allocates its buffers through GBM on such a node; a virtual machine with a
+/// plain VGA device (no `/dev/dri`) has none, and the renderer then paints a
+/// blank window, which is exactly what the workaround avoids.
+#[cfg(target_os = "linux")]
+pub fn drm_render_node_present() -> bool {
+    std::fs::read_dir("/dev/dri")
+        .map(|entries| {
+            entries
+                .flatten()
+                .any(|entry| entry.file_name().to_string_lossy().starts_with("renderD"))
+        })
+        .unwrap_or(false)
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn drm_render_node_present() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DmabufDecision {
     /// The variable was already in the environment and was left exactly as
@@ -221,9 +241,10 @@ enum DmabufDecision {
 
 /// The whole policy, kept free of I/O so it can be tested: a value the user
 /// set always wins; otherwise `FUMETO_NVIDIA_WORKAROUND` forces it on or off,
-/// and the default applies it exactly when the proprietary NVIDIA module is
-/// loaded, where WebKitGTK's DMA-BUF renderer is known to paint nothing.
-fn decide_dmabuf_workaround(mode: Option<&str>, env_present: bool, nvidia: bool) -> DmabufDecision {
+/// and the default applies it exactly when the DMA-BUF renderer is known to
+/// paint nothing — the proprietary NVIDIA module is loaded, or there is no
+/// DRM render node for it to allocate from (`known_bad`).
+fn decide_dmabuf_workaround(mode: Option<&str>, env_present: bool, known_bad: bool) -> DmabufDecision {
     if env_present {
         return DmabufDecision::LeftUntouched;
     }
@@ -231,7 +252,7 @@ fn decide_dmabuf_workaround(mode: Option<&str>, env_present: bool, nvidia: bool)
     match mode.as_deref() {
         Some("on") => DmabufDecision::Applied,
         Some("off") => DmabufDecision::Skipped,
-        _ if nvidia => DmabufDecision::Applied,
+        _ if known_bad => DmabufDecision::Applied,
         _ => DmabufDecision::Skipped,
     }
 }
@@ -241,6 +262,7 @@ struct StartupRecord {
     dmabuf_env_value: Option<String>,
     workaround_mode: Option<String>,
     nvidia_detected: bool,
+    render_node_present: bool,
     decision: DmabufDecision,
 }
 
@@ -258,6 +280,7 @@ impl StartupRecord {
             dmabuf_env_value,
             workaround_mode: std::env::var(NVIDIA_WORKAROUND_VAR).ok(),
             nvidia_detected: nvidia_driver_present(),
+            render_node_present: drm_render_node_present(),
             decision,
         }
     }
@@ -281,10 +304,11 @@ pub fn apply_webkit_dmabuf_workaround() {
     let dmabuf_env_value = dmabuf_env_value();
     let workaround_mode = std::env::var(NVIDIA_WORKAROUND_VAR).ok();
     let nvidia_detected = nvidia_driver_present();
+    let render_node_present = drm_render_node_present();
     let decision = decide_dmabuf_workaround(
         workaround_mode.as_deref(),
         dmabuf_env_value.is_some(),
-        nvidia_detected,
+        nvidia_detected || !render_node_present,
     );
     if decision == DmabufDecision::Applied {
         std::env::set_var(WEBKIT_DMABUF_VAR, "1");
@@ -293,6 +317,7 @@ pub fn apply_webkit_dmabuf_workaround() {
         dmabuf_env_value,
         workaround_mode,
         nvidia_detected,
+        render_node_present,
         decision,
     });
 }
@@ -307,10 +332,10 @@ fn env_or_unset(name: &str) -> String {
 /// output says what the shell did and why.
 pub fn log_startup_decisions() {
     let record = startup_record();
-    let nvidia = if record.nvidia_detected {
-        "nvidia detected"
-    } else {
-        "nvidia not detected"
+    let nvidia = match (record.nvidia_detected, record.render_node_present) {
+        (true, _) => "nvidia detected",
+        (false, false) => "no DRM render node",
+        (false, true) => "nvidia not detected",
     };
     let mode = record.workaround_mode.as_deref().unwrap_or("auto");
     match record.decision {
