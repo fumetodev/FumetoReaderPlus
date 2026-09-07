@@ -4,11 +4,13 @@
 	import { APP_NAME } from '$lib/version.js';
 	import { motionDuration } from '$lib/util/motion.js';
 	import { openExternal } from '$lib/util/external-links.js';
+	import { isMobile } from '$lib/util/platform.js';
 
 	// First-run tour: five swipeable pages. Figures reuse the licensed Help
 	// screenshots (Black Jack pages, publisher free-secondary-use terms — the
 	// title/author credit is visible inside each frame), so nothing here can
-	// ever show a real user's library.
+	// ever show a real user's library. Three pages read differently on a
+	// desktop, where the mouse and keyboard replace taps and long-presses.
 	interface TourPage {
 		key: string;
 		title: string;
@@ -31,21 +33,21 @@
 			title: m.onboarding_your_library_your_files(),
 			figure: '/help/library-grid-view.png',
 			figureAlt: m.onboarding_library_in_grid_view(),
-			body: m.onboarding_import_cbz_files_with()
+			body: isMobile ? m.onboarding_import_cbz_files_with() : m.onboarding_import_desktop()
 		},
 		{
 			key: 'reader',
 			title: m.onboarding_read_the_way_manga(),
 			figure: '/help/reader-single-page.png',
 			figureAlt: m.onboarding_reader_showing_a_manga(),
-			body: m.onboarding_manga_turns_right_to()
+			body: isMobile ? m.onboarding_manga_turns_right_to() : m.onboarding_reader_desktop()
 		},
 		{
 			key: 'translate',
 			title: m.onboarding_translate_as_you_read(),
 			figure: '/help/translation-page-result.png',
 			figureAlt: m.onboarding_a_fully_translated_page(),
-			body: m.onboarding_tap_translate_and_the()
+			body: isMobile ? m.onboarding_tap_translate_and_the() : m.onboarding_translate_desktop()
 		},
 		{
 			key: 'setup',

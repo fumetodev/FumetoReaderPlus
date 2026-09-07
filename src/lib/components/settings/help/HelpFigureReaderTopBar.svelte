@@ -2,12 +2,14 @@
 	import * as m from '$lib/paraglide/messages.js';
 	/** Interactive Help replica of the reader's top bar. */
 	import HelpInteractiveFigure, { type HelpFigurePart } from './HelpInteractiveFigure.svelte';
+	import { isMobile } from '$lib/util/platform.js';
 
 	const parts: HelpFigurePart[] = [
 		{
 			id: 'back',
 			label: m.common_back(),
-			description: m.help_fig_returns_to_wherever_you()
+			// The same control; only the hardware that also triggers it differs.
+			description: isMobile ? m.help_fig_returns_to_wherever_you() : m.help_fig_returns_desktop()
 		},
 		{
 			id: 'title',

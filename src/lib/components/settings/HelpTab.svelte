@@ -10,7 +10,7 @@
 	import { openExternal } from '$lib/util/external-links.js';
 	import { get } from 'svelte/store';
 	import { helpInitialSection, settingsDialogOpen } from '$lib/stores/ui-state.js';
-	import { isMobile } from '$lib/util/platform.js';
+	import { isAndroid, isMobile } from '$lib/util/platform.js';
 	import { onboardingTourOpen } from '$lib/onboarding/onboarding.js';
 	import HelpFigureReaderTopBar from './help/HelpFigureReaderTopBar.svelte';
 	import HelpFigureReaderBottomBar from './help/HelpFigureReaderBottomBar.svelte';
@@ -164,7 +164,7 @@
 	{#if expandedSection === 'overview'}
 		<div class="px-4 pb-4 pt-2 text-xs leading-relaxed text-surface-300" transition:slide={{ duration: motionDuration(200) }}>
 			<p>
-				{m.help_intro({ app: APP_NAME })}
+				{isMobile ? m.help_intro({ app: APP_NAME }) : m.help_intro_desktop({ app: APP_NAME })}
 			</p>
 			<p class="mt-2 font-medium text-surface-200">{m.help_read_comics_from()}</p>
 				<ul class="mt-1 list-disc space-y-1 pl-4">
@@ -661,10 +661,13 @@
 						</p>
 						<img src="/help/translation-batch-progress.png" alt={m.help_batch_translation_progress_indicator()} class="mx-auto my-3 w-full max-w-[300px] rounded-lg border border-surface-700" />
 
-						<p class="mt-2 text-surface-300">{m.help_background_translation_android()}</p>
-						<p class="mt-1">
-							{m.help_enable_keep_translating_in()}
-						</p>
+						{#if isAndroid}
+							<!-- The keep-alive service is an Android feature; a desktop window simply keeps running. -->
+							<p class="mt-2 text-surface-300">{m.help_background_translation_android()}</p>
+							<p class="mt-1">
+								{m.help_enable_keep_translating_in()}
+							</p>
+						{/if}
 
 						<p class="mt-2 text-surface-300">{m.help_export_translated_cbz()}</p>
 						<p class="mt-1">
@@ -943,9 +946,12 @@
 			<p class="mt-3 font-medium text-surface-200">{m.help_permissions_used()}</p>
 			<ul class="mt-1 list-disc space-y-1 pl-4">
 					<li><RichMessage message={m.help_perm_internet_li()} emClass="text-surface-200" /></li>
-				<li><RichMessage message={m.help_perm_foreground_li()} emClass="text-surface-200" /></li>
-				<li><RichMessage message={m.help_perm_wake_lock_li()} emClass="text-surface-200" /></li>
-				<li><RichMessage message={m.help_perm_notifications_li()} emClass="text-surface-200" /></li>
+				{#if isAndroid}
+					<!-- The remaining permissions belong to the Android manifest; the desktop asks for none of them. -->
+					<li><RichMessage message={m.help_perm_foreground_li()} emClass="text-surface-200" /></li>
+					<li><RichMessage message={m.help_perm_wake_lock_li()} emClass="text-surface-200" /></li>
+					<li><RichMessage message={m.help_perm_notifications_li()} emClass="text-surface-200" /></li>
+				{/if}
 			</ul>
 
 			<p class="mt-3 font-medium text-surface-200">{m.help_third_party_services()}</p>
