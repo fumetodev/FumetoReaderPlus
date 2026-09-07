@@ -43,23 +43,27 @@ export, and both translation paths, including fully on-device translation.
 - **FUSE.** Like every AppImage it mounts itself with FUSE 2. If it refuses to start, install
   your distribution's `libfuse2` (Debian/Ubuntu) or `fuse-libs` (Fedora), or run it with
   `--appimage-extract-and-run`.
-- **First use.** The text-detection, recognition and layout models (about 126 MB) download from
+- **First use.** The text-detection, recognition and layout models (about 121 MB) download from
   Hugging Face the first time you translate, and the on-device translation model when you pick
-  one — exactly as on Android. Everything the app stores lives in
-  `~/.local/share/com.fumeto.reader/`; deleting that folder and the AppImage is a complete
-  uninstall.
+  one — exactly as on Android. On an x86-64 machine pick one of the *manga* fine-tunes (v5 is
+  the current one): the small 1.25-bit stock model has fast kernels only on ARM and runs many
+  times slower here. Everything the app stores lives in `~/.local/share/com.fumeto.reader/`;
+  deleting that folder and the AppImage is a complete uninstall.
+- **Libraries and imports.** Add a folder you already own under Settings → Libraries; it is read
+  in place and can be watched for new files. Files chosen in the import dialog or dropped onto the
+  window are copied into the app's own "Local Comics" library, as on Android.
 - **Keyboard and mouse.** Arrow keys, Space and Page Up/Down turn pages, Home/End jump to the
   first and last page, `f` or F11 toggles fullscreen, Escape leaves the reader. Scroll to pan,
   Ctrl+scroll to zoom. Import through the file dialog or by dropping files or a folder onto the
   window.
 - **Display.** The app runs as an X11 client (through XWayland on Wayland desktops). On machines
-  with the NVIDIA driver it disables WebKitGTK's DMA-BUF renderer at startup, which works around
-  a known blank-window bug; set `FUMETO_NVIDIA_WORKAROUND=off` to skip that, or set
+  with the NVIDIA driver, and on machines without a DRM render node such as most virtual machines,
+  it disables WebKitGTK's DMA-BUF renderer at startup, which works around a known blank-window
+  bug; set `FUMETO_NVIDIA_WORKAROUND=off` to skip that, or set
   `WEBKIT_DISABLE_DMABUF_RENDERER=1` yourself on another GPU if the window stays blank
   (`WEBKIT_DISABLE_COMPOSITING_MODE=1` is the last resort).
-- **Video.** Video files play through GStreamer. If a video stays black, install your
-  distribution's `gstreamer1.0-plugins-good`, `gstreamer1.0-plugins-bad` and
-  `gstreamer1.0-libav` packages.
+- **Video.** Video pages play through a GStreamer bundled inside the AppImage; nothing from the
+  host is needed.
 - **Updates.** Once a day the app asks GitHub whether a newer release exists and shows a notice
   with a download link; the check can be switched off in Settings.
 - **Reporting a problem.** Start the app from a terminal with `FUMETO_LOG=info` in front of the
@@ -67,8 +71,9 @@ export, and both translation paths, including fully on-device translation.
 
 The Linux build is a **beta**: it is built and smoke-tested in CI and verified on Ubuntu 22.04 and
 on a rolling distribution with an NVIDIA GPU, but not yet across the range of desktops and drivers
-Android devices get. Untested so far: Intel GPUs, KDE and XFCE, drag-and-drop from sandboxed
-(Flatpak) file managers, SELinux-enforcing systems and NixOS. Bug reports are welcome.
+Android devices get. On-device text detection and layout take a few seconds per page on a 2013-era
+CPU. Untested so far: Intel GPUs, KDE and XFCE, fullscreen under GNOME on X11, drag-and-drop from
+sandboxed (Flatpak) file managers, SELinux-enforcing systems and NixOS. Bug reports are welcome.
 
 ## What it does
 
