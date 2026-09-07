@@ -288,6 +288,12 @@ struct LlamaState {
     /// Temperature the current chain was built with, so a request only pays for
     /// a rebuild when the setting actually moved.
     sampler_temperature: f32,
+    /// Whether the loaded checkpoint was trained with a per-target guidance
+    /// block for every language (`guidance_scope == "all-targets"` at load).
+    /// Only that checkpoint saw the non-English blocks; every other model
+    /// keeps the English-only behaviour it shipped with. Lives on the state
+    /// so an unload resets it with everything else.
+    multilingual: bool,
 }
 
 fn clamp_temperature(requested: f32) -> f32 {
@@ -326,8 +332,13 @@ static BACKEND_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 const N_CTX: u32 = 512;
 const N_PREDICT: i32 = 128;
-const N_THREADS: i32 = 6;
 const REPEAT_LAST_N: i32 = 64;
+
+/// One worker per physical core, clamped to the window that measured well;
+/// the old fixed six when the topology cannot be read. Decided once.
+fn n_threads() -> i32 {
+    crate::desktop::llama_thread_count()
+}
 /// Kept byte-for-byte in step with `jni_bridge.cpp`'s DEFAULT_TEMPERATURE.
 /// Measured 2026-08-21; see the fine-tune eval changelog (item 5).
 const DEFAULT_TEMPERATURE: f32 = 0.15;
@@ -441,6 +452,7 @@ fn build_manga_translation_instruction(
     target_code: &str,
     source_name: &str,
     target_name: &str,
+    multilingual: bool,
 ) -> String {
     // The compact reference keeps common isolated manga bubbles from losing a
     // concrete place noun or inventing the wrong implied subject.
@@ -449,14 +461,37 @@ fn build_manga_translation_instruction(
     // block, so a Simplified Chinese target wants the Chinese terminology
     // rather than English's. English's block is byte-identical to the literal
     // this replaced.
-    let guidance = crate::manga_guidance::manga_guidance_for(source_code, target_code);
+    //
+    // Scoped to the loaded checkpoint, exactly as the Android bridge does it:
+    // only a model loaded with the all-targets scope saw the non-English
+    // blocks, so every other model gets the English block for English and
+    // nothing for any other target. Without this gate a German target on
+    // desktop received a prompt Android never sends.
+    let guidance = if multilingual || target_code == "en" {
+        crate::manga_guidance::manga_guidance_for(source_code, target_code)
+    } else {
+        ""
+    };
 
     format!(
         "{guidance}Translate the following text from {source_name} into {target_name} as natural, concise manga dialogue. Preserve specific nouns, exact meaning, speaker intent, tone, punctuation, and sound effects. Output only the translated result without any explanation:\n\n{text}"
     )
 }
 
-fn ensure_backend_init() {
+/// Refuses, before any llama.cpp code runs, on a CPU that lacks the
+/// instruction sets the library was compiled for (`build.rs`). ggml's own
+/// dispatch does not check them either — the first matmul would be an
+/// illegal-instruction crash of the whole app — so the check has to sit in
+/// front of `llama_backend_init`, and its message has to reach the user.
+fn ensure_backend_init() -> Result<(), String> {
+    let missing = crate::desktop::cpu_missing_features();
+    if !missing.is_empty() {
+        return Err(format!(
+            "cpu-unsupported: this CPU lacks {} (on-device translation needs {})",
+            missing.join(", "),
+            crate::desktop::cpu_baseline_label(),
+        ));
+    }
     if !BACKEND_INITIALIZED.swap(true, Ordering::SeqCst) {
         unsafe {
             llama_backend_init();
@@ -479,15 +514,53 @@ fn ensure_backend_init() {
             std::mem::size_of::<llama_context_params>(),
         );
     }
+    Ok(())
+}
+
+/// One Info line at start-up with the two facts a performance or crash report
+/// needs: the worker count chosen for this machine and whether its CPU meets
+/// the compiled baseline.
+pub fn log_backend_facts() {
+    let missing = crate::desktop::cpu_missing_features();
+    if missing.is_empty() {
+        log::info!(
+            "[llama] threads={} cpu={} baseline=ok",
+            n_threads(),
+            crate::desktop::cpu_baseline_label(),
+        );
+    } else {
+        log::info!(
+            "[llama] threads={} cpu={} baseline=missing:{}",
+            n_threads(),
+            crate::desktop::cpu_baseline_label(),
+            missing.join(","),
+        );
+    }
+}
+
+/// At Debug, the exact text handed to the tokenizer, one `[prompt]` line per
+/// line of it, so a desktop prompt can be diffed against the Android log.
+fn log_prompt_lines(prompt: &[u8]) {
+    if !log::log_enabled!(log::Level::Debug) {
+        return;
+    }
+    for line in String::from_utf8_lossy(prompt).lines() {
+        log::debug!("[prompt] {line}");
+    }
 }
 
 // ============================================================
 // Tauri commands
 // ============================================================
 
+/// `guidance_scope` is `"all-targets"` for the one checkpoint trained with a
+/// per-target guidance block for every language; anything else (including
+/// absent) keeps the English-only prompt every other model shipped with.
 #[tauri::command(async)]
-pub fn llama_load(model_path: String) -> Result<bool, String> {
-    ensure_backend_init();
+pub fn llama_load(model_path: String, guidance_scope: Option<String>) -> Result<bool, String> {
+    ensure_backend_init()?;
+
+    let multilingual = guidance_scope.as_deref() == Some("all-targets");
 
     if !Path::new(&model_path).exists() {
         return Err(format!("Model file not found: {}", model_path));
@@ -530,8 +603,8 @@ pub fn llama_load(model_path: String) -> Result<bool, String> {
         let mut ctx_params = llama_context_default_params();
         ctx_params.n_ctx = N_CTX;
         ctx_params.n_batch = N_CTX;
-        ctx_params.n_threads = N_THREADS;
-        ctx_params.n_threads_batch = N_THREADS;
+        ctx_params.n_threads = n_threads();
+        ctx_params.n_threads_batch = n_threads();
 
         let ctx = llama_init_from_model(model, ctx_params);
         if ctx.is_null() {
@@ -556,13 +629,15 @@ pub fn llama_load(model_path: String) -> Result<bool, String> {
             sampler,
             cached_prompt_tokens: Vec::new(),
             sampler_temperature: DEFAULT_TEMPERATURE,
+            multilingual,
         });
 
         log::info!(
-            "Hy-MT2 model loaded: {}, n_ctx={}, n_threads={}, n_gpu_layers=0",
+            "Hy-MT2 model loaded: {}, n_ctx={}, n_threads={}, n_gpu_layers=0, guidance={}",
             model_path,
             N_CTX,
-            N_THREADS,
+            n_threads(),
+            if multilingual { "all-targets" } else { "english-only" },
         );
     }
 
@@ -736,8 +811,14 @@ pub fn llama_translate(
     // Phase-tested Hy-MT2 manga prompt. Full language names disambiguate short
     // OCR samples while the explicit constraints keep speech and SFX concise.
     let src_name = get_lang_name(&source_lang);
-    let instruction =
-        build_manga_translation_instruction(text, &source_lang, &target_lang, &src_name, &tgt_name);
+    let instruction = build_manga_translation_instruction(
+        text,
+        &source_lang,
+        &target_lang,
+        &src_name,
+        &tgt_name,
+        s.multilingual,
+    );
     log::debug!(
         "Hy-MT2 translation request: {} -> {}",
         source_lang,
@@ -753,6 +834,7 @@ pub fn llama_translate(
             }
 
             let prompt = render_hymt_chat_prompt(s.model, &instruction)?;
+            log_prompt_lines(&prompt);
 
             // Tokenize the template body with automatic special insertion off,
             // then enforce the vocabulary's BOS explicitly. This is necessary for
@@ -1020,12 +1102,20 @@ pub struct BackendInfo {
     pub description: String,
 }
 
+/// Same shape on every outcome: a CPU below the compiled baseline answers
+/// `backend: "unsupported"` with the reason as the description, which the
+/// settings screen shows in place of the compute label.
 #[tauri::command]
 pub fn llama_get_backend() -> BackendInfo {
-    ensure_backend_init();
-    BackendInfo {
-        backend: "cpu".into(),
-        description: format!("llama.cpp STQ CPU ({} threads)", N_THREADS),
+    match ensure_backend_init() {
+        Ok(()) => BackendInfo {
+            backend: "cpu".into(),
+            description: format!("llama.cpp STQ CPU ({} threads)", n_threads()),
+        },
+        Err(description) => BackendInfo {
+            backend: "unsupported".into(),
+            description,
+        },
     }
 }
 
@@ -1104,15 +1194,23 @@ mod tests {
 
     #[test]
     fn japanese_english_prompt_includes_phase_tested_manga_guidance() {
-        let prompt =
-            build_manga_translation_instruction("ついたー", "ja", "en", "Japanese", "English");
+        let prompt = build_manga_translation_instruction(
+            "ついたー",
+            "ja",
+            "en",
+            "Japanese",
+            "English",
+            false,
+        );
         assert!(prompt.contains("部室 translates to clubroom"));
         assert!(prompt.contains("ついたー translates to I'm here!"));
         assert!(prompt.ends_with("ついたー"));
 
         // A non-Japanese source carries no terminology block: every frozen
         // block is Japanese-source and would be noise in another direction.
-        let other = build_manga_translation_instruction("Bonjour", "fr", "en", "French", "English");
+        let other = build_manga_translation_instruction(
+            "Bonjour", "fr", "en", "French", "English", false,
+        );
         assert!(!other.contains("部室"));
         assert!(other.contains("from French into English"));
     }
@@ -1123,14 +1221,15 @@ mod tests {
         // Sending English's block (or none) to a Chinese target is the shape
         // of mistake that produced v2's 99.7% off-target rate there.
         let english =
-            build_manga_translation_instruction("x", "ja", "en", "Japanese", "English");
+            build_manga_translation_instruction("x", "ja", "en", "Japanese", "English", true);
         for (code, name) in [
             ("zh-Hans", "Simplified Chinese"),
             ("fa", "Persian"),
             ("ko", "Korean"),
             ("ar", "Arabic"),
         ] {
-            let prompt = build_manga_translation_instruction("x", "ja", code, "Japanese", name);
+            let prompt =
+                build_manga_translation_instruction("x", "ja", code, "Japanese", name, true);
             assert!(
                 prompt.contains("Reference the following manga translations:"),
                 "{code} lost its guidance block"
@@ -1153,10 +1252,51 @@ mod tests {
 
     #[test]
     fn an_unknown_target_gets_no_guidance_rather_than_english() {
-        let prompt = build_manga_translation_instruction("x", "ja", "el", "Japanese", "Greek");
+        let prompt =
+            build_manga_translation_instruction("x", "ja", "el", "Japanese", "Greek", true);
         assert!(!prompt.contains("Reference the following manga translations:"));
         assert!(!prompt.contains("部室"));
         assert!(prompt.contains("from Japanese into Greek"));
+    }
+
+    #[test]
+    fn guidance_scope_gates_non_english_targets_like_the_android_bridge() {
+        const BLOCK: &str = "Reference the following manga translations:";
+
+        // English-only scope (every model but the multilingual fine-tune):
+        // a German target gets no block at all.
+        let german_english_only =
+            build_manga_translation_instruction("x", "ja", "de", "Japanese", "German", false);
+        assert!(!german_english_only.contains(BLOCK));
+        assert!(!german_english_only.contains("部室"));
+        assert!(german_english_only.starts_with("Translate the following text from Japanese into German"));
+
+        // All-targets scope: the same German target gets its own block.
+        let german_all_targets =
+            build_manga_translation_instruction("x", "ja", "de", "Japanese", "German", true);
+        assert!(german_all_targets.contains(BLOCK));
+        assert!(german_all_targets.contains("from Japanese into German"));
+        assert_ne!(
+            german_all_targets,
+            build_manga_translation_instruction("x", "ja", "en", "Japanese", "English", true),
+            "the German prompt reused the English block"
+        );
+
+        // English keeps its block under either scope, byte for byte.
+        let english_english_only =
+            build_manga_translation_instruction("x", "ja", "en", "Japanese", "English", false);
+        let english_all_targets =
+            build_manga_translation_instruction("x", "ja", "en", "Japanese", "English", true);
+        assert!(english_english_only.contains(BLOCK));
+        assert_eq!(english_english_only, english_all_targets);
+    }
+
+    #[test]
+    fn the_backend_check_passes_on_a_baseline_host() {
+        // The one path that can turn `llama_get_backend` into "unsupported";
+        // on a machine that can run this binary at all it must not.
+        assert_eq!(ensure_backend_init(), Ok(()));
+        assert_eq!(llama_get_backend().backend, "cpu");
     }
 
     #[test]
@@ -1173,7 +1313,7 @@ mod tests {
     fn live_hymt_translation_smoke() {
         let model_path = std::env::var("HYM_T2_TEST_MODEL")
             .expect("HYM_T2_TEST_MODEL must point to a Hy-MT2 GGUF");
-        assert!(llama_load(model_path).expect("Hy-MT2 model must load"));
+        assert!(llama_load(model_path, None).expect("Hy-MT2 model must load"));
 
         // Official tokenizer contract for one rendered User/test/Assistant
         // turn. This proves BOS is present even though the 1.25-bit GGUF does
