@@ -11,7 +11,7 @@
 	import { db } from '$lib/db/index.js';
 	import { open } from '@tauri-apps/plugin-dialog';
 	import { readDir, stat } from '@tauri-apps/plugin-fs';
-	import { join } from '@tauri-apps/api/path';
+	import { appDataDir, join } from '@tauri-apps/api/path';
 	import { filePathToFile } from '$lib/import/tauri-file-bridge.js';
 	import { isDesktopTauri, isMobile } from '$lib/util/platform.js';
 	import { settings, isLocalLibrary } from '$lib/settings/settings.js';
@@ -195,6 +195,11 @@
 
 		const paths = Array.isArray(selected) ? selected : [selected];
 
+		if (isDesktopTauri) {
+			await importPathsIntoLocalLibrary(paths);
+			return;
+		}
+
 		// Convert native paths to File objects
 		const files: File[] = [];
 		for (const path of paths) {
@@ -208,6 +213,74 @@
 
 		if (files.length > 0) {
 			await handleFilesArray(files);
+		}
+	}
+
+	/**
+	 * The library a desktop import copies into: the app's own "Local Comics"
+	 * library (created at launch under the app data directory), or the local
+	 * library the dialog was opened for. A folder the user already owns is
+	 * never the target — that is what Settings → Libraries is for.
+	 */
+	async function resolveDesktopImportLibrary() {
+		const s = get(settings);
+		try {
+			const comicsPath = await join(await appDataDir(), 'Comics');
+			const own = s.libraries.filter(isLocalLibrary).find((entry) => entry.path === comicsPath);
+			if (own) return own;
+		} catch {
+			// Fall through to the dialog's own target.
+		}
+		return getActiveLocalLibrary();
+	}
+
+	/**
+	 * Desktop: files chosen in the dialog or dropped on the window are copied
+	 * into the local library and picked up by its scan, exactly as a phone's
+	 * import does. An archive kept only inside the browser database would
+	 * belong to no library and never appear in the catalog.
+	 */
+	async function importPathsIntoLocalLibrary(paths: string[]): Promise<void> {
+		const lib = await resolveDesktopImportLibrary();
+		if (!lib) {
+			errorMessage = m.import_no_local_library();
+			return;
+		}
+		rememberLocalTarget(lib.id);
+		isImporting.set(true);
+		errorMessage = '';
+		try {
+			const result = await importToLibrary(
+				paths,
+				lib.path,
+				lib.id,
+				paths.map(() => ({})),
+				false,
+				(message) => importProgressMessage.set(message)
+			);
+			const failed = result.failed.map((entry) => ({
+				name: entry.path.split(/[\\/]/).pop() ?? entry.path,
+				error: entry.error
+			}));
+			if (paths.length === 1 && result.succeeded.length === 1) {
+				// Single file — open it, as the browser flow does.
+				const filename = result.succeeded[0].split(/[\\/]/).pop() ?? '';
+				const metadata = (await db.volumes.where('library_id').equals(lib.id).toArray())
+					.find((volume) => volume.filename === filename);
+				if (metadata) await openReader({ ...metadata, current_page: 0 }, 'catalog');
+				importDialogOpen.set(false);
+				return;
+			}
+			importResult = { succeeded: result.succeeded.length, failed };
+			if (failed.length === 0) {
+				setTimeout(() => {
+					importResult = null;
+					importDialogOpen.set(false);
+				}, 2000);
+			}
+		} finally {
+			isImporting.set(false);
+			importProgressMessage.set('');
 		}
 	}
 
@@ -357,6 +430,14 @@
 	/** Desktop shell: paths from the window's native drop go through the file-dialog pipeline. */
 	async function handleDroppedPaths(paths: string[]): Promise<void> {
 		const filePaths = await expandDroppedPaths(paths);
+		if (filePaths.length === 0) {
+			errorMessage = m.import_no_files();
+			return;
+		}
+		if (isDesktopTauri) {
+			await importPathsIntoLocalLibrary(filePaths);
+			return;
+		}
 		const files: File[] = [];
 		for (const path of filePaths) {
 			try {
