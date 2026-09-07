@@ -14,6 +14,7 @@
 
 import { writable, get } from 'svelte/store';
 import { randomUUID } from '$lib/util/uuid.js';
+import { perfMark } from '$lib/util/perf.js';
 import { readingDirection } from '$lib/stores/reader-state.js';
 import { db } from '$lib/db/index.js';
 import type { RecognizedBlock } from './recognized-block.js';
@@ -1118,6 +1119,16 @@ export async function translatePageOnDevice(
 		ppocr: ppocrMetrics
 	};
 	publishOnDeviceMetrics(metrics);
+	// Token counts and tokens per second are logged per call by the shell's
+	// own inference line; this page line carries the JS-side split.
+	perfMark('translate.page', metrics.totalMs, {
+		ocr: ocrMs,
+		modelLoad: modelLoadMs,
+		inference: translationInferenceMs,
+		blocks: metrics.detectedBlocks,
+		translated: metrics.translatedBlocks,
+		modelCalls
+	});
 	return {
 		pageTranslation,
 		overlayData: pageTranslation.overlay_data ?? overlayData,

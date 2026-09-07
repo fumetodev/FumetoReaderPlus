@@ -12,6 +12,7 @@
  */
 
 import type { DetectedTextRegion } from '$lib/types/index.js';
+import { perfMark } from '$lib/util/perf.js';
 import { ortWasmBaseUrl } from './ort-wasm-paths.js';
 import { loadPPOcrWasmModelBuffer } from './ppocr-wasm-model-loader.js';
 import {
@@ -491,6 +492,12 @@ export async function recognizeTextRegionsWasm(
 	if (typeof window !== 'undefined') {
 		(window as unknown as Record<string, unknown>).__fumeto_last_ppocr_recognizer_metrics = metrics;
 	}
+	perfMark('ocr.recognize', preprocessingMs + inferenceMs + decodeMs, {
+		regions: regions.length,
+		batches: batchAttempts,
+		inference: inferenceMs,
+		decode: decodeMs
+	});
 	return results;
 }
 
