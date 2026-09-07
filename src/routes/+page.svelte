@@ -40,7 +40,8 @@
 	} from '$lib/stores/catalog-state.js';
 	import { settings, isLocalLibrary, isYACReaderLibrary, isKomgaLibrary, isKavitaLibrary, initSecureSettings } from '$lib/settings/settings.js';
 	import { scanLibrary } from '$lib/library/library-scanner.js';
-	import { startWatchingLibrary, stopAllWatching } from '$lib/library/library-watcher.js';
+	import { stopAllWatching } from '$lib/library/library-watcher.js';
+	import { syncLibraryWatchers } from '$lib/library/library-watch-sync.js';
 	import { getOrCreateClient } from '$lib/yacreader/yac-client-manager.js';
 	import { fullSyncLibrary, getLastSyncDiagnostics, remoteStartupSyncPlan, fetchRemoteFolderContents } from '$lib/yacreader/yac-sync-service.js';
 	import { getOrCreateKomgaClient } from '$lib/komga/komga-client-manager.js';
@@ -508,7 +509,10 @@
 		// the reader slider writes those, NOT this setting).
 		overlayFontScale.set(initSettings.overlayFontScaleDefault ?? 1);
 
-		// Auto-scan and watch all configured libraries
+		// Folder watchers follow the library list from here on (a no-op on mobile).
+		void syncLibraryWatchers(initSettings.libraries);
+
+		// Auto-scan all configured libraries
 		for (const lib of initSettings.libraries) {
 			if (isLocalLibrary(lib)) {
 				if (lib.autoScan) {
@@ -519,21 +523,6 @@
 					});
 				}
 
-				if (lib.watchEnabled) {
-					startWatchingLibrary(lib.id, lib.path, async () => {
-						const currentSettings = get(settings);
-						const currentLib = currentSettings.libraries.find((l) => l.id === lib.id);
-						if (currentLib && isLocalLibrary(currentLib)) {
-							submitMaintenance({
-								kind: 'local-library-watch-scan', key: `scan:${currentLib.id}`, priority: 2,
-								operation: () => scanLibrary(currentLib.path, undefined, currentLib.id),
-								onError: (error) => console.error(`Library watcher scan failed for "${currentLib.name}":`, error),
-							});
-						}
-					}).catch((err) => {
-						console.error(`Library watcher failed for "${lib.name}":`, err);
-					});
-				}
 			}
 			// YACReader libraries: startup sync
 			if (isYACReaderLibrary(lib)) {

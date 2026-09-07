@@ -1083,6 +1083,8 @@
 	"libraries_title": "Libraries",
 	"libraries_unknown_type": "Unknown library type",
 	"libraries_watch": "Watch for new files",
+	"libraries_watch_active": "Watching this folder — new files are scanned as they arrive.",
+	"libraries_watch_failed": "Watching failed: {detail}",
 	"model_variant_custom_description": "Run your own GGUF model from device storage. Other models are largely untested — quality and speed are not guaranteed.",
 	"model_variant_custom_title": "Custom Model",
 	"model_variant_manga_v2_description": "Better Japanese to English than the Standard model, but worse than it for every other language pair. Takes up more space and runs at a similar speed.",

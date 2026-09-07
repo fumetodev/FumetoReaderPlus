@@ -13,6 +13,7 @@
 	import { assignAuthorsFromFolders } from '$lib/library/author-from-folders.js';
 	import { eraseAndRescanLibrary } from '$lib/library/library-scanner.js';
 	import { deleteLibraryData } from '$lib/library/library-removal-service.js';
+	import { libraryWatchStatus } from '$lib/library/library-watcher.js';
 	import { isMobile, isAndroid } from '$lib/util/platform.js';
 	import { mkdir, exists as fsExists } from '@tauri-apps/plugin-fs';
 	import { appDataDir, join } from '@tauri-apps/api/path';
@@ -146,6 +147,9 @@
 			if (i !== index || !isLocalLibrary(lib)) return lib;
 			return { ...lib, watchEnabled: !lib.watchEnabled };
 		});
+		// Apply now rather than after the debounce: the status line under the
+		// switch answers this tap, and a watcher that cannot start says so here.
+		void applyDraftNow();
 	}
 
 	// ============================================================
@@ -396,6 +400,17 @@
 									</div>
 								{/if}
 							</div>
+							{#if !isMobile && lib.watchEnabled && $libraryWatchStatus[lib.id]}
+								{@const watchStatus = $libraryWatchStatus[lib.id]}
+								<p
+									class="mt-1 text-[11px] {watchStatus.state === 'error' ? 'text-red-400' : 'text-surface-500'}"
+									data-library-watch-status={watchStatus.state}
+								>
+									{watchStatus.state === 'error'
+										? m.libraries_watch_failed({ detail: watchStatus.detail ?? '' })
+										: m.libraries_watch_active()}
+								</p>
+							{/if}
 						{:else if isYACReaderLibrary(lib)}
 							<div class="mb-2 flex items-center gap-1.5">
 								<span class="rounded bg-primary-600/20 px-1.5 py-0.5 text-[10px] font-medium text-primary-300">YACReader</span>
