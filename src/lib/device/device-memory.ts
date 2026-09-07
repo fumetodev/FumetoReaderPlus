@@ -12,17 +12,37 @@ import * as m from '$lib/paraglide/messages.js';
  * should learn their device can't hold the model before paying, not after.
  */
 
+import { desktopSystemInfo } from './desktop-system-info.js';
+
 export interface DeviceMemory {
 	totalBytes: number;
 	availBytes: number;
 	lowMemory: boolean;
 }
 
-/** Reads the Android bridge's memory snapshot; null anywhere it can't. */
+/**
+ * The desktop shell's answer, read from the cached system-info snapshot;
+ * null in a browser, on Android, or before the snapshot was primed.
+ */
+function readDesktopMemory(): DeviceMemory | null {
+	const info = desktopSystemInfo();
+	if (!info || info.totalMemoryBytes === null || info.totalMemoryBytes <= 0) return null;
+	return {
+		totalBytes: info.totalMemoryBytes,
+		availBytes: info.availableMemoryBytes ?? 0,
+		lowMemory: false
+	};
+}
+
+/**
+ * Reads the platform's memory snapshot; null anywhere it can't. Android
+ * answers through its bridge; the desktop shell answers through a command,
+ * because WebKitGTK exposes nothing of the kind to a page.
+ */
 export function readDeviceMemory(): DeviceMemory | null {
 	try {
 		const raw = window.__fumeto_android?.getMemoryInfo?.();
-		if (!raw) return null;
+		if (!raw) return readDesktopMemory();
 		const parsed = JSON.parse(raw) as Partial<DeviceMemory>;
 		if (typeof parsed.totalBytes !== 'number' || !Number.isFinite(parsed.totalBytes) || parsed.totalBytes <= 0) {
 			return null;
