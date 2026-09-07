@@ -1,5 +1,50 @@
 // @ts-nocheck — vendored upstream file; see PROVENANCE.md (the banner is the only modification)
+import { blobSourceFor } from './blob-source-registry.js'
+
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
+
+// Whether a frame loaded from a `blob:` URL exposes its document. WebKitGTK
+// inside a custom-scheme app (the Linux desktop build) says no — the frame is
+// cross-origin and `contentDocument` is null — so sections are inlined as
+// `srcdoc` there instead (see blob-source-registry.js). Probed once.
+let blobFramesAccessible = null
+const probeBlobFrames = () => new Promise(resolve => {
+    const frame = document.createElement('iframe')
+    frame.setAttribute('sandbox', 'allow-same-origin allow-scripts')
+    frame.style.display = 'none'
+    const url = URL.createObjectURL(new Blob(['<!DOCTYPE html><title>probe</title>'], { type: 'text/html' }))
+    let done = false
+    const finish = ok => {
+        if (done) return
+        done = true
+        clearTimeout(timer)
+        frame.remove()
+        URL.revokeObjectURL(url)
+        resolve(ok)
+    }
+    const timer = setTimeout(() => finish(false), 3000)
+    frame.addEventListener('load', () => {
+        let doc = null
+        try { doc = frame.contentDocument } catch { doc = null }
+        // the first load is the initial about:blank document; wait for the real one
+        if (!doc || doc.URL === 'about:blank') return
+        finish(true)
+    })
+    document.body.append(frame)
+    frame.src = url
+})
+const srcdocFor = async src => {
+    if (!src.startsWith('blob:')) return null
+    if (blobFramesAccessible == null) blobFramesAccessible = await probeBlobFrames()
+    if (blobFramesAccessible) return null
+    const source = blobSourceFor(src)
+    if (!source) return null
+    // a <base> keeps relative references resolving against the section's URL
+    const base = `<base href="${src}">`
+    return /<base\s/i.test(source.data) ? source.data
+        : /<head[^>]*>/i.test(source.data) ? source.data.replace(/<head[^>]*>/i, m => m + base)
+        : base + source.data
+}
 
 const debounce = (f, wait, immediate) => {
     let timeout
@@ -253,9 +298,16 @@ class View {
     }
     async load(src, afterLoad, beforeRender) {
         if (typeof src !== 'string') throw new Error(`${src} is not string`)
+        const srcdoc = await srcdocFor(src)
         return new Promise(resolve => {
-            this.#iframe.addEventListener('load', () => {
+            const onLoad = () => {
                 const doc = this.document
+                // a `srcdoc` navigation first fires load for the initial
+                // about:blank document; the section arrives with the next one
+                if (srcdoc != null && (!doc || doc.URL === 'about:blank')) {
+                    this.#iframe.addEventListener('load', onLoad, { once: true })
+                    return
+                }
                 afterLoad?.(doc)
 
                 // it needs to be visible for Firefox to get computed style
@@ -279,8 +331,10 @@ class View {
                 doc.fonts.ready.then(() => this.expand())
 
                 resolve()
-            }, { once: true })
-            this.#iframe.src = src
+            }
+            this.#iframe.addEventListener('load', onLoad, { once: true })
+            if (srcdoc != null) this.#iframe.srcdoc = srcdoc
+            else this.#iframe.src = src
         })
     }
     render(layout) {
