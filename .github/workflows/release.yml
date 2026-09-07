@@ -210,10 +210,11 @@ jobs:
       # has no FUSE.
       APPIMAGE_EXTRACT_AND_RUN: '1'
       # The runner sets HOME to /github/home inside the container while root's
-      # passwd entry says /root; rustup refuses that mismatch unless told where
-      # to live. Both point under the runner's HOME so the caches line up.
-      CARGO_HOME: /github/home/.cargo
-      RUSTUP_HOME: /github/home/.rustup
+      # passwd entry says /root, and rustup-init refuses that mismatch. The
+      # toolchain is installed with HOME=/root and every cargo path is spelled
+      # out, so the cache step and the build agree on where it lives.
+      CARGO_HOME: /root/.cargo
+      RUSTUP_HOME: /root/.rustup
     defaults:
       run:
         shell: bash
@@ -252,15 +253,19 @@ jobs:
           node-version: 24
           cache: npm
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Install the Rust toolchain
+        run: |
+          curl -sSf https://sh.rustup.rs | env HOME=/root sh -s -- -y --profile minimal --no-modify-path
+          echo "/root/.cargo/bin" >> "$GITHUB_PATH"
+          /root/.cargo/bin/rustc --version
 
       # A cache hit still rebuilds the vendored llama.cpp: a fresh checkout's
       # mtimes make CMake reconfigure it. Accepted; the crates are the win.
       - uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
+            /root/.cargo/registry
+            /root/.cargo/git
             src-tauri/target
           key: appimage-jammy-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/llama-bridge/llama.cpp-version.txt') }}
 
