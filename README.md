@@ -45,9 +45,9 @@ export, and both translation paths, including fully on-device translation.
   `--appimage-extract-and-run`.
 - **First use.** The text-detection, recognition and layout models (about 121 MB) download from
   Hugging Face the first time you translate, and the on-device translation model when you pick
-  one — exactly as on Android. On an x86-64 machine pick one of the *manga* fine-tunes (v5 is
-  the current one): the small 1.25-bit stock model has fast kernels only on ARM and runs many
-  times slower here. Everything the app stores lives in `~/.local/share/com.fumeto.reader/`
+  one — exactly as on Android. On Linux the *manga v5* fine-tune is the default choice: the
+  small 1.25-bit stock model has fast kernels only on ARM and runs many times slower on an
+  x86-64 machine. Everything the app stores lives in `~/.local/share/com.fumeto.reader/`
   (plus a small WebKit cookie store under `~/.cache/com.fumeto.reader/`); deleting those two
   folders and the AppImage is a complete uninstall.
 - **Libraries and imports.** Add a folder you already own under Settings → Libraries; it is read
