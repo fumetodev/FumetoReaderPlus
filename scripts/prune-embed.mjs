@@ -1,12 +1,16 @@
 #!/usr/bin/env node
-// Removes files from the SvelteKit build output that the Android WebView never
-// uses, so they are not embedded into libapp_lib.so. Android runs PP-OCR
-// det/rec natively from APK assets (see generatePpocrNativeAssets in
-// build.gradle.kts) and rtmdet layout natively through the ORT bridge; the base
-// ORT WASM runtime is still kept because rtmdet-wasm is the tier-2 fallback when
-// the native engine fails (see layout-detector.ts). Invoked by
-// `npm run build:android`, which src-tauri/tauri.android.conf.json selects as
-// the Android beforeBuildCommand. Desktop/dev builds keep the full payload.
+// Removes files from the SvelteKit build output that no packaged build loads,
+// so they are not embedded into the app binary. Both packaged targets — the
+// Android APK and the Linux desktop AppImage — download the vision models on
+// first use through the in-app model manager, so the ONNX copies under
+// static/models/ only serve `npm run dev` in a plain browser, and the
+// onnxruntime-web variants below are never imported by the shipping reader
+// path on any target. The base ORT WASM runtime stays: it runs rtmdet layout
+// on the desktop and is the fallback tier behind the native engine on Android
+// (see layout-detector.ts). Invoked by `npm run build:android` and
+// `npm run build:desktop`, the beforeBuildCommands that
+// tauri.android.conf.json and tauri.linux.conf.json select; a plain
+// `npm run build` keeps the full payload for browser development.
 import { rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -61,8 +65,8 @@ for (const rel of KEEP) {
 	}
 }
 if (missing.length > 0) {
-	console.error(`prune-android-embed: required files missing from build/: ${missing.join(', ')}`);
+	console.error(`prune-embed: required files missing from build/: ${missing.join(', ')}`);
 	process.exit(1);
 }
 
-console.log(`prune-android-embed: saved ${(saved / 1024 / 1024).toFixed(1)} MB from the Android embed`);
+console.log(`prune-embed: saved ${(saved / 1024 / 1024).toFixed(1)} MB from the embedded app`);
