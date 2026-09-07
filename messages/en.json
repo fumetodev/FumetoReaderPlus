@@ -1657,6 +1657,7 @@
 	"settings_translation_copying_progress": "Copying {done} MB{rest}",
 	"settings_translation_could_not_apply_that": "Could not apply that prompt format",
 	"settings_translation_cpu_arm_neon_stq": "CPU (ARM NEON STQ)",
+	"settings_translation_cpu_stq_desktop": "CPU (llama.cpp STQ)",
 	"settings_translation_cpu_metal_runtime": "CPU/Metal runtime",
 	"settings_translation_currently_run": "Translations currently run <em>{pipeline}</em>.",
 	"settings_translation_default_value": "Default ({value})",

@@ -13,7 +13,7 @@
 	// Read once — the same advice the future Pro purchase flow must show
 	// BEFORE purchase, so a 4 GB device learns its limits before paying.
 	const deviceMemory = readDeviceMemory();
-	import { isLlamaBridgeAvailable, unloadModel as unloadHyMT2Model, getBackend, getAvailableMemoryGB } from '$lib/translation/llamacpp-bridge.js';
+	import { isLlamaBridgeAvailable, unloadModel as unloadHyMT2Model, getBackendInfo, getAvailableMemoryGB } from '$lib/translation/llamacpp-bridge.js';
 	import { settings, DEFAULT_OPENROUTER_MODEL, SUPPORTED_LANGUAGES, ON_DEVICE_SOURCE_LANGUAGES, ON_DEVICE_TARGET_LANGUAGES, ON_DEVICE_TEMPERATURE_DEFAULT, ON_DEVICE_TEMPERATURE_MIN, ON_DEVICE_TEMPERATURE_MAX } from '$lib/settings/settings.js';
 	import { untrack } from 'svelte';
 	import { fetchModelsForProvider } from '$lib/translation/llm-client.js';
@@ -336,6 +336,9 @@
 		custom: false
 	});
 	let hyMT2Backend = $state('unknown');
+	// The shell's own words for the backend. Only read when the backend is
+	// 'unsupported', where it names the CPU features the build needs.
+	let hyMT2BackendDescription = $state('');
 
 	// Vision models (PP-OCR detector + recogniser, rtmdet layout). Downloaded
 	// on demand; the readiness flag drives the card below and nothing else, so
@@ -500,7 +503,9 @@
 	$effect(() => {
 		if (draft.onDeviceTranslationBackend === 'translategemma' && !hyMT2CheckStarted) {
 			hyMT2CheckStarted = true;
-			getBackend().then(b => { hyMT2Backend = b; }).catch(() => { hyMT2Backend = 'unknown'; });
+			getBackendInfo()
+				.then((info) => { hyMT2Backend = info.backend; hyMT2BackendDescription = info.description; })
+				.catch(() => { hyMT2Backend = 'unknown'; hyMT2BackendDescription = ''; });
 			refreshHyMT2Downloaded()
 				.finally(() => { hyMT2ChecksLoaded = true; });
 		}
@@ -989,9 +994,15 @@
 						<span class="text-xs text-green-400">{m.settings_translation_llama_cpp_bridge_available()}</span>
 					</div>
 					<div class="mt-1.5 space-y-1">
-						<p class="text-[11px] text-surface-500">
-							<RichMessage message={m.settings_translation_compute({ backend: hyMT2Backend === 'cpu' ? m.settings_translation_cpu_arm_neon_stq() : hyMT2Backend.startsWith('metal') ? m.settings_translation_cpu_metal_runtime() : m.settings_translation_checking() })} emClass="text-surface-300" />
-						</p>
+						{#if hyMT2Backend === 'unsupported'}
+							<!-- The desktop shell refused its CPU preflight; the description
+							     names what the build needs, so it stands in for the error line. -->
+							<p class="break-words text-[11px] text-red-400">{hyMT2BackendDescription}</p>
+						{:else}
+							<p class="text-[11px] text-surface-500">
+								<RichMessage message={m.settings_translation_compute({ backend: hyMT2Backend === 'cpu' ? (isAndroid ? m.settings_translation_cpu_arm_neon_stq() : m.settings_translation_cpu_stq_desktop()) : hyMT2Backend.startsWith('metal') ? m.settings_translation_cpu_metal_runtime() : m.settings_translation_checking() })} emClass="text-surface-300" />
+							</p>
+						{/if}
 						{#if getAvailableMemoryGB() > 0}
 							<p class="text-[11px] text-surface-500">
 								<RichMessage message={m.settings_translation_available_ram({ gb: getAvailableMemoryGB().toFixed(1) })} emClass={getAvailableMemoryGB() >= 2 ? 'text-green-400' : getAvailableMemoryGB() >= 1.5 ? 'text-yellow-400' : 'text-red-400'} />

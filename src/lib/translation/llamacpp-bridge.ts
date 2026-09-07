@@ -13,6 +13,7 @@
 
 import { get, writable } from 'svelte/store';
 import { parseBridgeRejection } from '$lib/i18n/errors.js';
+import { desktopSystemInfo } from '$lib/device/desktop-system-info.js';
 import { isAndroid, isDesktop } from '$lib/util/platform.js';
 import { settings, ON_DEVICE_TEMPERATURE_DEFAULT } from '$lib/settings/settings.js';
 import type { GgufDownloadState } from './gguf-model-manager.js';
@@ -348,6 +349,25 @@ export async function getBackend(): Promise<string> {
 }
 
 /**
+ * The active backend together with the shell's description of it. On
+ * desktop the backend can be "unsupported" — the CPU lacks an instruction
+ * set the build assumes — and the description then says which; Android
+ * reports the backend name alone.
+ */
+export async function getBackendInfo(): Promise<{ backend: string; description: string }> {
+	if (isDesktop) {
+		try {
+			const { invoke } = await import('@tauri-apps/api/core');
+			const info = await invoke<{ backend: string; description?: string }>('llama_get_backend');
+			return { backend: info.backend, description: info.description ?? '' };
+		} catch {
+			return { backend: 'unknown', description: '' };
+		}
+	}
+	return { backend: await getBackend(), description: '' };
+}
+
+/**
  * Check if the device has GPU acceleration available.
  * Android: OpenCL driver. macOS: Metal (always available on Apple Silicon).
  */
@@ -383,12 +403,14 @@ export function hasOpenCL(): boolean {
 
 /**
  * Get available device RAM in GB.
- * Desktop: uses navigator.deviceMemory (approximate) or returns 0.
+ * Desktop: the shell's system-info snapshot (WebKitGTK offers a page no
+ * memory API at all); 0 before it is primed or where the command is absent.
  */
 export function getAvailableMemoryGB(): number {
 	if (isDesktop) {
-		// navigator.deviceMemory is available in Chromium-based WebViews
-		return (navigator as unknown as Record<string, number>).deviceMemory ?? 0;
+		const info = desktopSystemInfo();
+		const bytes = info?.availableMemoryBytes ?? info?.totalMemoryBytes ?? 0;
+		return bytes > 0 ? bytes / 1024 ** 3 : 0;
 	}
 	const bridge = getBridge();
 	if (!bridge?.getAvailableMemoryGB) return 0;
@@ -434,7 +456,19 @@ async function performHyMT2ModelLoad(
 ): Promise<void> {
 	if (isDesktop) {
 		const { invoke } = await import('@tauri-apps/api/core');
-		await invoke('llama_load', { modelPath });
+		try {
+			await invoke('llama_load', {
+				modelPath,
+				// The same two values the Android bridge sends, so both shells
+				// gate the per-target guidance block on one rule.
+				guidanceScope: options?.multilingualGuidance ? 'all-targets' : 'english-only'
+			});
+		} catch (error) {
+			// A Tauri command rejects with its bare error string. Wrap it so the
+			// text (for instance a CPU-preflight verdict) reaches the same
+			// `err.message` readers the Android path feeds.
+			throw error instanceof Error ? error : new Error(String(error));
+		}
 		return;
 	}
 
