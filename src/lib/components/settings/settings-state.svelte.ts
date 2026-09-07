@@ -25,7 +25,7 @@ import {
 import type { ProviderConfig } from '$lib/translation/llm-types.js';
 import { clearProviderKey } from '$lib/settings/secure-storage.js';
 import { planProviderKeyCommit } from '$lib/settings/provider-key-drafts.js';
-import { stopAllWatching } from '$lib/library/library-watcher.js';
+import { syncLibraryWatchers } from '$lib/library/library-watch-sync.js';
 
 const APPLY_DEBOUNCE_MS = 250;
 
@@ -247,13 +247,13 @@ async function performApply(): Promise<void> {
 		await saveApiKeySecurely(settingsDraft.apiKey);
 	}
 
-	// Stop watchers only when the library set actually changed (they restart
-	// on next app start, matching the previous save behavior).
-	if (JSON.stringify(patch.libraries) !== JSON.stringify(previous.libraries)) {
-		stopAllWatching();
-	}
-
 	settings.patch(patch);
+
+	// Folder watchers follow the library set as soon as it changes: a switch
+	// flipped here starts or stops its watcher now, not on the next launch.
+	if (patch.libraries && JSON.stringify(patch.libraries) !== JSON.stringify(previous.libraries)) {
+		void syncLibraryWatchers(patch.libraries);
+	}
 }
 
 /** Apply the draft now (awaits any in-flight apply first). */
