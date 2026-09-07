@@ -1,5 +1,6 @@
 // @ts-nocheck — vendored upstream file; see PROVENANCE.md (the banner is the only modification)
 import * as CFI from './epubcfi.js'
+import { rememberBlobSource, forgetBlobSource } from './blob-source-registry.js'
 
 const NS = {
     CONTAINER: 'urn:oasis:names:tc:opendocument:xmlns:container',
@@ -726,6 +727,7 @@ class Loader {
         const newData = await event.detail.data
         const newType = await event.detail.type
         const url = URL.createObjectURL(new Blob([newData], { type: newType }))
+        rememberBlobSource(url, newData, newType)
         this.#cache.set(href, url)
         this.#refCount.set(href, 1)
         if (parent) {
@@ -751,6 +753,7 @@ class Loader {
         //console.log(`unreferencing ${href}, now ${count}`)
         if (count < 1) {
             //console.log(`unloading ${href}`)
+            forgetBlobSource(this.#cache.get(href))
             URL.revokeObjectURL(this.#cache.get(href))
             this.#cache.delete(href)
             this.#refCount.delete(href)
@@ -905,7 +908,10 @@ class Loader {
         this.unref(item?.href)
     }
     destroy() {
-        for (const url of this.#cache.values()) URL.revokeObjectURL(url)
+        for (const url of this.#cache.values()) {
+            forgetBlobSource(url)
+            URL.revokeObjectURL(url)
+        }
     }
 }
 
