@@ -607,6 +607,7 @@
 	"help_keywords_translations": "OpenRouter, API-Schlüssel, Anbieter, auf dem Gerät, Modi, Overlay, Überarbeitungen, Kosten, Preis",
 	"help_keywords_whats_new": "Änderungsprotokoll, Release, Version, Updates",
 	"help_library_polish_library_names": "Bibliotheks-Feinschliff: Bibliotheksnamen liegen auf einem Titelstreifen auf den Karten in „Alle Bibliotheken“, und das Schließen eines Tabs animiert die verbleibenden Tabs in ihre Position.",
+	"help_linux_desktop_beta_the_app": "Linux-Desktop (Beta): Die App läuft jetzt auch auf x86-64 Linux als AppImage, mit demselben Reader, denselben Bibliotheken und derselben On-Device-Übersetzung wie unter Android; Leertaste, Bild-auf/-ab, Pos1/Ende, Escape und F11 funktionieren im Reader, und die README listet die Voraussetzungen auf",
 	"help_local_device_storage_zip": "Lokaler Gerätespeicher (ZIP/CBZ/PDF-Dateien)",
 	"help_local_library": "Lokale Bibliothek",
 	"help_local_llm_servers": "Lokale LLM-Server",

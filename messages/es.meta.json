@@ -2334,6 +2334,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T14:58:49.759Z"
 	},
+	"help_linux_desktop_beta_the_app": {
+		"sourceHash": "ee36fd538bc4c631",
+		"model": "anthropic/claude-sonnet-5",
+		"draftedAt": "2026-09-07T21:10:19.788Z"
+	},
 	"help_local_device_storage_zip": {
 		"sourceHash": "47f44b44e864764a",
 		"model": "anthropic/claude-sonnet-5",
