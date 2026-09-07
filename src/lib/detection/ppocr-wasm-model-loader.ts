@@ -1,16 +1,19 @@
 /**
  * Model-byte loader for the PP-OCR WASM sessions.
  *
- * Desktop/dev builds serve the det/rec models from the frontend bundle.
- * Android builds prune them from the WebView embed (scripts/
- * prune-android-embed.mjs) because native ORT owns det/rec there — but the
- * SvelteKit SPA fallback answers those URLs with index.html at HTTP 200, so a
- * status check never fires and ort-web dies with "protobuf parsing failed".
- * This loader prefers a downloaded model (see ocr-model-manager.ts), then
- * validates the fetched bytes and, when they are not a model, materializes a
- * packaged asset copy through the PP-OCR bridge and reads it back via
- * plugin-fs — restoring the WASM fallback without re-embedding 83 MB of
- * model weights.
+ * Resolution order, first hit wins:
+ *   1. A downloaded model in the app-data `models/` directory (see
+ *      ocr-model-manager.ts). This is the production path on every Tauri
+ *      host: the desktop shell always runs the WASM tier, and an Android
+ *      device lands here when native ORT is unavailable.
+ *   2. The frontend bundle's `/models/` URL, which a plain browser
+ *      (`npm run dev`) serves from `static/models`. The bytes are sniffed
+ *      before use: a bundle that was pruned of its models answers those URLs
+ *      with index.html at HTTP 200 (the SPA fallback), so a status check never
+ *      fires and ort-web would die with "protobuf parsing failed".
+ *   3. Android only: a packaged asset copy materialised through the PP-OCR
+ *      bridge and read back via plugin-fs, which keeps the WASM fallback
+ *      working without re-embedding 83 MB of weights in the web bundle.
  */
 
 import {

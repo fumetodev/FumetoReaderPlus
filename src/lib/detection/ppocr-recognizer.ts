@@ -12,6 +12,7 @@
  */
 
 import type { DetectedTextRegion } from '$lib/types/index.js';
+import { ortWasmBaseUrl } from './ort-wasm-paths.js';
 import { loadPPOcrWasmModelBuffer } from './ppocr-wasm-model-loader.js';
 import {
 	DEFAULT_NATIVE_PPOCR_RECOGNIZER_CONFIG,
@@ -109,7 +110,7 @@ export async function initRecognizerWasm(): Promise<void> {
 		const [, ortModule] = await Promise.all([loadDictionary(), import('onnxruntime-web/wasm')]);
 
 		ort = ortModule;
-		ort.env.wasm.wasmPaths = `${window.location.origin}/wasm/`;
+		ort.env.wasm.wasmPaths = ortWasmBaseUrl();
 		ort.env.wasm.proxy = false;
 		ort.env.wasm.numThreads = 1;
 
