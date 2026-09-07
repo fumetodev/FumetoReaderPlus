@@ -730,6 +730,7 @@
 	"help_the_llm_receives_the": "The LLM receives the actual comic page image and translates directly from the visual. Best accuracy — understands speech bubbles, SFX, reading order, and visual context.",
 	"help_the_menu": "The ⋮ menu",
 	"help_the_on_device_manga_translation": "The on-device manga translation model is updated to v5: it makes fewer meaning errors and no longer mistakes short katakana names for sound effects",
+	"help_linux_desktop_beta_the_app": "Linux desktop (beta): the app now also runs on x86-64 Linux as an AppImage, with the same reader, libraries and on-device translation as Android; Space, Page Up/Down, Home/End, Escape and F11 work in the reader, and the README lists the requirements",
 	"help_the_openrouter_ai_homepage": "The openrouter.ai homepage with its Get API Key button",
 	"help_the_review_pass_roughly": "The review pass roughly doubles cost; \"Skip review step\" halves it back.",
 	"help_the_storage_card_and": "The Storage card and On-Device Models list (Settings → Libraries) show what uses space; models can be deleted individually.",
