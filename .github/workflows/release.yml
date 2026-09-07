@@ -10,6 +10,10 @@ name: Release
 on:
   push:
     tags: ['v*']
+    # A branch under rc/ builds release-candidate artefacts on every push
+    # (workflow artefacts only, no release), which is how a change is proven
+    # in CI before it reaches the default branch and manual dispatch exists.
+    branches: ['rc/**']
   workflow_dispatch:
     inputs:
       release_tag:
@@ -47,8 +51,10 @@ jobs:
         env:
           INPUT_TAG: ${{ inputs.release_tag }}
         run: |
-          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_TYPE" = "tag" ]; then
             TAG="$GITHUB_REF_NAME"
+          elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            TAG=""
           else
             TAG="$INPUT_TAG"
           fi
