@@ -14,6 +14,7 @@
 import { get, writable } from 'svelte/store';
 import { parseBridgeRejection } from '$lib/i18n/errors.js';
 import { desktopSystemInfo } from '$lib/device/desktop-system-info.js';
+import { perfMark } from '$lib/util/perf.js';
 import { isAndroid, isDesktop } from '$lib/util/platform.js';
 import { settings, ON_DEVICE_TEMPERATURE_DEFAULT } from '$lib/settings/settings.js';
 import type { GgufDownloadState } from './gguf-model-manager.js';
@@ -456,6 +457,7 @@ async function performHyMT2ModelLoad(
 ): Promise<void> {
 	if (isDesktop) {
 		const { invoke } = await import('@tauri-apps/api/core');
+		const started = performance.now();
 		try {
 			await invoke('llama_load', {
 				modelPath,
@@ -463,6 +465,7 @@ async function performHyMT2ModelLoad(
 				// gate the per-target guidance block on one rule.
 				guidanceScope: options?.multilingualGuidance ? 'all-targets' : 'english-only'
 			});
+			perfMark('llama.load', performance.now() - started, { model: fileBasename(modelPath) });
 		} catch (error) {
 			// A Tauri command rejects with its bare error string. Wrap it so the
 			// text (for instance a CPU-preflight verdict) reaches the same
@@ -760,7 +763,9 @@ export async function cancelInference(): Promise<void> {
 	if (isDesktop) {
 		try {
 			const { invoke } = await import('@tauri-apps/api/core');
+			const started = performance.now();
 			await invoke('llama_cancel');
+			perfMark('llama.cancel', performance.now() - started);
 		} catch {
 			// Best effort
 		}
@@ -779,6 +784,11 @@ export async function cancelInference(): Promise<void> {
 // ============================================================
 // Download (delegates to Kotlin OkHttp)
 // ============================================================
+
+/** The last path segment, for perf lines that name a model without its directory. */
+function fileBasename(path: string): string {
+	return path.split(/[\\/]/).pop() || path;
+}
 
 // Desktop download cancellation flag
 let desktopDownloadAbort: AbortController | null = null;
@@ -821,7 +831,7 @@ export async function downloadModelFile(
 			// of a model that can be over a gigabyte.
 			const { downloadToFileDesktop } = await import('$lib/util/desktop-stream-download.js');
 			desktopDownloadAbort = new AbortController();
-			await downloadToFileDesktop(url, destPath, {
+			const { bytes, ms } = await downloadToFileDesktop(url, destPath, {
 				signal: desktopDownloadAbort.signal,
 				onProgress: (downloadedBytes, totalBytes) => {
 					onProgress?.(downloadedBytes, totalBytes);
@@ -832,6 +842,7 @@ export async function downloadModelFile(
 					});
 				}
 			});
+			perfMark(`download.${fileBasename(destPath)}`, ms, { bytes });
 
 			publish({
 				status: 'completed',

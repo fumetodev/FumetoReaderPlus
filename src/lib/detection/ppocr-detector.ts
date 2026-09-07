@@ -24,6 +24,7 @@ import {
 	type NativePPOcrConfig,
 	type NativePPOcrDetection
 } from './native-ppocr-detector.js';
+import { perfMark } from '$lib/util/perf.js';
 import { ortWasmBaseUrl } from './ort-wasm-paths.js';
 import { groupRawTextComponents } from './ppocr-grouping.js';
 import { loadPPOcrWasmModelBuffer } from './ppocr-wasm-model-loader.js';
@@ -240,6 +241,15 @@ function logDetectorMetrics(metrics: {
 	if (typeof window !== 'undefined') {
 		(window as unknown as Record<string, unknown>).__fumeto_last_ppocr_detector_metrics = sanitized;
 	}
+	// The WASM tier is the only detector the desktop shell runs, so this is
+	// its per-page line in the process log.
+	perfMark('ocr.detect', metrics.totalMs, {
+		input: `${metrics.inputWidth}x${metrics.inputHeight}`,
+		inference: metrics.inferenceMs,
+		raw: metrics.rawRegions,
+		merged: metrics.mergedRegions,
+		mode: metrics.mode
+	});
 }
 
 function logNativeDetectorMetrics(
