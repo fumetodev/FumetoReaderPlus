@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-FumetoReaderPlus is a manga/comic reader with library management (local imports + YACReader/Komga/Kavita servers) and AI translation (off-device LLM providers, or fully on-device). It is a SvelteKit 5 + TypeScript SPA running inside a Tauri v2 Android WebView, with native Kotlin/C++ accelerators and a thin Rust layer. **Android is the product** — the desktop target exists but is shelved. Offline-first: SSR is disabled and the static adapter emits a single `index.html` for Tauri to load.
+FumetoReaderPlus is a manga/comic reader with library management (local imports + YACReader/Komga/Kavita servers) and AI translation (off-device LLM providers, or fully on-device). It is a SvelteKit 5 + TypeScript SPA running inside a Tauri v2 Android WebView, with native Kotlin/C++ accelerators and a thin Rust layer. **Android is the product**; Linux (x86_64 AppImage) is a beta desktop target that shares the whole frontend and runs llama.cpp through the Rust bridge. macOS and Windows are not built. Offline-first: SSR is disabled and the static adapter emits a single `index.html` for Tauri to load.
 
 The architecture deep-dives are being re-published gradually after the open-sourcing cleanup; until then, this file is the canonical orientation.
 
@@ -17,18 +17,21 @@ npm run check            # i18n compile → svelte-check over src/ → native-st
 
 npm run tauri:android-build -- --debug   # Android debug APK (for device testing)
 npm run tauri:android-build              # Release build (requires signing)
-npm run build:android    # SPA build + prune-android-embed (used by android builds)
+npm run build:android    # SPA build + prune-embed (used by android builds)
+npm run build:desktop    # SPA build + the same prune (used by the Linux build)
+npm run tauri:linux-build  # Linux AppImage → src-tauri/target/release/bundle/appimage/
+npm run release:linux    # preflight → AppImage → overlay audit → dist/linux/ (AppImage + .sha256 + sidecar)
 ```
 
-Android builds need `ANDROID_HOME`/`NDK_HOME` exported and **JDK 21** (newer JDKs are not supported by this Gradle). Node: `.npmrc` sets `engine-strict=true`, and the dependency tree's `engines` ranges admit Node 22/24/26 but reject 20, 23 and 25 — `npm ci` fails outright on those (CI pins 24 for exactly this reason; see the comment in `.github/workflows/build.yml`).
+Android builds need `ANDROID_HOME`/`NDK_HOME` exported and **JDK 21** (newer JDKs are not supported by this Gradle). Node: `.npmrc` sets `engine-strict=true`, and the dependency tree's `engines` ranges admit Node 22/24/26 but reject 20, 23 and 25 — `npm ci` fails outright on those (CI pins 24 for exactly this reason; see the comment in `.github/workflows/release.yml`).
 
 `src-tauri/gen/android/` is Tauri's generated project, but the Kotlin sources under `app/src/main/java/com/fumeto/reader/`, `app/build.gradle.kts` and `proguard-rules.pro` are git-tracked customizations — re-running `tauri android init` overwrites them; restore with `git checkout -- src-tauri/gen/android/`. `src-tauri/tauri.android.conf.json` swaps the Android `beforeBuildCommand` to `npm run build:android`, and `build.gradle.kts` drives the llama-bridge CMake build (the OpenCL ICD stub is linked from `llama-bridge/opencl-lib/` and excluded from the APK; the vendor driver loads at runtime).
 
-The only CI (`.github/workflows/build.yml`) builds **desktop** Tauri bundles (macOS/Windows/Linux) on a `v*` tag push or manual dispatch and opens a draft GitHub release. It runs no tests and no Android build; `release:record` creates `v<version>-vc<code>` tags, so pushing one triggers it.
+The only CI (`.github/workflows/release.yml`) runs on a `v*` tag push: a first job creates one draft GitHub release from the tag's annotation, then an `apk` job (arm64 APK) and an `appimage` job (Linux x86_64, built inside an `ubuntu:22.04` container so the glibc floor stays at 2.35) run in parallel and upload into it. A manual dispatch with an empty `release_tag` builds release-candidate artefacts only (workflow artefacts, no release); with an existing tag it re-uploads into that release. CI runs no tests. `release:record` creates `v<version>-vc<code>` tags, so pushing one triggers it.
 
 ### Release
 
-`npm run version:set -- X.Y.Z` writes the version to all three carriers (`package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`; `versionCode` = major·1 000 000 + minor·1 000 + patch) — never bump one by hand. `npm run release:android -- --aab` wraps the whole build: `release:preflight` (the three versions agree, the versionCode is not already in the ledger, clean worktree, `i18n:draft:check`, then `check`), `tauri android build` with `VITE_FUMETO_DEBUG_UI_FIXTURES=0`/`VITE_FUMETO_PSEUDOLOCALE=0` pinned, and `release:collect` into `dist/android/`. The default is an APK; Play needs `--aab`. `npm run release:record -- --artifact dist/android/<name> --track <internal|closed-testing|open-testing|production>` runs **after the Play upload, not after the build** — it appends to `release-ledger.json` (which is what marks that versionCode spent) and creates the `v<version>-vc<code>` tag. Keystore and `key.properties` are gitignored. Workflow is trunk-based on `main` with short-lived branches.
+`npm run version:set -- X.Y.Z` writes the version to all three carriers (`package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`; `versionCode` = major·1 000 000 + minor·1 000 + patch) — never bump one by hand. `npm run release:android -- --aab` wraps the whole build: `release:preflight` (the three versions agree, the versionCode is not already in the ledger, clean worktree, `i18n:draft:check`, then `check`), `tauri android build` with `VITE_FUMETO_DEBUG_UI_FIXTURES=0`/`VITE_FUMETO_PSEUDOLOCALE=0` pinned, and `release:collect` into `dist/android/`. The default is an APK; Play needs `--aab`. `npm run release:record -- --artifact dist/android/<name> --track <internal|closed-testing|open-testing|production>` runs **after the Play upload, not after the build** — it appends to `release-ledger.json` (which is what marks that versionCode spent) and creates the `v<version>-vc<code>` tag. Keystore and `key.properties` are gitignored. `npm run release:linux` runs the same preflight, builds the AppImage, runs the overlay audit on the embedded web build and collects `dist/linux/fumeto-<version>-x86_64.AppImage` with a `.sha256` and a JSON sidecar; a locally built AppImage embeds the host's WebKitGTK and glibc floor and is a test artefact — the release AppImage is CI's. One tag ships both artefacts; the ledger stays Play-only (the AppImage burns no versionCode). Workflow is trunk-based on `main` with short-lived branches.
 
 ## Architecture
 
@@ -101,6 +104,15 @@ Each native bridge has a WASM/JS fallback path so the app still works in a plain
 - **Every user-facing string is a message; stores and records hold codes.** Components call `m.<key>()` from `$lib/paraglide/messages.js` (generated, gitignored; `npm run i18n:compile`); persisted/store text is a `UserMessage { code, params }` rendered by the component, and every code has a `RENDERERS` entry.
 - **A drafted locale that is behind its English source never ships.** Each draft carries the sha256 of the source it was made from (`messages/<locale>.meta.json`); `npm run i18n:draft:check` (offline, run by `release:preflight`) fails on stale/missing/orphan keys unless `messages/stale-acknowledgements.json` names a reason and an `expiresBefore` version. `npm run i18n:draft` re-drafts only what changed and writes only what the validator accepts (placeholders, tags, the locale's plural categories, glossary, register, length, punctuation). Never-translate terms are `messages/glossary.json`, not prose in a prompt; a hand correction is marked `reviewed` so a re-draft cannot overwrite it.
 
+#### Linux build
+
+- **llama.cpp on desktop is built for a fixed x86-64 baseline, never for the build host.** `build.rs` sets `GGML_NATIVE=OFF` and pins SSE4.2/AVX/AVX2/FMA/F16C/BMI2 on and every AVX-512 flag off; ggml's own defaults flip to "no ISA at all" when `SOURCE_DATE_EPOCH` is set and to "whatever this CPU has" otherwise, so every flag is explicit. `desktop.rs::cpu_missing_features` is the matching runtime gate (a `cpu-unsupported:` error instead of SIGILL) and its list must change together with the defines.
+- **Prune parity.** `build:desktop` and `build:android` run the same `scripts/prune-embed.mjs`; Linux downloads the PP-OCR and layout models on first use exactly like Android (`ocr-model-manager.ts` gates on a Tauri host, not on Android). A desktop build that embeds the ONNX models is a regression, not a convenience.
+- **Capability split.** `capabilities/default.json` is the Android permission set and is never widened; Linux additions (fs watch, file handles, fullscreen, the any-path fs scope) live in `capabilities/linux.json` under `platforms: ["linux"]`. The broad scope is justified by the native folder picker being the gate; `requireLiteralLeadingDot: false` is Linux-only config in `tauri.linux.conf.json`.
+- **No Cargo profile changes for desktop performance.** Profiles are global and would alter the Android library; linuxdeploy strips the binary anyway, and llama.cpp's optimisation level comes from the `cmake` crate's profile mapping. Desktop-only crate features (`tauri-plugin-fs` `watch`, `tauri` `devtools`) go in the `cfg(not(any(target_os = "android", target_os = "ios")))` dependency table, never in the shared one — a global `devtools` feature would enable WebView debugging on release APKs.
+- **The WebKitGTK DMA-BUF workaround is opt-out, not forced.** It is applied only when an NVIDIA kernel module is loaded and `WEBKIT_DISABLE_DMABUF_RENDERER` is unset; `FUMETO_NVIDIA_WORKAROUND=off` disables it. It runs before the Tauri builder because GTK reads the variable at init.
+- **The linuxdeploy GTK hook is vendored** (`src-tauri/linuxdeploy/`) and copied into the bundler's cache before a build. Its only change from upstream keeps `GDK_BACKEND=x11` as the default while letting a user opt into Wayland; the AppImage is an X11 client by construction.
+
 ### Domain map (src/lib/)
 
 - `db/` — Dexie schema + singleton. `catalog/` — catalog projection, Continue Reading, virtual windowing. `library/`, `yacreader/`, `komga/`, `kavita/` — sources and server clients. `import/` — ZIP/RAR/PDF extraction into IndexedDB.
@@ -110,7 +122,7 @@ Each native bridge has a WASM/JS fallback path so the app still works in a plain
 - `overlay-layout/` — V2 canonical render-plan engine (placement, fills, bidi, baked cache). `export/` — CBZ export rendering overlays via the same canonical plans.
 - `tabs/`, `controllers/`, `navigation/`, `stores/` — UI state machines. Components use Svelte 5 runes; `stores/` uses classic `writable`/`derived`.
 - `regions/` — guided regions (user-drawn boxes: draw session, cropper, per-region translation run). `billing/` — Play Billing bridge, entitlement policy, `PRO_FEATURES`. `i18n/` — locale tables, `getLanguageDisplayName`, `UserMessage` renderers; `paraglide/` — generated message functions (gitignored). `diagnostics/` — always-on error ring, boundary and report. `benchmark/` — the in-app PP-OCR/model-candidate benchmark host that the e2e specs drive. `work-coordination/` — the lanes.
-- There is no feature flag for overlay v2 — it is the only overlay system. Desktop-only paths (Rust llama commands, `library-watcher`) are inert on Android.
+- There is no feature flag for overlay v2 — it is the only overlay system. Desktop-only paths (Rust llama commands, `src-tauri/src/desktop.rs`, `library-watcher`, the GitHub update check) are inert on Android.
 
 ## Conventions
 

@@ -26,7 +26,7 @@ licence files vendored into this repository are the authoritative texts.
 
 | Model | Where | Licence / terms |
 |---|---|---|
-| PP-OCRv6 detection + recognition (ONNX) | `static/models/` — converted from PaddleOCR upstream releases | Apache-2.0 (PaddlePaddle/PaddleOCR) |
+| PP-OCRv6 detection + recognition (ONNX) | `static/models/` (served in browser development) — converted from PaddleOCR upstream releases; downloaded at first use from `huggingface.co/fumetodev/…` on Android and Linux | Apache-2.0 (PaddlePaddle/PaddleOCR) |
 | rtmdet-manga-layout | downloaded at build/run time from `huggingface.co/fumetodev/rtmdet-manga-layout-onnx` | Apache-2.0 (this project's own fine-tune) |
 | Hy-MT2 manga fine-tunes (GGUF) | downloaded by the user in-app from `huggingface.co/fumetodev/…` | This project's fine-tunes of Tencent's Hy-MT2; base-model terms per the upstream Hugging Face model page (`tencent/Hy-MT2-1.8B`), which publishes them as Apache-2.0 |
 
@@ -49,6 +49,20 @@ archives; replacing it with a fully free extractor is a welcome contribution.
 
 `androidx.*`, `com.google.android.material`, `kotlinx-coroutines-android`,
 `okhttp` — Apache-2.0. `com.microsoft.onnxruntime:onnxruntime-android` — MIT.
+
+## Linux AppImage (collected at packaging time)
+
+The Linux build links llama.cpp and ggml statically (MIT, listed above). The AppImage is
+assembled with linuxdeploy, which copies the system libraries the binary needs from the build
+machine (an Ubuntu 22.04 container) as separate, replaceable `.so` files under `usr/lib/`:
+WebKitGTK and JavaScriptCore (LGPL-2.1 and BSD-2-Clause), GTK 3, GLib/GIO, libsoup 3, Pango,
+GdkPixbuf and its loaders including librsvg (LGPL-2.1), Cairo (LGPL-2.1 / MPL-1.1), HarfBuzz
+(MIT), ICU (Unicode licence), GStreamer (LGPL-2.1) and their dependencies. Any of them can be
+replaced by extracting the AppImage (`--appimage-extract`), which is what their licences
+require. The authoritative list is the extracted `usr/lib/` directory of a given release. The
+AppImage runtime comes from appimagetool (MIT); the linuxdeploy GTK plugin script is vendored
+under `src-tauri/linuxdeploy/` (MIT) with its licence header intact. GStreamer plugin packages
+from the "ugly" set are never bundled.
 
 ## Sample imagery (not software)
 
