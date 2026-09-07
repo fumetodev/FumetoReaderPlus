@@ -11,6 +11,7 @@
 	 * jump, keyboard) scrolls the strip to the requested page.
 	 */
 	import { onDestroy, onMount, untrack } from 'svelte';
+	import { motionDuration } from '$lib/util/motion.js';
 	import { get } from 'svelte/store';
 	import { currentPageIndex, currentVolume, pageDimensions } from '$lib/stores/reader-state.js';
 	import { isVideoPageFilename } from '$lib/import/types.js';
@@ -266,6 +267,17 @@
 	}
 
 	let resizeObserver: ResizeObserver | undefined;
+
+	/**
+	 * Keyboard paging for the strip: scroll most of a viewport (a sliver of
+	 * the previous screen stays visible so the eye keeps its place), in the
+	 * direction given. The scroll handler then re-derives the current page.
+	 */
+	export function scrollByViewport(direction: 1 | -1): void {
+		if (!containerEl) return;
+		const step = Math.round(containerEl.clientHeight * 0.85) * direction;
+		containerEl.scrollBy({ top: step, behavior: motionDuration(1) === 0 ? 'auto' : 'smooth' });
+	}
 
 	onMount(() => {
 		if (!containerEl) return;
