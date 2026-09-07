@@ -29,7 +29,7 @@
 	import MobileFilmstrip from '$lib/components/mobile/MobileFilmstrip.svelte';
 	import MobilePageJumpDialog from '$lib/components/mobile/MobilePageJumpDialog.svelte';
 	import MobileTranslateStatusDialog from '$lib/components/mobile/MobileTranslateStatusDialog.svelte';
-	import { isMobile } from '$lib/util/platform.js';
+	import { isMobile, isTauriHost } from '$lib/util/platform.js';
 	import { appView, currentPageIndex, currentVolume, isDrawingMode, leaveReader, overlayFontScale, readerSessionId, readerTargetEpoch } from '$lib/stores/reader-state.js';
 	import { toggleFullScreen } from '$lib/panzoom/util.js';
 	import { settingsDialogOpen, settingsLoading, settingsReturnView, settingsCommitHandler, settingsNavigationBusy, settingsViewMounted, importDialogOpen, catalogContextMenuOpen, readerBarsVisible, pageThumbnailScrubberOpen, movingBoxId, resizingBoxId, overlayCancelHandler, overlayEditorCloseHandler, overlayEditorDismissHandler, readerTransientCloseHandler, catalogTransientCloseHandler } from '$lib/stores/ui-state.js';
@@ -478,8 +478,11 @@
 		// storage-pressure eviction; Settings → Libraries surfaces the outcome.
 		void ensureStoragePersistence();
 
-		// On mobile, ensure the local library exists in app-specific storage
-		if (isMobile) {
+		// On a Tauri host, phone or desktop, ensure the app's own "Local Comics"
+		// library exists in app-specific storage: it is where the import dialog
+		// and the desktop's drag-and-drop put archives, so without it a desktop
+		// import would belong to no library and never appear in the catalog.
+		if (isTauriHost) {
 			try {
 				const dataDir = await appDataDir();
 				const comicsDir = await join(dataDir, 'Comics');
