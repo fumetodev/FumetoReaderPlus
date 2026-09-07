@@ -18,7 +18,7 @@ import { settings, ON_DEVICE_TEMPERATURE_DEFAULT } from '$lib/settings/settings.
 import type { GgufDownloadState } from './gguf-model-manager.js';
 
 // Pending async callbacks from Kotlin — shared across llama operations
-// and generic file downloads (model-downloader.ts).
+// and the model downloads that ride the same bridge.
 const pendingCallbacks = new Map<
 	string,
 	{
@@ -120,7 +120,6 @@ const progressHandlers = new Map<string, (downloadedBytes: number, totalBytes: n
 
 /**
  * Register a pending callback that will be resolved/rejected by the Kotlin bridge.
- * Used by both llamacpp-bridge internals and model-downloader.ts.
  */
 export function registerCallback(
 	callbackId: string,
@@ -784,32 +783,13 @@ export async function downloadModelFile(
 
 	if (isDesktop) {
 		try {
-			const { invoke } = await import('@tauri-apps/api/core');
-			const { fetch } = await import('@tauri-apps/plugin-http');
-			const { writeFile } = await import('@tauri-apps/plugin-fs');
-
+			// Streams straight to disk: the page never holds more than one chunk
+			// of a model that can be over a gigabyte.
+			const { downloadToFileDesktop } = await import('$lib/util/desktop-stream-download.js');
 			desktopDownloadAbort = new AbortController();
-			const response = await fetch(url, { signal: desktopDownloadAbort.signal });
-
-			if (!response.ok) {
-				throw new Error(`Download failed: HTTP ${response.status}`);
-			}
-
-			const totalBytes = parseInt(response.headers.get('content-length') ?? '0', 10);
-			const reader = response.body?.getReader();
-			if (!reader) throw new Error('No response body');
-
-			const chunks: Uint8Array[] = [];
-			let downloadedBytes = 0;
-
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-				chunks.push(value);
-				downloadedBytes += value.byteLength;
-
-				// Report progress every ~1 MB
-				if (downloadedBytes % (1024 * 1024) < value.byteLength) {
+			await downloadToFileDesktop(url, destPath, {
+				signal: desktopDownloadAbort.signal,
+				onProgress: (downloadedBytes, totalBytes) => {
 					onProgress?.(downloadedBytes, totalBytes);
 					publish({
 						status: 'downloading',
@@ -817,17 +797,7 @@ export async function downloadModelFile(
 						progress: { downloadedBytes, totalBytes }
 					});
 				}
-			}
-
-			// Combine chunks and write to file
-			const fullData = new Uint8Array(downloadedBytes);
-			let offset = 0;
-			for (const chunk of chunks) {
-				fullData.set(chunk, offset);
-				offset += chunk.byteLength;
-			}
-
-			await writeFile(destPath, fullData);
+			});
 
 			publish({
 				status: 'completed',
