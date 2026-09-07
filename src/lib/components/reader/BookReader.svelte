@@ -26,6 +26,7 @@
 	import { getBookCss } from '$lib/book/book-css.js';
 	import { createFoliateView, type FoliateView, type FoliateRelocateDetail } from '$lib/book/foliate-view.js';
 	import { openEpubBook, type OpenedEpubBook } from '$lib/book/foliate-loader.js';
+	import { isMobile } from '$lib/util/platform.js';
 
 	let hostEl = $state<HTMLDivElement | null>(null);
 	let ready = $state(false);
@@ -110,10 +111,49 @@
 		if (ready) applyDisplaySettings();
 	});
 
+	/**
+	 * Desktop paging keys. A phone turns pages with the tap zones above; a
+	 * keyboard reader expects the same keys the comic reader honours. The
+	 * handler lives on the window, so it applies while the reader chrome has
+	 * focus — a click inside the book moves focus into its frame, where the
+	 * tap zones take over.
+	 */
+	function handleDesktopKeydown(event: KeyboardEvent): void {
+		if (event.ctrlKey || event.metaKey || event.altKey || event.defaultPrevented) return;
+		const target = event.target as HTMLElement | null;
+		if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+		let action: (() => Promise<unknown> | undefined) | null = null;
+		switch (event.key) {
+			case 'ArrowRight':
+				action = () => view?.goRight();
+				break;
+			case 'ArrowLeft':
+				action = () => view?.goLeft();
+				break;
+			case ' ':
+				action = event.shiftKey ? () => view?.prev() : () => view?.next();
+				break;
+			case 'PageDown':
+				action = () => view?.next();
+				break;
+			case 'PageUp':
+				action = () => view?.prev();
+				break;
+			default:
+				return;
+		}
+		event.preventDefault();
+		void action();
+	}
+
 	onMount(() => {
 		void openBook();
 		document.addEventListener('visibilitychange', handleVisibility);
-		return () => document.removeEventListener('visibilitychange', handleVisibility);
+		if (!isMobile) window.addEventListener('keydown', handleDesktopKeydown);
+		return () => {
+			document.removeEventListener('visibilitychange', handleVisibility);
+			if (!isMobile) window.removeEventListener('keydown', handleDesktopKeydown);
+		};
 	});
 
 	async function openBook(): Promise<void> {
