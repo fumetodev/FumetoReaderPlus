@@ -607,6 +607,7 @@
 	"help_keywords_translations": "openrouter, clé api, fournisseur, sur l’appareil, modes, calque, révisions, coût, prix",
 	"help_keywords_whats_new": "journal des modifications, version, mises à jour",
 	"help_library_polish_library_names": "Amélioration de la bibliothèque : les noms de bibliothèque s’affichent sur une bande de titre sur les fiches Toutes les bibliothèques, et la fermeture d’un onglet anime les onglets restants pour qu’ils se replacent.",
+	"help_linux_desktop_beta_the_app": "Bureau Linux (bêta) : l’application fonctionne désormais aussi sur Linux x86-64 sous forme d’AppImage, avec le même lecteur, les mêmes bibliothèques et la même traduction sur l’appareil que sous Android ; Espace, Page précédente/suivante, Origine/Fin, Échap et F11 fonctionnent dans le lecteur, et le fichier README indique les prérequis",
 	"help_local_device_storage_zip": "Stockage local de l’appareil (fichiers ZIP/CBZ/PDF)",
 	"help_local_library": "Bibliothèque locale",
 	"help_local_llm_servers": "Serveurs LLM locaux",

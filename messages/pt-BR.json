@@ -607,6 +607,7 @@
 	"help_keywords_translations": "openrouter, chave de api, provedor, no dispositivo, modos, sobreposição, revisões, custo, preço",
 	"help_keywords_whats_new": "registro de alterações, lançamento, versão, atualizações",
 	"help_library_polish_library_names": "Aprimoramentos na biblioteca: os nomes das bibliotecas ficam em uma faixa de título nos cartões de Todas as bibliotecas, e fechar uma aba anima as abas restantes até a posição.",
+	"help_linux_desktop_beta_the_app": "Linux desktop (beta): o aplicativo agora também funciona em Linux x86-64 como um AppImage, com o mesmo leitor, bibliotecas e tradução no dispositivo do Android; Espaço, Page Up/Down, Home/End, Escape e F11 funcionam no leitor, e o README lista os requisitos",
 	"help_local_device_storage_zip": "Armazenamento local no dispositivo (arquivos ZIP/CBZ/PDF)",
 	"help_local_library": "Biblioteca local",
 	"help_local_llm_servers": "Servidores LLM locais",
