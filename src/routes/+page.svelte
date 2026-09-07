@@ -79,6 +79,7 @@
 	import { readerPageTranslationController } from '$lib/translation/reader-page-translation-runtime.js';
 	import { readerPageJump } from '$lib/reader/reader-page-jump.js';
 	import { activeRegionDrawSession, finishRegionDrawSession, highlightedDrawRegionIds, syncRegionDrawTarget } from '$lib/regions/region-draw-session.js';
+	import { announceDesktopUpdateIfAvailable } from '$lib/update/update-check.js';
 
 	let uninstallOcrBenchmarkHost: (() => void) | null = null;
 	let uninstallModelCandidateEvalApi: (() => void) | null = null;
@@ -92,6 +93,7 @@
 	let stopVolumePagesMigration: (() => void) | null = null;
 	let stopWaitingForCatalogMigration: (() => void) | null = null;
 	let visualViewportResizeHandler: (() => void) | null = null;
+	let updateCheckTimer: ReturnType<typeof setTimeout> | null = null;
 	const appMaintenanceController = new AbortController();
 	let observedReaderSessionId = '';
 	// Debug fixture code is a build-time opt-in. Runtime BuildConfig.DEBUG alone
@@ -370,7 +372,16 @@
 				else benchmarkWindow.__fumeto_page_benchmark_navigation = previousNavigation;
 			};
 		}
-		if (!isMobile) window.addEventListener('keydown', handleDesktopWindowKeydown);
+		if (!isMobile) {
+			window.addEventListener('keydown', handleDesktopWindowKeydown);
+			// The passive new-version check waits for the first paint to settle.
+			// The runner itself only ever talks to the network on the Linux
+			// desktop shell, and only while the Help → About switch is on.
+			updateCheckTimer = setTimeout(() => {
+				updateCheckTimer = null;
+				void announceDesktopUpdateIfAvailable();
+			}, 5000);
+		}
 		// Android back button handling via native bridge
 		// MainActivity.kt calls window.__fumeto_back_handler() on back press.
 		// Return false to consume the event, true to let the app close.
@@ -630,6 +641,8 @@
 		uninstallPageBenchmarkNavigation = null;
 		if (isMobile) window.removeEventListener('keydown', handleWindowKeydown, true);
 		else window.removeEventListener('keydown', handleDesktopWindowKeydown);
+		if (updateCheckTimer) clearTimeout(updateCheckTimer);
+		updateCheckTimer = null;
 		if (window.visualViewport && visualViewportResizeHandler) {
 			window.visualViewport.removeEventListener('resize', visualViewportResizeHandler);
 		}
@@ -749,9 +762,10 @@
 		{/if}
 	</div>
 
-	{#if isMobile}
-		<ToastHost />
-	{/if}
+	<!-- One toast stack for every platform: the desktop needs it for the
+	     new-version notice, and gains the edit/undo and scan toasts that
+	     were pushed but never rendered there. -->
+	<ToastHost />
 	<OcrModelSheet />
 	{#if isMobile && ($appView === 'catalog' || $appView === 'tabs' || $appView === 'settings')}
 		<!-- One dock, three destinations. Settings is a peer view now — the
