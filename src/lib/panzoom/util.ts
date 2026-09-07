@@ -13,7 +13,7 @@ import panzoom from 'panzoom';
 import { writable, get } from 'svelte/store';
 import { isDrawingMode, readingDirection } from '$lib/stores/reader-state.js';
 import { isOverlayEditMode } from '$lib/stores/ui-state.js';
-import { isMobile } from '$lib/util/platform.js';
+import { isDesktopTauri, isMobile } from '$lib/util/platform.js';
 
 let pz: PanZoom | undefined;
 let container: HTMLElement | undefined;
@@ -110,8 +110,13 @@ export function initPanzoom(node: HTMLElement) {
 		filterKey: (e: KeyboardEvent) => {
 			const target = e.target as HTMLElement;
 
-			// Always filter left/right arrows (used for page navigation)
-			if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+			// Always filter the reader's own navigation keys: left/right arrows
+			// turn pages, and Space/PageUp/PageDown/Home/End are the desktop
+			// paging keys (PageViewer owns them; panzoom must not pan on them).
+			if (
+				e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === ' '
+				|| e.key === 'PageUp' || e.key === 'PageDown' || e.key === 'Home' || e.key === 'End'
+			) {
 				return true;
 			}
 
@@ -462,10 +467,26 @@ export function panToShowBox(box: { x: number; y: number; width: number; height:
 	withPausedTransform(() => pz!.moveTo(targetX, targetY));
 }
 
-export function toggleFullScreen() {
+/**
+ * Toggle fullscreen. The desktop shell owns its window, so it is asked
+ * directly — the document API only fullscreens the page inside a window that
+ * keeps its own frame there. Everywhere else (Android, a plain browser) the
+ * document API is the whole story. Async so a caller can await the switch.
+ */
+export async function toggleFullScreen(): Promise<void> {
+	if (isDesktopTauri) {
+		try {
+			const { getCurrentWindow } = await import('@tauri-apps/api/window');
+			const currentWindow = getCurrentWindow();
+			await currentWindow.setFullscreen(!(await currentWindow.isFullscreen()));
+			return;
+		} catch (error) {
+			console.warn('Window fullscreen failed, falling back to the document API:', error);
+		}
+	}
 	if (!document.fullscreenElement) {
-		document.documentElement.requestFullscreen();
+		await document.documentElement.requestFullscreen?.();
 	} else if (document.exitFullscreen) {
-		document.exitFullscreen();
+		await document.exitFullscreen();
 	}
 }

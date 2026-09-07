@@ -30,7 +30,8 @@
 	import MobilePageJumpDialog from '$lib/components/mobile/MobilePageJumpDialog.svelte';
 	import MobileTranslateStatusDialog from '$lib/components/mobile/MobileTranslateStatusDialog.svelte';
 	import { isMobile } from '$lib/util/platform.js';
-	import { appView, currentPageIndex, currentVolume, leaveReader, overlayFontScale, readerSessionId, readerTargetEpoch } from '$lib/stores/reader-state.js';
+	import { appView, currentPageIndex, currentVolume, isDrawingMode, leaveReader, overlayFontScale, readerSessionId, readerTargetEpoch } from '$lib/stores/reader-state.js';
+	import { toggleFullScreen } from '$lib/panzoom/util.js';
 	import { settingsDialogOpen, settingsLoading, settingsReturnView, settingsCommitHandler, settingsNavigationBusy, settingsViewMounted, importDialogOpen, catalogContextMenuOpen, readerBarsVisible, pageThumbnailScrubberOpen, movingBoxId, resizingBoxId, overlayCancelHandler, overlayEditorCloseHandler, overlayEditorDismissHandler, readerTransientCloseHandler, catalogTransientCloseHandler } from '$lib/stores/ui-state.js';
 	import {
 		currentSubfolder,
@@ -70,7 +71,7 @@
 	import { scheduleCatalogV16Migration } from '$lib/db/catalog-migration.js';
 	import { scheduleVolumePagesMigration } from '$lib/db/volume-pages-migration.js';
 	import OcrModelSheet from '$lib/components/detection/OcrModelSheet.svelte';
-	import { dismissOcrModelPrompt } from '$lib/detection/ocr-model-gate.js';
+	import { dismissOcrModelPrompt, ocrModelPromptOpen } from '$lib/detection/ocr-model-gate.js';
 	import { dismissReaderDisclosure, readerDisclosure } from '$lib/reader/reader-disclosure.js';
 	import { appWorkCoordinator } from '$lib/work-coordination/work-coordinator.js';
 	import { mobileReaderUi } from '$lib/reader/mobile-reader-ui.js';
@@ -181,7 +182,13 @@
 		appView.set(destination);
 	}
 
-	function handleReaderBack(): boolean {
+	/**
+	 * Closes the topmost transient reader surface — a popover, the box editor,
+	 * a move/resize, a region draw — and reports whether there was one. Shared
+	 * by Android Back and the desktop Escape key, so both platforms unwind the
+	 * reader in the same order.
+	 */
+	function closeReaderTransient(): boolean {
 		const closeTransient = get(readerTransientCloseHandler);
 		if (closeTransient) {
 			closeTransient();
@@ -209,6 +216,11 @@
 			void finishRegionDrawSession({ enterReview: true });
 			return true;
 		}
+		return false;
+	}
+
+	function handleReaderBack(): boolean {
+		if (closeReaderTransient()) return true;
 		const outcome = mobileReaderUi.handleBack();
 		if (outcome === 'leave-reader') leaveReader();
 		return true;
@@ -219,6 +231,44 @@
 		event.preventDefault();
 		event.stopPropagation();
 		handleReaderBack();
+	}
+
+	function isEditableTarget(target: EventTarget | null): boolean {
+		if (!(target instanceof HTMLElement)) return false;
+		return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+	}
+
+	/**
+	 * Desktop keyboard: F11 toggles fullscreen in every view; Escape unwinds
+	 * the reader the way Android Back does, one layer per press, and finally
+	 * leaves it. Registered in the bubbling phase, so a dialog that handled
+	 * Escape on its own element has already marked the event; the surfaces
+	 * that listen on the window after this handler are checked by store.
+	 * The mobile chrome's own Back ladder is deliberately not consulted here —
+	 * it would swallow the first Escape to hide bars a desktop reader never
+	 * sees.
+	 */
+	function handleDesktopWindowKeydown(event: KeyboardEvent): void {
+		if (event.key === 'F11') {
+			event.preventDefault();
+			void toggleFullScreen();
+			return;
+		}
+		if (event.key !== 'Escape' || event.defaultPrevented || isEditableTarget(event.target)) return;
+		if (get(appView) !== 'reader') {
+			if (get(ocrModelPromptOpen)) {
+				event.preventDefault();
+				dismissOcrModelPrompt();
+			}
+			return;
+		}
+		// The page viewer's own handler turns drawing mode off on Escape.
+		if (get(isDrawingMode)) return;
+		if (get(settingsDialogOpen) || get(pageThumbnailScrubberOpen) || get(importDialogOpen) || get(onboardingTourOpen)) return;
+		event.preventDefault();
+		if (dismissOcrModelPrompt()) return;
+		if (closeReaderTransient()) return;
+		leaveReader();
 	}
 
 	// Apply color scheme reactively (also handles initial mount)
@@ -319,6 +369,7 @@
 				else benchmarkWindow.__fumeto_page_benchmark_navigation = previousNavigation;
 			};
 		}
+		if (!isMobile) window.addEventListener('keydown', handleDesktopWindowKeydown);
 		// Android back button handling via native bridge
 		// MainActivity.kt calls window.__fumeto_back_handler() on back press.
 		// Return false to consume the event, true to let the app close.
@@ -589,6 +640,7 @@
 		uninstallPageBenchmarkNavigation?.();
 		uninstallPageBenchmarkNavigation = null;
 		if (isMobile) window.removeEventListener('keydown', handleWindowKeydown, true);
+		else window.removeEventListener('keydown', handleDesktopWindowKeydown);
 		if (window.visualViewport && visualViewportResizeHandler) {
 			window.visualViewport.removeEventListener('resize', visualViewportResizeHandler);
 		}
