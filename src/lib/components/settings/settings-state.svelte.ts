@@ -24,6 +24,7 @@ import {
 } from '$lib/settings/settings.js';
 import type { ProviderConfig } from '$lib/translation/llm-types.js';
 import { clearProviderKey } from '$lib/settings/secure-storage.js';
+import { DEFAULT_HYMT2_VARIANT } from '$lib/settings/settings.js';
 import { planProviderKeyCommit } from '$lib/settings/provider-key-drafts.js';
 import { syncLibraryWatchers } from '$lib/library/library-watch-sync.js';
 
@@ -53,7 +54,7 @@ export class SettingsDraft {
 	onDeviceTargetLang = $state('en');
 	onDeviceOCRProvider = $state<'ppocr'>('ppocr');
 	onDeviceTranslationBackend = $state<'translategemma'>('translategemma');
-	hyMT2Variant = $state<FumetoSettings['hyMT2Variant']>('stock');
+	hyMT2Variant = $state<FumetoSettings['hyMT2Variant']>(DEFAULT_HYMT2_VARIANT);
 	onDeviceTemperature = $state(ON_DEVICE_TEMPERATURE_DEFAULT);
 	backgroundTranslation = $state(false);
 	desktopUpdateCheck = $state(true);
@@ -125,7 +126,7 @@ export class SettingsDraft {
 		// straight from the settings store so an import updates the UI live.
 		this.hyMT2Variant = (s.hyMT2Variant as string) === 'manga-v1' ? 'manga-v2'
 			: (s.hyMT2Variant as string) === 'manga-v4' ? 'manga-v5'
-			: (s.hyMT2Variant ?? 'stock');
+			: (s.hyMT2Variant ?? DEFAULT_HYMT2_VARIANT);
 		this.onDeviceTemperature = s.onDeviceTemperature ?? ON_DEVICE_TEMPERATURE_DEFAULT;
 		this.backgroundTranslation = s.backgroundTranslation;
 		this.desktopUpdateCheck = s.desktopUpdateCheck ?? true;

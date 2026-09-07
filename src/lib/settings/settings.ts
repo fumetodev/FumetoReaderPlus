@@ -10,6 +10,7 @@ import { defaultTargetForUiLocale, isUiLocaleSetting, type UiLocaleSetting } fro
 import { getUiLocale } from '$lib/i18n/locale.js';
 import { get, writable } from 'svelte/store';
 import { randomUUID } from '$lib/util/uuid.js';
+import { isAndroid } from '$lib/util/platform.js';
 import type { PageViewMode, TranslationMode } from '$lib/types/index.js';
 import type { ProviderConfig } from '$lib/translation/llm-types.js';
 
@@ -297,6 +298,9 @@ export interface FumetoSettings {
 	 * 'custom' means the user's own imported GGUF and is only honoured while
 	 * `customModel` is populated; `activeHyMT2Variant()` degrades it to 'stock'
 	 * otherwise, so deleting the file cannot leave the picker unchecked.
+	 *
+	 * The fresh-install choice is `DEFAULT_HYMT2_VARIANT`, which differs by
+	 * platform: the stock 1.25-bit model has fast kernels only on ARM.
 	 */
 	hyMT2Variant: 'stock' | 'manga-v2' | 'manga-v3' | 'manga-v5' | 'custom';
 	/**
@@ -371,6 +375,15 @@ export const ON_DEVICE_TEMPERATURE_DEFAULT = 0.15;
 export const ON_DEVICE_TEMPERATURE_MIN = 0;
 export const ON_DEVICE_TEMPERATURE_MAX = 1;
 
+/**
+ * The on-device model a fresh install starts with. Android keeps the small
+ * stock 1.25-bit model, whose fast kernels are NEON-only; an x86-64 desktop
+ * runs that format through the scalar path many times slower than the
+ * Q4_K_M manga fine-tune, so it starts on manga-v5 instead. Only the fresh
+ * default moves: a stored choice is the user's and is never rewritten.
+ */
+export const DEFAULT_HYMT2_VARIANT: FumetoSettings['hyMT2Variant'] = isAndroid ? 'stock' : 'manga-v5';
+
 export const DEFAULT_SETTINGS: FumetoSettings = {
 	openrouterApiKey: '',
 	selectedModel: DEFAULT_OPENROUTER_MODEL,
@@ -426,7 +439,7 @@ export const DEFAULT_SETTINGS: FumetoSettings = {
 	translationPipeline: 'off-device',
 	onDeviceOCRProvider: 'ppocr',
 	onDeviceTranslationBackend: 'translategemma',
-	hyMT2Variant: 'stock',
+	hyMT2Variant: DEFAULT_HYMT2_VARIANT,
 	customModel: undefined,
 	onDeviceTemperature: ON_DEVICE_TEMPERATURE_DEFAULT,
 	onDeviceSourceLang: 'auto',
