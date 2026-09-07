@@ -123,7 +123,9 @@ npm run release:linux       # preflight, build, audit, then collect into dist/li
 ```
 
 The first build compiles the vendored llama.cpp (~10 minutes) for a fixed AVX2/FMA/F16C
-baseline, never for the build machine's own CPU. An AppImage built locally embeds the host's
+baseline, never for the build machine's own CPU. On a distribution newer than the floor the
+bundler's own `strip` cannot read the system libraries, so the ladder sets `NO_STRIP=true` there
+(`npm run tauri:linux-build` needs it in the environment by hand). An AppImage built locally embeds the host's
 WebKitGTK and needs the host's glibc version or newer, so it is for testing; the AppImages on the
 releases page come from CI's Ubuntu 22.04 container.
 
