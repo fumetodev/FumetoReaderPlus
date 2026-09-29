@@ -14,6 +14,7 @@
 import { get, writable } from 'svelte/store';
 import { parseBridgeRejection } from '$lib/i18n/errors.js';
 import { isAndroid, isDesktop } from '$lib/util/platform.js';
+import { streamToFile } from '$lib/util/stream-to-file.js';
 import { settings, ON_DEVICE_TEMPERATURE_DEFAULT } from '$lib/settings/settings.js';
 import type { GgufDownloadState } from './gguf-model-manager.js';
 
@@ -756,7 +757,7 @@ let downloadCancelRequested = false;
 /**
  * Download a model file.
  * Android: via Kotlin OkHttp bridge with __llama_progress callback.
- * Desktop: via fetch with streaming progress.
+ * Desktop: via fetch, streamed to disk with progress.
  *
  * `onProgress` diverts reporting to the caller and leaves
  * `ggufDownloadProgress` untouched. Without it, a second downloader (the OCR
@@ -784,9 +785,7 @@ export async function downloadModelFile(
 
 	if (isDesktop) {
 		try {
-			const { invoke } = await import('@tauri-apps/api/core');
 			const { fetch } = await import('@tauri-apps/plugin-http');
-			const { writeFile } = await import('@tauri-apps/plugin-fs');
 
 			desktopDownloadAbort = new AbortController();
 			const response = await fetch(url, { signal: desktopDownloadAbort.signal });
@@ -796,20 +795,17 @@ export async function downloadModelFile(
 			}
 
 			const totalBytes = parseInt(response.headers.get('content-length') ?? '0', 10);
-			const reader = response.body?.getReader();
-			if (!reader) throw new Error('No response body');
+			if (!response.body) throw new Error('No response body');
 
-			const chunks: Uint8Array[] = [];
-			let downloadedBytes = 0;
-
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-				chunks.push(value);
-				downloadedBytes += value.byteLength;
-
-				// Report progress every ~1 MB
-				if (downloadedBytes % (1024 * 1024) < value.byteLength) {
+			// Streamed to `<dest>.part` and renamed on completion: holding the
+			// whole model in the JS heap cost twice its size (see stream-to-file).
+			let reportedMegabytes = 0;
+			await streamToFile(response.body, destPath, {
+				onProgress: (downloadedBytes) => {
+					// Report progress every ~1 MB
+					const megabytes = Math.floor(downloadedBytes / (1024 * 1024));
+					if (megabytes === reportedMegabytes) return;
+					reportedMegabytes = megabytes;
 					onProgress?.(downloadedBytes, totalBytes);
 					publish({
 						status: 'downloading',
@@ -817,17 +813,7 @@ export async function downloadModelFile(
 						progress: { downloadedBytes, totalBytes }
 					});
 				}
-			}
-
-			// Combine chunks and write to file
-			const fullData = new Uint8Array(downloadedBytes);
-			let offset = 0;
-			for (const chunk of chunks) {
-				fullData.set(chunk, offset);
-				offset += chunk.byteLength;
-			}
-
-			await writeFile(destPath, fullData);
+			});
 
 			publish({
 				status: 'completed',

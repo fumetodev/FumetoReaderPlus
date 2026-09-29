@@ -14,6 +14,7 @@
  */
 
 import { isAndroid } from '$lib/util/platform.js';
+import { streamToFile } from '$lib/util/stream-to-file.js';
 import {
 	registerCallback,
 	registerProgressHandler,
@@ -46,7 +47,7 @@ async function downloadDesktop(
 	signal?: AbortSignal
 ): Promise<void> {
 	const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
-	const { writeFile, mkdir } = await import('@tauri-apps/plugin-fs');
+	const { mkdir } = await import('@tauri-apps/plugin-fs');
 
 	// Ensure parent directory exists
 	const lastSlash = destPath.lastIndexOf('/');
@@ -64,28 +65,12 @@ async function downloadDesktop(
 	if (!response.ok) throw new Error(`Download failed: HTTP ${response.status}`);
 	const totalBytes = parseInt(response.headers.get('content-length') || '0', 10);
 
-	const reader = response.body?.getReader();
-	if (!reader) throw new Error('Response body is not readable');
+	if (!response.body) throw new Error('Response body is not readable');
 
-	const chunks: Uint8Array[] = [];
-	let downloadedBytes = 0;
-
-	while (true) {
-		const { done, value } = await reader.read();
-		if (done) break;
-		chunks.push(value);
-		downloadedBytes += value.byteLength;
-		onProgress(downloadedBytes, totalBytes);
-	}
-
-	const fullBuffer = new Uint8Array(downloadedBytes);
-	let offset = 0;
-	for (const chunk of chunks) {
-		fullBuffer.set(chunk, offset);
-		offset += chunk.byteLength;
-	}
-
-	await writeFile(destPath, fullBuffer);
+	// Streamed to disk in bounded memory; see stream-to-file.ts.
+	await streamToFile(response.body, destPath, {
+		onProgress: (downloadedBytes) => onProgress(downloadedBytes, totalBytes)
+	});
 }
 
 // ============================================================
