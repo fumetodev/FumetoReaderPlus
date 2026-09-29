@@ -4,7 +4,7 @@
  * All operations use @tauri-apps/plugin-fs for Android/desktop compatibility.
  */
 
-import { readFile, writeFile, mkdir, remove } from '@tauri-apps/plugin-fs';
+import { readFile, writeFile, copyFile, rename, mkdir, remove } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
 import { isArchiveExtension } from '$lib/import/types.js';
 
@@ -35,7 +35,17 @@ export function resolveDisplayName(path: string): string {
 		} catch { /* fall through */ }
 	}
 	// Fallback: last path segment
-	return path.split(/[\\/]/).pop() || 'archive.cbz';
+	const segment = path.split(/[\\/]/).pop() || 'archive.cbz';
+	// A file:// URL (what the iOS document picker returns) percent-encodes it;
+	// "My%20Comic.cbz" must not become the copied file's name and title.
+	if (path.startsWith('file://')) {
+		try {
+			return decodeURIComponent(segment) || 'archive.cbz';
+		} catch {
+			return segment;
+		}
+	}
+	return segment;
 }
 
 /**
@@ -79,6 +89,16 @@ async function buildDestPath(
 /**
  * Copy an archive file from sourcePath to the organized library folder.
  * Returns the destination path.
+ *
+ * A real path or `file://` URL (desktop, and the iOS document picker) is copied
+ * by the Rust side, so the archive never passes through the JS heap — reading
+ * it in and writing it back out held a whole volume in memory at least twice,
+ * which an iOS WebView does not survive for a large archive. The copy lands on
+ * a `.part` name first, which no scan treats as an archive, and is renamed
+ * into place only once complete.
+ *
+ * An Android `content://` URI keeps the read-then-write path: plugin-fs
+ * `copyFile` resolves both ends as filesystem paths and cannot open one.
  */
 export async function copyFileToLibrary(
 	sourcePath: string,
@@ -88,9 +108,24 @@ export async function copyFileToLibrary(
 ): Promise<string> {
 	const filename = extractArchiveFilename(sourcePath);
 	const destPath = await buildDestPath(libraryPath, filename, author, series);
-	const data = await readFile(sourcePath);
-	await writeFile(destPath, data);
+	if (isContentUri(sourcePath)) {
+		const data = await readFile(sourcePath);
+		await writeFile(destPath, data);
+		return destPath;
+	}
+	const partPath = `${destPath}.part`;
+	try {
+		await copyFile(sourcePath, partPath);
+		await rename(partPath, destPath);
+	} catch (error) {
+		await remove(partPath).catch(() => undefined);
+		throw error;
+	}
 	return destPath;
+}
+
+function isContentUri(path: string): boolean {
+	return path.startsWith('content://');
 }
 
 /**
