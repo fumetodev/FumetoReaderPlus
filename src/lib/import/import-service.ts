@@ -20,7 +20,7 @@ import { getArchiveType } from './types.js';
 import { beginVolumeImport } from './import-registry.js';
 import { extractFirstZipImage, streamZipArchivePages, type StreamedPage } from './archive-extraction.js';
 import { isMobile } from '$lib/util/platform.js';
-import { copyFileToLibrary, tryDeleteFile } from '$lib/util/file-utils.js';
+import { copyFileToLibrary, resolveDisplayName, tryDeleteFile } from '$lib/util/file-utils.js';
 import { scanLibrary, type ScanResult } from '$lib/library/library-scanner.js';
 import { ensureAppDataPathsHealed, rebaseStalePath } from '$lib/library/app-data-relocation.js';
 import { revokeThumbnailUrl } from '$lib/stores/thumbnail-cache.js';
@@ -690,7 +690,7 @@ export async function importToLibrary(
 	for (let i = 0; i < filePaths.length; i++) {
 		const srcPath = filePaths[i];
 		const assignment = assignments[i] || {};
-		const filename = srcPath.split(/[\\/]/).pop() || 'archive.cbz';
+		const filename = resolveDisplayName(srcPath);
 		onProgress?.(m.import_progress_copying({ index: i + 1, total: filePaths.length, name: filename }));
 
 		try {
