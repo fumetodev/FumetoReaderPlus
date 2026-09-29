@@ -29,6 +29,7 @@ import {
 } from '$lib/import/import-service.js';
 import { isArchiveExtension } from '$lib/import/types.js';
 import { isAndroid } from '$lib/util/platform.js';
+import { ensureAppDataPathsHealed, rebaseStalePath } from './app-data-relocation.js';
 import { revokeThumbnailUrl } from '$lib/stores/thumbnail-cache.js';
 import type { LibraryImport, VolumeMetadata } from '$lib/types/index.js';
 
@@ -307,22 +308,28 @@ function scansInFlightFor(libKey: string): Promise<unknown>[] {
  * Concurrent identical-scope calls resolve with a real `ScanResult` that
  * covered their request — never a synthetic failure.
  *
- * @param libraryPath - Absolute path to the library folder
+ * @param requestedLibraryPath - Absolute path to the library folder
  * @param onProgress - Optional progress callback
  * @param libraryId - Settings ID of the library being scanned
- * @param subfolder - Optional subfolder to scan (relative to libraryPath)
+ * @param subfolder - Optional subfolder to scan (relative to the library path)
  * @returns Scan result with counts and any failures
  */
 export async function scanLibrary(
-	libraryPath: string,
+	requestedLibraryPath: string,
 	onProgress?: (progress: ScanProgress) => void,
 	libraryId?: string,
 	subfolder?: string
 ): Promise<ScanResult> {
-	const libKey = libraryId || libraryPath;
+	const libKey = libraryId || requestedLibraryPath;
 	const scopeKey = scanScopeKey(libKey, subfolder);
 
 	const runOnce = async (): Promise<ScanResult> => {
+		// A scan must never reconcile against import records that still name a
+		// data directory the app has moved out of: every archive would look new
+		// and be re-imported as a duplicate. A caller holding a pre-move copy of
+		// the library path is carried onto the current one.
+		await ensureAppDataPathsHealed();
+		const libraryPath = rebaseStalePath(requestedLibraryPath);
 		await awaitExclusiveGate(libKey);
 		// Android: pull user-dropped archives from the USB-visible external
 		// folder into the library dir first, so the Settings tip's workflow

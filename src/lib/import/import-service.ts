@@ -22,6 +22,7 @@ import { extractFirstZipImage, streamZipArchivePages, type StreamedPage } from '
 import { isMobile } from '$lib/util/platform.js';
 import { copyFileToLibrary, tryDeleteFile } from '$lib/util/file-utils.js';
 import { scanLibrary, type ScanResult } from '$lib/library/library-scanner.js';
+import { ensureAppDataPathsHealed, rebaseStalePath } from '$lib/library/app-data-relocation.js';
 import { revokeThumbnailUrl } from '$lib/stores/thumbnail-cache.js';
 import { naturalCompare } from '$lib/util/natural-sort.js';
 
@@ -680,6 +681,11 @@ export async function importToLibrary(
 	const succeeded: string[] = [];
 	const failed: { path: string; error: string }[] = [];
 	const deleteFailures: string[] = [];
+
+	// Copy into where the library lives now, not where a caller's pre-move
+	// snapshot says it was (see app-data-relocation.ts).
+	await ensureAppDataPathsHealed();
+	libraryPath = rebaseStalePath(libraryPath);
 
 	for (let i = 0; i < filePaths.length; i++) {
 		const srcPath = filePaths[i];

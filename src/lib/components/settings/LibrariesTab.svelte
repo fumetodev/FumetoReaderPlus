@@ -17,6 +17,7 @@
 	import { mkdir, exists as fsExists } from '@tauri-apps/plugin-fs';
 	import { appDataDir, join } from '@tauri-apps/api/path';
 	import { resolveMobileLocalLibrary } from '$lib/settings/local-library-bootstrap.js';
+	import { ensureAppDataPathsHealed, rebaseStaleLibraryPaths } from '$lib/library/app-data-relocation.js';
 	import { storageDurability, refreshStorageDurability, requestStoragePersistence } from '$lib/storage/durability.js';
 	import OnDeviceModelsCard from './OnDeviceModelsCard.svelte';
 	import SettingsTransferCard from './SettingsTransferCard.svelte';
@@ -29,8 +30,17 @@
 	$effect(() => {
 		void refreshStorageDurability();
 		if (isMobile) {
+			// Tracked here, synchronously: the reads below follow an await and
+			// would not re-run this effect when the list changes.
+			void draft.libraries;
 			void (async () => {
 				try {
+					// Compare against where the library lives now: a draft taken before
+					// the launch-time heal still names the old data directory, and would
+					// make the existing "Local Comics" look missing.
+					await ensureAppDataPathsHealed();
+					const healed = rebaseStaleLibraryPaths(draft.libraries);
+					if (healed !== draft.libraries) draft.libraries = healed;
 					const entry = await resolveMobileLocalLibrary(draft.libraries, {
 						appDataDir,
 						join,
