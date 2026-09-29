@@ -39,6 +39,8 @@
 	} from '$lib/stores/catalog-state.js';
 	import { settings, isLocalLibrary, isYACReaderLibrary, isKomgaLibrary, isKavitaLibrary, initSecureSettings } from '$lib/settings/settings.js';
 	import { scanLibrary } from '$lib/library/library-scanner.js';
+	import { ensureAppDataPathsHealed } from '$lib/library/app-data-relocation.js';
+	import { resolveMobileLocalLibrary } from '$lib/settings/local-library-bootstrap.js';
 	import { startWatchingLibrary, stopAllWatching } from '$lib/library/library-watcher.js';
 	import { getOrCreateClient } from '$lib/yacreader/yac-client-manager.js';
 	import { fullSyncLibrary, getLastSyncDiagnostics, remoteStartupSyncPlan, fetchRemoteFolderContents } from '$lib/yacreader/yac-sync-service.js';
@@ -404,6 +406,9 @@
 
 		// Load API key from encrypted storage (+ migrate from plaintext if needed)
 		await initSecureSettings();
+		// Before anything reads a local library path: an iOS update can move the
+		// app's data directory, and every stored absolute path with it.
+		await ensureAppDataPathsHealed();
 		// Do not delay the first frame while the one-time provider download cache
 		// cleanup runs; the helper first waits for the v12 DB migration to commit.
 		void cleanupRetiredProviderStorage();
@@ -414,32 +419,19 @@
 		// On mobile, ensure the local library exists in app-specific storage
 		if (isMobile) {
 			try {
-				const dataDir = await appDataDir();
-				const comicsDir = await join(dataDir, 'Comics');
-				const dirExists = await fsExists(comicsDir);
-				if (!dirExists) {
-					await mkdir(comicsDir, { recursive: true });
-				}
-				// Ensure the local library entry exists in settings
-				const currentSettings = get(settings);
-				const hasLocal = currentSettings.libraries.some(
-					(l) => isLocalLibrary(l) && l.path === comicsDir
-				);
-				if (!hasLocal) {
-					settings.update((s) => ({
-						...s,
-						libraries: [
-							...s.libraries,
-							{
-								id: randomUUID(),
-								type: 'local' as const,
-								name: 'Local Comics',
-								path: comicsDir,
-								autoScan: true,
-								watchEnabled: false
-							}
-						]
-					}));
+				const entry = await resolveMobileLocalLibrary(get(settings).libraries, {
+					appDataDir,
+					join,
+					exists: fsExists,
+					mkdir,
+					randomUUID: () => randomUUID()
+				});
+				if (entry) {
+					settings.update((s) =>
+						s.libraries.some((l) => isLocalLibrary(l) && l.path === entry.path)
+							? s
+							: { ...s, libraries: [...s.libraries, entry] }
+					);
 				}
 			} catch (err) {
 				console.warn('Failed to create local library:', err);
