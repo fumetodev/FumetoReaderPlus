@@ -26,6 +26,7 @@ import type { ProviderConfig } from '$lib/translation/llm-types.js';
 import { clearProviderKey } from '$lib/settings/secure-storage.js';
 import { planProviderKeyCommit } from '$lib/settings/provider-key-drafts.js';
 import { stopAllWatching } from '$lib/library/library-watcher.js';
+import { rebaseStaleLibraryPaths } from '$lib/library/app-data-relocation.js';
 
 const APPLY_DEBOUNCE_MS = 250;
 
@@ -222,6 +223,9 @@ let applyChain: Promise<void> = Promise.resolve();
 async function performApply(): Promise<void> {
 	const previous = get(settings);
 	const patch = settingsDraft.collectPatch();
+	// A draft hydrated before the launch-time path heal still names the old
+	// data directory; writing it back verbatim would undo the heal.
+	if (patch.libraries) patch.libraries = rebaseStaleLibraryPaths(patch.libraries);
 
 	// Commit staged provider API keys transactionally with the provider list.
 	const keyCommitPlan = planProviderKeyCommit(
