@@ -1,0 +1,26 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "build": {
+    "beforeBuildCommand": "npm run build:macos"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "FumetoReaderPlus",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "backgroundThrottling": "disabled"
+      }
+    ]
+  },
+  "bundle": {
+    "macOS": {
+      "minimumSystemVersion": "14.0",
+      "signingIdentity": "-"
+    }
+  }
+}
