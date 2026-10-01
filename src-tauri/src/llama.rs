@@ -178,6 +178,9 @@ pub struct llama_batch {
 extern "C" {
     // Backend lifecycle
     pub fn llama_backend_init();
+    /// Static, NUL-terminated summary of the compiled CPU features and
+    /// registered backends (e.g. "DOTPROD = 1", Metal). Owned by llama.cpp.
+    pub fn llama_print_system_info() -> *const c_char;
 
     // Model
     pub fn llama_model_default_params() -> llama_model_params;
@@ -462,6 +465,16 @@ fn ensure_backend_init() {
             llama_backend_init();
         }
         log::info!("llama backend initialized");
+        // What this binary was actually compiled for — the way to confirm a
+        // bundle carries the fixed CPU baseline from build.rs (GGML_NATIVE off,
+        // dotprod on Apple Silicon) and that Metal is registered.
+        let system_info = unsafe { llama_print_system_info() };
+        if !system_info.is_null() {
+            log::info!(
+                "llama system info: {}",
+                unsafe { CStr::from_ptr(system_info) }.to_string_lossy()
+            );
+        }
         // FFI layout sanity check: log the sizes of the two structs we hand
         // across the C boundary by value. Any future llama.cpp bump that
         // silently adds/removes/reorders a field will change these numbers,

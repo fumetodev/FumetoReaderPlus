@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>FumetoReaderPlus connects to the comic servers (Komga, Kavita, YACReader) and translation servers (LM Studio) you add on your network.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>FumetoReaderPlus reads the comic libraries you add from your Documents folder.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>FumetoReaderPlus reads the comic libraries and files you add from your Downloads folder.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>FumetoReaderPlus reads the comic libraries and files you add from your Desktop.</string>
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>FumetoReaderPlus reads the comic libraries you add from external drives.</string>
+	<key>NSNetworkVolumesUsageDescription</key>
+	<string>FumetoReaderPlus reads the comic libraries you add from network shares.</string>
+</dict>
+</plist>
