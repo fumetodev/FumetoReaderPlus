@@ -2,8 +2,8 @@
  * Model-byte loader for the PP-OCR WASM sessions.
  *
  * Desktop/dev builds serve the det/rec models from the frontend bundle.
- * Android builds prune them from the WebView embed (scripts/
- * prune-android-embed.mjs) because native ORT owns det/rec there — but the
+ * Android builds prune them from the WebView embed (`scripts/prune-embed.mjs
+ * android`) because native ORT owns det/rec there — but the
  * SvelteKit SPA fallback answers those URLs with index.html at HTTP 200, so a
  * status check never fires and ort-web dies with "protobuf parsing failed".
  * This loader prefers a downloaded model (see ocr-model-manager.ts), then

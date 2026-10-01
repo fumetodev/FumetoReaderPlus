@@ -12,7 +12,8 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "build:android": "npm run build && node scripts/prune-android-embed.mjs",
+    "build:android": "npm run build && node scripts/prune-embed.mjs android",
+    "build:macos": "npm run build && node scripts/prune-embed.mjs macos",
     "build:debug-ui-fixtures": "VITE_FUMETO_DEBUG_UI_FIXTURES=1 vite build",
     "schemes:generate": "npx --yes esbuild scripts/generate-color-schemes.src.mjs --bundle --platform=node --format=esm --outfile=node_modules/.cache/fumeto/schemes-gen.mjs --log-level=error && node node_modules/.cache/fumeto/schemes-gen.mjs",
     "version:set": "node scripts/set-app-version.mjs",

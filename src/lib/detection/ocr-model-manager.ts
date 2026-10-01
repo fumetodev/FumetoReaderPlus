@@ -80,7 +80,7 @@ let downloadInProgress = false;
 let cancelRequested = false;
 
 /**
- * Only Android manages these files. `scripts/prune-android-embed.mjs` strips
+ * Only Android manages these files. `scripts/prune-embed.mjs android` strips
  * the models from the Android web bundle and nothing else does, so a browser
  * (`npm run dev`) and the desktop build still serve them from `static/models`
  * and every readiness question answers "yes" there — asking a desktop user to
