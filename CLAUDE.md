@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-FumetoReaderPlus is a manga/comic reader with library management (local imports + YACReader/Komga/Kavita servers) and AI translation (off-device LLM providers, or fully on-device). It is a SvelteKit 5 + TypeScript SPA running inside a Tauri v2 Android WebView, with native Kotlin/C++ accelerators and a thin Rust layer. **Android is the product** — the desktop target exists but is shelved. Offline-first: SSR is disabled and the static adapter emits a single `index.html` for Tauri to load.
+FumetoReaderPlus is a manga/comic reader with library management (local imports + YACReader/Komga/Kavita servers) and AI translation (off-device LLM providers, or fully on-device). It is a SvelteKit 5 + TypeScript SPA running inside a Tauri v2 Android WebView, with native Kotlin/C++ accelerators and a thin Rust layer. **Android is the product** — the Windows/Linux desktop builds are shelved; macOS on Apple Silicon is being brought up as an unsigned personal build (see macOS below). Offline-first: SSR is disabled and the static adapter emits a single `index.html` for Tauri to load.
 
 The architecture deep-dives are being re-published gradually after the open-sourcing cleanup; until then, this file is the canonical orientation.
 
@@ -17,14 +17,27 @@ npm run check            # i18n compile → svelte-check over src/ → native-st
 
 npm run tauri:android-build -- --debug   # Android debug APK (for device testing)
 npm run tauri:android-build              # Release build (requires signing)
-npm run build:android    # SPA build + prune-android-embed (used by android builds)
+npm run build:android    # SPA build + prune-embed android (used by android builds)
+
+npm run tauri:build      # On an Apple Silicon Mac: the macOS .app + .dmg
+npm run build:macos      # SPA build + prune-embed macos (used by macOS builds)
 ```
 
 Android builds need `ANDROID_HOME`/`NDK_HOME` exported and **JDK 21** (newer JDKs are not supported by this Gradle). Node: `.npmrc` sets `engine-strict=true`, and the dependency tree's `engines` ranges admit Node 22/24/26 but reject 20, 23 and 25 — `npm ci` fails outright on those (CI pins 24 for exactly this reason; see the comment in `.github/workflows/build.yml`).
 
 `src-tauri/gen/android/` is Tauri's generated project, but the Kotlin sources under `app/src/main/java/com/fumeto/reader/`, `app/build.gradle.kts` and `proguard-rules.pro` are git-tracked customizations — re-running `tauri android init` overwrites them; restore with `git checkout -- src-tauri/gen/android/`. `src-tauri/tauri.android.conf.json` swaps the Android `beforeBuildCommand` to `npm run build:android`, and `build.gradle.kts` drives the llama-bridge CMake build (the OpenCL ICD stub is linked from `llama-bridge/opencl-lib/` and excluded from the APK; the vendor driver loads at runtime).
 
-The only CI (`.github/workflows/build.yml`) builds **desktop** Tauri bundles (macOS/Windows/Linux) on a `v*` tag push or manual dispatch and opens a draft GitHub release. It runs no tests and no Android build; `release:record` creates `v<version>-vc<code>` tags, so pushing one triggers it.
+The only CI (`.github/workflows/build.yml`) runs on **manual dispatch only** (Actions → Build & Release → Run workflow); tag pushes do not trigger it, including the `v<version>-vc<code>` tags `release:record` creates. A `verify` job runs `npm run check` and the unit tests in `tests/unit/`; then the build job produces **desktop** Tauri bundles (macOS Apple Silicon, Windows, Linux) and uploads them as workflow artifacts. A draft GitHub release is created only when the run is dispatched on a tag. There is no Android build in CI.
+
+### macOS
+
+Apple Silicon only (macOS 14+), unsigned, for personal use. Build on the Mac itself with `npm run tauri:build`; the `.app` and `.dmg` land in `src-tauri/target/release/bundle/{macos,dmg}/` (`target/aarch64-apple-darwin/…` with `--target aarch64-apple-darwin`, as CI passes).
+
+- `src-tauri/tauri.macos.conf.json` is merged over `tauri.conf.json` on macOS builds only: ad-hoc signing (`signingIdentity: "-"`, which Apple Silicon requires of every app), `minimumSystemVersion` 14.0, the desktop window size, `backgroundThrottling: "disabled"` (otherwise WebKit suspends a hidden window after ~5 minutes and a batch translation stops), and `npm run build:macos` as the `beforeBuildCommand`. Arrays are replaced, not merged, so the window object restates every field.
+- `src-tauri/Info.plist` is merged into the bundle's Info.plist: the texts of the local-network and files-and-folders permission prompts (English only for now).
+- `build.rs` compiles llama.cpp for a fixed CPU baseline, never the build machine's (`GGML_NATIVE=OFF`; `armv8.4-a+dotprod+fp16` = the M1 baseline on Apple Silicon). CI fails a macOS build whose CMake cache says otherwise. `llama_print_system_info()` is logged at backend init (debug builds only — release builds do not register the log plugin).
+- Installing: a build made on the Mac opens directly. A downloaded one is quarantined and Gatekeeper blocks it; allow it under System Settings → Privacy & Security → Open Anyway, or run `xattr -dr com.apple.quarantine /Applications/FumetoReaderPlus.app`.
+- An ad-hoc signature differs on every build, so macOS asks again for folder and network access after each update. Signing locally with a free "Apple Development" certificate from Xcode (`APPLE_SIGNING_IDENTITY="Apple Development: …" npm run tauri:build`) keeps those grants.
 
 ### Release
 
