@@ -71,7 +71,8 @@ static gates that ship here.
 - SvelteKit 5 SPA running inside a Tauri v2 Android WebView; Kotlin/C++
   accelerators (ONNX Runtime, llama.cpp) behind injected JS bridges; all
   product state lives in the WebView (Dexie/IndexedDB). Desktop builds exist
-  but are experimental and unsupported.
+  but are experimental and unsupported; a macOS (Apple Silicon) build is in
+  progress — see the macOS notes in `CLAUDE.md`.
 - `CLAUDE.md` is the contributor orientation: commands, architecture map, and
   the invariants the test gates enforce.
 - This repository is a **cleaned import**: the app was developed privately for
