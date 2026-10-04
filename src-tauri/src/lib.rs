@@ -1,4 +1,6 @@
 #[cfg(not(mobile))]
+mod keep_awake;
+#[cfg(not(mobile))]
 mod llama;
 #[cfg(not(mobile))]
 mod manga_guidance;
@@ -21,6 +23,7 @@ pub fn run() {
         llama::llama_unload,
         llama::llama_is_loaded,
         llama::llama_cancel,
+        keep_awake::app_keep_awake,
     ]);
 
     builder

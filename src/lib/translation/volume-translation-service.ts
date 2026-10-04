@@ -81,7 +81,8 @@ import { RemotePageSource } from '$lib/reader/remote-page-source.js';
 import { KomgaPageSource } from '$lib/reader/komga-page-source.js';
 import { KavitaPageSource } from '$lib/reader/kavita-page-source.js';
 import { PrefetchedPageSource } from '$lib/reader/prefetched-page-source.js';
-import { isAndroid } from '$lib/util/platform.js';
+import { isAndroid, isMacOS } from '$lib/util/platform.js';
+import { acquireKeepAwake, releaseKeepAwake } from '$lib/desktop/keep-awake.js';
 import { applyReviewRevisions } from './review-sync.js';
 import {
 	createOverlayDocumentV2,
@@ -506,6 +507,7 @@ async function runVolumeTranslation(
 	let pageSource: PageSource | null = null;
 	let effectivePageSource: PageSource | null = null;
 	let bgBridge: typeof import('./background-service-bridge.js') | null = null;
+	let keepAwakeHeld = false;
 
 	try {
 		// Load volume data
@@ -697,6 +699,13 @@ async function runVolumeTranslation(
 			}
 		}
 
+		// The Mac counterpart: hold off App Nap and idle sleep while this job
+		// runs. Claims are reference-counted across concurrent jobs.
+		if ($settings.backgroundTranslation && isMacOS) {
+			keepAwakeHeld = true;
+			await acquireKeepAwake();
+		}
+
 		// Wrap onProgress to also update the foreground service notification
 		const wrappedOnProgress = (j: VolumeTranslationJob) => {
 			onProgress?.(j);
@@ -824,6 +833,7 @@ async function runVolumeTranslation(
 		}
 		// Release only this volume's claim — other jobs may still need the service.
 		if (bgBridge) bgBridge.stopBackgroundTranslation(volumeUuid);
+		if (keepAwakeHeld) void releaseKeepAwake();
 		runDescriptors.delete(volumeUuid);
 		cancelReasons.delete(volumeUuid);
 	}

@@ -28,3 +28,9 @@ tauri-plugin-dialog = "2.7"
 tauri-plugin-fs = "2.5"
 tauri-plugin-http = "2"
 tauri-plugin-opener = "2"
+
+# macOS-only: the background-translation keep-awake activity (keep_awake.rs).
+# Both crates are already in the tree through tauri; only features are added.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSProcessInfo", "NSString"] }
