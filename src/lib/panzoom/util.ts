@@ -13,7 +13,8 @@ import panzoom from 'panzoom';
 import { writable, get } from 'svelte/store';
 import { isDrawingMode, readingDirection } from '$lib/stores/reader-state.js';
 import { isOverlayEditMode } from '$lib/stores/ui-state.js';
-import { isMobile } from '$lib/util/platform.js';
+import { isMobile, isTauriDesktop } from '$lib/util/platform.js';
+import { toggleWindowFullscreen } from '$lib/desktop/window-fullscreen.js';
 
 let pz: PanZoom | undefined;
 let container: HTMLElement | undefined;
@@ -463,6 +464,12 @@ export function panToShowBox(box: { x: number; y: number; width: number; height:
 }
 
 export function toggleFullScreen() {
+	// The desktop app toggles its window: WKWebView does not reliably honour
+	// the Element Fullscreen API below.
+	if (isTauriDesktop()) {
+		void toggleWindowFullscreen().catch((error) => console.warn('[fullscreen] window toggle failed:', error));
+		return;
+	}
 	if (!document.fullscreenElement) {
 		document.documentElement.requestFullscreen();
 	} else if (document.exitFullscreen) {

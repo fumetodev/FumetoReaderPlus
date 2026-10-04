@@ -8,7 +8,7 @@
 	import { appView, currentVolume, currentPageIndex, currentPageIsVideo, totalPages, isDrawingMode, isOverlayMode, readingDirection, nextPage, prevPage, overlayFontScale, pageRotation, readerReturnView, leaveReader, rotateCurrentPage, toggleReadingDirection } from '$lib/stores/reader-state.js';
 	import { isBookVolume } from '$lib/book/media-kind.js';
 	import { onDestroy } from 'svelte';
-	import { sidebarOpen, settingsDialogOpen, settingsLoading, settingsReturnView, settingsViewMounted, isOverlayEditMode, readerBarsVisible, pageThumbnailScrubberOpen, overlayEditorCloseHandler } from '$lib/stores/ui-state.js';
+	import { sidebarOpen, openSettingsDialog, settingsLoading, settingsReturnView, settingsViewMounted, isOverlayEditMode, readerBarsVisible, pageThumbnailScrubberOpen, overlayEditorCloseHandler } from '$lib/stores/ui-state.js';
 	import { currentPageOverlay } from '$lib/stores/translation-state.js';
 	import { get } from 'svelte/store';
 	import { settings } from '$lib/settings/settings.js';
@@ -116,8 +116,7 @@
 			appView.set('settings');
 			return;
 		}
-		settingsLoading.set(true);
-		setTimeout(() => settingsDialogOpen.set(true), 100);
+		openSettingsDialog();
 	}
 
 	function navigateUpFolder() {

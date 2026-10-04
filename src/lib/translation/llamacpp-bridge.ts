@@ -14,6 +14,7 @@
 import { get, writable } from 'svelte/store';
 import { parseBridgeRejection } from '$lib/i18n/errors.js';
 import { isAndroid, isDesktop } from '$lib/util/platform.js';
+import { desktopMemorySnapshot } from '$lib/device/desktop-memory.js';
 import { streamToFile } from '$lib/util/stream-to-file.js';
 import { settings, ON_DEVICE_TEMPERATURE_DEFAULT } from '$lib/settings/settings.js';
 import type { GgufDownloadState } from './gguf-model-manager.js';
@@ -385,12 +386,14 @@ export function hasOpenCL(): boolean {
 
 /**
  * Get available device RAM in GB.
- * Desktop: uses navigator.deviceMemory (approximate) or returns 0.
+ * Desktop: the desktop app's last `system_memory` reading (see
+ * `refreshDesktopMemory`), or 0 when there is none — e.g. in a browser.
+ * (`navigator.deviceMemory` was used here; WebKit has no such property, and
+ * where it exists it is a rounded TOTAL, not what is available.)
  */
 export function getAvailableMemoryGB(): number {
 	if (isDesktop) {
-		// navigator.deviceMemory is available in Chromium-based WebViews
-		return (navigator as unknown as Record<string, number>).deviceMemory ?? 0;
+		return (desktopMemorySnapshot()?.availBytes ?? 0) / 1024 ** 3;
 	}
 	const bridge = getBridge();
 	if (!bridge?.getAvailableMemoryGB) return 0;

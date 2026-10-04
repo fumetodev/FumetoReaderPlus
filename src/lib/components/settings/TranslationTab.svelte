@@ -8,6 +8,7 @@
 	import { randomUUID } from '$lib/util/uuid.js';
 	import { ggufDownloadState, downloadHyMT2Model, cancelModelDownload as cancelGgufDownload, deleteHyMT2Model, isModelDownloaded, HYMT2_VARIANTS, BUNDLED_HYMT2_VARIANTS, bundledSpec, type HyMT2Variant, type BundledHyMT2Variant } from '$lib/translation/gguf-model-manager.js';
 	import { modelMemoryAdvice, readDeviceMemory } from '$lib/device/device-memory.js';
+	import { refreshDesktopMemory } from '$lib/device/desktop-memory.js';
 	import { ocrModelDownloadState, downloadOcrModels, cancelOcrModelDownload, deleteOcrModels, areOcrModelsReady, OCR_MODELS_TOTAL_BYTES } from '$lib/detection/ocr-model-manager.js';
 
 	// Read once — the same advice the future Pro purchase flow must show
@@ -16,6 +17,16 @@
 	import { isLlamaBridgeAvailable, unloadModel as unloadHyMT2Model, getBackend, getAvailableMemoryGB } from '$lib/translation/llamacpp-bridge.js';
 	import { settings, DEFAULT_OPENROUTER_MODEL, SUPPORTED_LANGUAGES, ON_DEVICE_SOURCE_LANGUAGES, ON_DEVICE_TARGET_LANGUAGES, ON_DEVICE_TEMPERATURE_DEFAULT, ON_DEVICE_TEMPERATURE_MIN, ON_DEVICE_TEMPERATURE_MAX } from '$lib/settings/settings.js';
 	import { untrack } from 'svelte';
+
+	// Available RAM moves, unlike the total: read it when this tab opens. On
+	// the desktop the figure comes from the app (startup snapshot, refreshed
+	// here); on Android straight from the bridge, as before.
+	let availableMemoryGb = $state(getAvailableMemoryGB());
+	$effect(() => {
+		void refreshDesktopMemory().then(() => {
+			availableMemoryGb = getAvailableMemoryGB();
+		});
+	});
 	import { fetchModelsForProvider } from '$lib/translation/llm-client.js';
 	import { validateOpenRouterApiKey } from '$lib/translation/openrouter-client.js';
 	import type { ProviderConfig, ProviderType, LLMModel } from '$lib/translation/llm-types.js';
@@ -995,10 +1006,10 @@
 						<p class="text-[11px] text-surface-500">
 							<RichMessage message={m.settings_translation_compute({ backend: hyMT2Backend === 'cpu' ? m.settings_translation_cpu_arm_neon_stq() : hyMT2Backend.startsWith('metal') ? m.settings_translation_cpu_metal_runtime() : m.settings_translation_checking() })} emClass="text-surface-300" />
 						</p>
-						{#if getAvailableMemoryGB() > 0}
+						{#if availableMemoryGb > 0}
 							<p class="text-[11px] text-surface-500">
-								<RichMessage message={m.settings_translation_available_ram({ gb: getAvailableMemoryGB().toFixed(1) })} emClass={getAvailableMemoryGB() >= 2 ? 'text-green-400' : getAvailableMemoryGB() >= 1.5 ? 'text-yellow-400' : 'text-red-400'} />
-								{#if getAvailableMemoryGB() < 2}
+								<RichMessage message={m.settings_translation_available_ram({ gb: availableMemoryGb.toFixed(1) })} emClass={availableMemoryGb >= 2 ? 'text-green-400' : availableMemoryGb >= 1.5 ? 'text-yellow-400' : 'text-red-400'} />
+								{#if availableMemoryGb < 2}
 									<span class="text-yellow-400"> {m.settings_translation_more_memory_headroom_is()}</span>
 								{/if}
 							</p>
