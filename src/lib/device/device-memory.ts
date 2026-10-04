@@ -1,4 +1,5 @@
 import * as m from '$lib/paraglide/messages.js';
+import { desktopMemorySnapshot } from './desktop-memory.js';
 /**
  * Device-memory advice for the on-device translation models.
  *
@@ -18,8 +19,19 @@ export interface DeviceMemory {
 	lowMemory: boolean;
 }
 
-/** Reads the Android bridge's memory snapshot; null anywhere it can't. */
+/**
+ * The memory snapshot: Android's bridge, else the desktop app's last answer
+ * (`refreshDesktopMemory` in desktop-memory.ts), else null — anywhere it cannot tell.
+ */
 export function readDeviceMemory(): DeviceMemory | null {
+	const android = readAndroidMemory();
+	if (android) return android;
+	const desktop = desktopMemorySnapshot();
+	return desktop ? { ...desktop, lowMemory: false } : null;
+}
+
+/** Reads the Android bridge's memory snapshot; null anywhere it can't. */
+function readAndroidMemory(): DeviceMemory | null {
 	try {
 		const raw = window.__fumeto_android?.getMemoryInfo?.();
 		if (!raw) return null;

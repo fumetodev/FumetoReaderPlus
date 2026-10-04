@@ -1,13 +1,19 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "desktop",
-  "description": "Desktop-only permissions: library folder watching",
-  "platforms": ["macOS", "windows", "linux"],
+  "description": "Desktop-only permissions: library folder watching and window full screen",
+  "platforms": [
+    "macOS",
+    "windows",
+    "linux"
+  ],
   "windows": [
     "main"
   ],
   "permissions": [
     "fs:allow-watch",
-    "fs:allow-unwatch"
+    "fs:allow-unwatch",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-is-fullscreen"
   ]
 }

@@ -29,9 +29,11 @@
 	import MobileFilmstrip from '$lib/components/mobile/MobileFilmstrip.svelte';
 	import MobilePageJumpDialog from '$lib/components/mobile/MobilePageJumpDialog.svelte';
 	import MobileTranslateStatusDialog from '$lib/components/mobile/MobileTranslateStatusDialog.svelte';
-	import { isMobile } from '$lib/util/platform.js';
+	import { isMobile, isTauriDesktop } from '$lib/util/platform.js';
+	import { installAppMenuHandler } from '$lib/desktop/app-menu.js';
+	import { refreshDesktopMemory } from '$lib/device/desktop-memory.js';
 	import { appView, currentPageIndex, currentVolume, leaveReader, overlayFontScale, readerSessionId, readerTargetEpoch } from '$lib/stores/reader-state.js';
-	import { settingsDialogOpen, settingsLoading, settingsReturnView, settingsCommitHandler, settingsNavigationBusy, settingsViewMounted, importDialogOpen, catalogContextMenuOpen, readerBarsVisible, pageThumbnailScrubberOpen, movingBoxId, resizingBoxId, overlayCancelHandler, overlayEditorCloseHandler, overlayEditorDismissHandler, readerTransientCloseHandler, catalogTransientCloseHandler } from '$lib/stores/ui-state.js';
+	import { openSettingsDialog, settingsDialogOpen, settingsLoading, settingsReturnView, settingsCommitHandler, settingsNavigationBusy, settingsViewMounted, importDialogOpen, catalogContextMenuOpen, readerBarsVisible, pageThumbnailScrubberOpen, movingBoxId, resizingBoxId, overlayCancelHandler, overlayEditorCloseHandler, overlayEditorDismissHandler, readerTransientCloseHandler, catalogTransientCloseHandler } from '$lib/stores/ui-state.js';
 	import {
 		currentSubfolder,
 		selectedLibraryId,
@@ -90,6 +92,7 @@
 	let uninstallTranslationConfigGuard: (() => void) | null = null;
 	let uninstallMobileUiFixtureHost: (() => void) | null = null;
 	let uninstallLibraryWatchSync: (() => void) | null = null;
+	let uninstallAppMenuHandler: (() => void) | null = null;
 	let stopCatalogMigration: (() => void) | null = null;
 	let stopVolumePagesMigration: (() => void) | null = null;
 	let stopWaitingForCatalogMigration: (() => void) | null = null;
@@ -280,6 +283,15 @@
 		// Volume translations hold a provider snapshot; if the user changes that
 		// choice mid-run the affected jobs stop instead of quietly carrying on.
 		uninstallTranslationConfigGuard = installTranslationConfigGuard();
+		if (isTauriDesktop()) {
+			// macOS menu bar: Settings… (⌘,) and Import… (⌘O).
+			uninstallAppMenuHandler = installAppMenuHandler({
+				openSettings: openSettingsDialog,
+				openImport: () => importDialogOpen.set(true)
+			});
+			// RAM for the on-device model advice, in place before Settings opens.
+			void refreshDesktopMemory();
+		}
 		if (isMobile) uninstallInsetAdapter = installWindowInsetAdapter();
 		// The reader may rotate with the device; every other view stays portrait.
 		if (isMobile) uninstallOrientationPolicy = installReaderOrientationPolicy();
@@ -589,6 +601,8 @@
 		}
 		visualViewportResizeHandler = null;
 		uninstallTranslationConfigGuard?.();
+		uninstallAppMenuHandler?.();
+		uninstallAppMenuHandler = null;
 		delete (window as any).__fumeto_back_handler;
 		void readerPageTranslationController.dispose();
 		disablePageBenchmarkMode();

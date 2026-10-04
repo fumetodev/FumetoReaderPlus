@@ -2,7 +2,7 @@
  * UI state store — tracks sidebar, dialogs, and other UI state.
  */
 
-import { writable } from 'svelte/store';
+import { get, writable } from 'svelte/store';
 import type { AppView } from '$lib/types/index.js';
 
 /** Whether the translation side panel is open */
@@ -16,6 +16,15 @@ export const settingsDialogOpen = writable<boolean>(false);
 /** Whether the settings loading overlay is visible (first presentation only,
  *  before the heavy settings DOM exists). */
 export const settingsLoading = writable<boolean>(false);
+
+/** Open the DESKTOP settings dialog (header button, macOS Settings… ⌘,): the
+ *  loading overlay first, then the dialog a beat later so the overlay paints
+ *  before the heavy settings DOM is built. No-op while it is already open. */
+export function openSettingsDialog(): void {
+	if (get(settingsDialogOpen)) return;
+	settingsLoading.set(true);
+	setTimeout(() => settingsDialogOpen.set(true), 100);
+}
 
 /** True while the mobile SettingsView is mounted (keep-alive). Entry points
  *  use it to show the loading overlay only for the first, expensive mount. */
