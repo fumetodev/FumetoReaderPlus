@@ -1083,6 +1083,7 @@
 	"libraries_title": "Bibliotheken",
 	"libraries_unknown_type": "Unbekannter Bibliothekstyp",
 	"libraries_watch": "Nach neuen Dateien suchen",
+	"libraries_watch_failed": "Dieser Ordner konnte nicht auf neue Dateien überwacht werden: {error}",
 	"model_variant_custom_description": "Führe dein eigenes GGUF-Modell aus dem Gerätespeicher aus. Andere Modelle sind größtenteils ungetestet — Qualität und Geschwindigkeit sind nicht garantiert.",
 	"model_variant_custom_title": "Eigenes Modell",
 	"model_variant_manga_v2_description": "Besser als das Standardmodell bei Japanisch zu Englisch, aber schlechter bei jedem anderen Sprachpaar. Braucht mehr Speicherplatz und läuft mit ähnlicher Geschwindigkeit.",

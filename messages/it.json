@@ -1083,6 +1083,7 @@
 	"libraries_title": "Librerie",
 	"libraries_unknown_type": "Tipo di libreria sconosciuto",
 	"libraries_watch": "Controlla la presenza di nuovi file",
+	"libraries_watch_failed": "Impossibile controllare la presenza di nuovi file in questa cartella: {error}",
 	"model_variant_custom_description": "Esegui un tuo modello GGUF dalla memoria del dispositivo. Gli altri modelli sono in gran parte non testati — qualità e velocità non sono garantite.",
 	"model_variant_custom_title": "Modello personalizzato",
 	"model_variant_manga_v2_description": "Migliore dal giapponese all'inglese rispetto al modello standard, ma peggiore per ogni altra coppia di lingue. Occupa più spazio e funziona a una velocità simile.",
