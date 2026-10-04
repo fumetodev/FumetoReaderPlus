@@ -9,8 +9,15 @@
 	import { resolveDisplayName } from '$lib/util/file-utils.js';
 	import { db } from '$lib/db/index.js';
 	import { open } from '@tauri-apps/plugin-dialog';
-	import { filePathToFile } from '$lib/import/tauri-file-bridge.js';
-	import { isMobile } from '$lib/util/platform.js';
+	import {
+		fileSource,
+		importSourcesSequentially,
+		partitionImportSources,
+		pathSource,
+		type ImportSource
+	} from '$lib/import/import-sources.js';
+	import { listenForFileDrops } from '$lib/desktop/file-drop.js';
+	import { isMobile, isTauriDesktop } from '$lib/util/platform.js';
 	import { settings, isLocalLibrary } from '$lib/settings/settings.js';
 	import { recallLocalTarget, rememberLocalTarget, selectedLibraryId } from '$lib/stores/catalog-state.js';
 	import { get } from 'svelte/store';
@@ -191,64 +198,59 @@
 		if (!selected) return; // User cancelled
 
 		const paths = Array.isArray(selected) ? selected : [selected];
-
-		// Convert native paths to File objects
-		const files: File[] = [];
-		for (const path of paths) {
-			try {
-				const file = await filePathToFile(path);
-				files.push(file);
-			} catch (err) {
-				console.error(`Failed to read file: ${path}`, err);
-			}
-		}
-
-		if (files.length > 0) {
-			await handleFilesArray(files);
-		}
+		// Paths, not Files: each archive is read only when its turn comes.
+		await handleImportSources(paths.map((path) => pathSource(path)));
 	}
 
-	/** Handle files from drag/drop (provides File objects directly). */
+	/** Handle files from an HTML5 drop (the browser dev server; the app gets paths). */
 	function handleDroppedFiles(files: FileList | null) {
 		if (!files || files.length === 0) return;
-		handleFilesArray(Array.from(files));
+		void handleImportSources(Array.from(files, fileSource));
 	}
 
-	/** Core import logic — accepts an array of File objects (desktop flow). */
-	async function handleFilesArray(files: File[]) {
-		if (files.length === 0) return;
-
-		// Validate all files up front
-		const validFiles: File[] = [];
-		const invalidNames: string[] = [];
-		for (const file of files) {
-			const ext = file.name.split('.').pop()?.toLowerCase() || '';
-			if (supportedExtensions.includes(ext)) {
-				validFiles.push(file);
-			} else {
-				invalidNames.push(file.name);
+	// The desktop app: Tauri takes OS file drops for itself, so the HTML5 drop
+	// handlers below never fire there. Its drag-drop events carry paths.
+	$effect(() => {
+		if (!$importDialogOpen || !isTauriDesktop()) return;
+		let unlisten: (() => void) | null = null;
+		let disposed = false;
+		void listenForFileDrops({
+			onHover: (active) => {
+				dragOver = active && !$isImporting;
+			},
+			onDrop: (paths) => {
+				if ($isImporting) return;
+				void handleImportSources(paths.map((path) => pathSource(path)));
 			}
-		}
+		})
+			.then((stop) => {
+				if (disposed) stop();
+				else unlisten = stop;
+			})
+			.catch((err) => console.warn('[import] could not listen for dropped files:', err));
+		return () => {
+			disposed = true;
+			unlisten?.();
+			dragOver = false;
+		};
+	});
 
-		if (validFiles.length === 0) {
+	/** Core import logic (desktop flow): validate by name, then import one file at a time. */
+	async function handleImportSources(sources: ImportSource[]) {
+		if (sources.length === 0) return;
+
+		const existingVolumes = await db.volumes.toArray();
+		const {
+			accepted: newFiles,
+			unsupported: invalidNames,
+			duplicates: duplicateNames
+		} = partitionImportSources(sources, supportedExtensions, new Set(existingVolumes.map((v) => v.filename)));
+
+		if (newFiles.length === 0 && duplicateNames.length === 0) {
 			errorMessage = invalidNames.length > 0
 				? m.import_unsupported_types({ names: invalidNames.join(', '), formats: supportedLabel })
 				: m.import_no_files();
 			return;
-		}
-
-		// Check for duplicates against existing library
-		const existingVolumes = await db.volumes.toArray();
-		const existingFilenames = new Set(existingVolumes.map((v) => v.filename));
-		const duplicateNames: string[] = [];
-		const newFiles: File[] = [];
-
-		for (const file of validFiles) {
-			if (existingFilenames.has(file.name)) {
-				duplicateNames.push(file.name);
-			} else {
-				newFiles.push(file);
-			}
 		}
 
 		if (newFiles.length === 0) {
@@ -271,26 +273,22 @@
 		isImporting.set(true);
 
 		const totalFiles = newFiles.length;
-		const succeeded: string[] = [];
-		const failed: { name: string; error: string }[] = [];
+		const prefixFor = (index: number, name: string) =>
+			totalFiles > 1 ? `[${index + 1}/${totalFiles}] ${name}: ` : '';
 
-		for (let i = 0; i < newFiles.length; i++) {
-			const file = newFiles[i];
-			const prefix = totalFiles > 1 ? `[${i + 1}/${totalFiles}] ${file.name}: ` : '';
-			importProgressMessage.set(`${prefix}${m.import_starting()}`);
-
-			try {
-				const volumeUuid = await importArchive(file, (progress) => {
+		const { succeeded, failed } = await importSourcesSequentially(
+			newFiles,
+			(file, index) => {
+				const prefix = prefixFor(index, newFiles[index].name);
+				return importArchive(file, (progress) => {
 					importProgressMessage.set(`${prefix}${renderUserMessage(progress.message)}`);
 				});
-				succeeded.push(volumeUuid);
-			} catch (err) {
-				failed.push({
-					name: file.name,
-					error: err instanceof Error ? err.message : m.import_failed()
-				});
+			},
+			{
+				onStart: (index, source) => importProgressMessage.set(`${prefixFor(index, source.name)}${m.import_starting()}`),
+				fallbackError: () => m.import_failed()
 			}
-		}
+		);
 
 		isImporting.set(false);
 		importProgressMessage.set('');

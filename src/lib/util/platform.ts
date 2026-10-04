@@ -72,3 +72,16 @@ export const isMacOS = flags.isMacOS;
 
 /** Whether the app is running on a desktop platform (not mobile). */
 export const isDesktop = flags.isDesktop;
+
+/**
+ * Whether a Tauri host is present — false in a plain browser (`npm run dev`),
+ * where the Tauri plugins import cleanly but every call fails.
+ */
+export function hasTauriHost(): boolean {
+	return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
+
+/** The desktop Tauri app (macOS/Windows/Linux), as opposed to a desktop browser. */
+export function isTauriDesktop(): boolean {
+	return isDesktop && hasTauriHost();
+}
