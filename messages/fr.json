@@ -1083,6 +1083,7 @@
 	"libraries_title": "Bibliothèques",
 	"libraries_unknown_type": "Type de bibliothèque inconnu",
 	"libraries_watch": "Surveiller les nouveaux fichiers",
+	"libraries_watch_failed": "Impossible de surveiller les nouveaux fichiers de ce dossier : {error}",
 	"model_variant_custom_description": "Exécutez votre propre modèle GGUF depuis le stockage de l'appareil. Les autres modèles sont largement non testés — la qualité et la vitesse ne sont pas garanties.",
 	"model_variant_custom_title": "Modèle personnalisé",
 	"model_variant_manga_v2_description": "Meilleur du japonais vers l'anglais que le modèle standard, mais moins bon pour toutes les autres paires de langues. Occupe plus d'espace et fonctionne à une vitesse similaire.",

@@ -5,7 +5,7 @@
 	import { INCLUDES_DEBUG_UI_FIXTURES } from '$lib/build-info.js';
 	import { onMount, onDestroy } from 'svelte';
 	import { randomUUID } from '$lib/util/uuid.js';
-	import { get } from 'svelte/store';
+	import { derived, get } from 'svelte/store';
 	import Header from '$lib/components/layout/Header.svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import CatalogView from '$lib/components/reader/CatalogView.svelte';
@@ -41,7 +41,8 @@
 	import { scanLibrary } from '$lib/library/library-scanner.js';
 	import { ensureAppDataPathsHealed } from '$lib/library/app-data-relocation.js';
 	import { resolveMobileLocalLibrary } from '$lib/settings/local-library-bootstrap.js';
-	import { startWatchingLibrary, stopAllWatching } from '$lib/library/library-watcher.js';
+	import { stopAllWatching } from '$lib/library/library-watcher.js';
+	import { installLibraryWatchSync } from '$lib/library/library-watch-sync.js';
 	import { getOrCreateClient } from '$lib/yacreader/yac-client-manager.js';
 	import { fullSyncLibrary, getLastSyncDiagnostics, remoteStartupSyncPlan, fetchRemoteFolderContents } from '$lib/yacreader/yac-sync-service.js';
 	import { getOrCreateKomgaClient } from '$lib/komga/komga-client-manager.js';
@@ -88,6 +89,7 @@
 	let uninstallOrientationPolicy: (() => void) | null = null;
 	let uninstallTranslationConfigGuard: (() => void) | null = null;
 	let uninstallMobileUiFixtureHost: (() => void) | null = null;
+	let uninstallLibraryWatchSync: (() => void) | null = null;
 	let stopCatalogMigration: (() => void) | null = null;
 	let stopVolumePagesMigration: (() => void) | null = null;
 	let stopWaitingForCatalogMigration: (() => void) | null = null;
@@ -449,7 +451,24 @@
 		// the reader slider writes those, NOT this setting).
 		overlayFontScale.set(initSettings.overlayFontScaleDefault ?? 1);
 
-		// Auto-scan and watch all configured libraries
+		// Folder watchers (desktop) follow the libraries as settings are applied:
+		// they start, stop and move with the "Watch for new files" switch, and a
+		// folder that cannot be watched is reported in Settings → Libraries.
+		uninstallLibraryWatchSync = installLibraryWatchSync({
+			libraries: derived(settings, ($s) => $s.libraries),
+			onChange: (libraryId) => {
+				const currentLib = get(settings).libraries.find((l) => l.id === libraryId);
+				if (currentLib && isLocalLibrary(currentLib)) {
+					submitMaintenance({
+						kind: 'local-library-watch-scan', key: `scan:${currentLib.id}`, priority: 2,
+						operation: () => scanLibrary(currentLib.path, undefined, currentLib.id),
+						onError: (error) => console.error(`Library watcher scan failed for "${currentLib.name}":`, error),
+					});
+				}
+			}
+		});
+
+		// Auto-scan all configured libraries
 		for (const lib of initSettings.libraries) {
 			if (isLocalLibrary(lib)) {
 				if (lib.autoScan) {
@@ -457,22 +476,6 @@
 						kind: 'local-library-auto-scan', key: `scan:${lib.id}`,
 						operation: () => scanLibrary(lib.path, undefined, lib.id),
 						onError: (error) => console.error(`Library auto-scan failed for "${lib.name}":`, error),
-					});
-				}
-
-				if (lib.watchEnabled) {
-					startWatchingLibrary(lib.id, lib.path, async () => {
-						const currentSettings = get(settings);
-						const currentLib = currentSettings.libraries.find((l) => l.id === lib.id);
-						if (currentLib && isLocalLibrary(currentLib)) {
-							submitMaintenance({
-								kind: 'local-library-watch-scan', key: `scan:${currentLib.id}`, priority: 2,
-								operation: () => scanLibrary(currentLib.path, undefined, currentLib.id),
-								onError: (error) => console.error(`Library watcher scan failed for "${currentLib.name}":`, error),
-							});
-						}
-					}).catch((err) => {
-						console.error(`Library watcher failed for "${lib.name}":`, err);
 					});
 				}
 			}
@@ -589,6 +592,8 @@
 		delete (window as any).__fumeto_back_handler;
 		void readerPageTranslationController.dispose();
 		disablePageBenchmarkMode();
+		uninstallLibraryWatchSync?.();
+		uninstallLibraryWatchSync = null;
 		stopAllWatching();
 	});
 

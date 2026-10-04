@@ -1083,6 +1083,7 @@
 	"libraries_title": "Bibliotecas",
 	"libraries_unknown_type": "Tipo de biblioteca desconhecido",
 	"libraries_watch": "Observar novos arquivos",
+	"libraries_watch_failed": "Não foi possível observar novos arquivos nesta pasta: {error}",
 	"model_variant_custom_description": "Execute seu próprio modelo GGUF do armazenamento do dispositivo. Outros modelos são pouco testados — qualidade e velocidade não são garantidas.",
 	"model_variant_custom_title": "Modelo Personalizado",
 	"model_variant_manga_v2_description": "Melhor de japonês para inglês do que o modelo Padrão, mas pior para todos os outros pares de idiomas. Ocupa mais espaço e roda em velocidade similar.",

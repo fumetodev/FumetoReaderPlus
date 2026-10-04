@@ -1065,6 +1065,7 @@
 	"libraries_title": "Pustaka",
 	"libraries_unknown_type": "Jenis pustaka tidak dikenal",
 	"libraries_watch": "Pantau berkas baru",
+	"libraries_watch_failed": "Tidak dapat memantau berkas baru di folder ini: {error}",
 	"model_variant_custom_description": "Jalankan model GGUF Anda sendiri dari penyimpanan perangkat. Model lain sebagian besar belum diuji secara luas — kualitas dan kecepatan tidak dijamin.",
 	"model_variant_custom_title": "Model Kustom",
 	"model_variant_manga_v2_description": "Lebih baik dari model Standar untuk terjemahan Jepang ke Inggris, tetapi lebih buruk untuk setiap pasangan bahasa lainnya. Memakan lebih banyak ruang dan berjalan dengan kecepatan yang serupa.",

@@ -29,6 +29,18 @@ tauri-plugin-fs = "2.5"
 tauri-plugin-http = "2"
 tauri-plugin-opener = "2"
 
+# Desktop-only (never Android/iOS). With resolver 2 these features and crates
+# do not reach the mobile builds.
+# - fs `watch`: the library folder watcher (src/lib/library/library-watcher.ts).
+# - persisted-scope: keeps the access a folder picker grants (e.g. a library on
+#   /Volumes/...) across restarts. Pinned exactly: 2.3.6 is the newest release
+#   that accepts the locked tauri 2.10 / plugin-fs 2.5.0. 2.3.7+ asks for a newer
+#   plugin-fs and cargo then moves tauri to 2.12, which would drag the npm
+#   @tauri-apps packages (and Android) along with it.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-fs = { version = "2.5", features = ["watch"] }
+tauri-plugin-persisted-scope = "=2.3.6"
+
 # macOS-only: the background-translation keep-awake activity (keep_awake.rs).
 # Both crates are already in the tree through tauri; only features are added.
 [target.'cfg(target_os = "macos")'.dependencies]

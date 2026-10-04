@@ -19,6 +19,7 @@
 	import { resolveMobileLocalLibrary } from '$lib/settings/local-library-bootstrap.js';
 	import { ensureAppDataPathsHealed, rebaseStaleLibraryPaths } from '$lib/library/app-data-relocation.js';
 	import { storageDurability, refreshStorageDurability, requestStoragePersistence } from '$lib/storage/durability.js';
+	import { libraryWatchErrors } from '$lib/library/library-watch-sync.js';
 	import OnDeviceModelsCard from './OnDeviceModelsCard.svelte';
 	import SettingsTransferCard from './SettingsTransferCard.svelte';
 
@@ -406,6 +407,11 @@
 									</div>
 								{/if}
 							</div>
+							{#if !isMobile && lib.watchEnabled && $libraryWatchErrors.get(lib.id)}
+								<p class="mt-1.5 text-[11px] text-red-400" data-library-watch-error>
+									{m.libraries_watch_failed({ error: $libraryWatchErrors.get(lib.id) ?? '' })}
+								</p>
+							{/if}
 						{:else if isYACReaderLibrary(lib)}
 							<div class="mb-2 flex items-center gap-1.5">
 								<span class="rounded bg-primary-600/20 px-1.5 py-0.5 text-[10px] font-medium text-primary-300">YACReader</span>
