@@ -40,9 +40,14 @@ tauri-plugin-opener = "2"
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-fs = { version = "2.5", features = ["watch"] }
 tauri-plugin-persisted-scope = "=2.3.6"
+# Remembers the window's size and position. 2.4.x accepts tauri 2.10; 2.5
+# needs 2.12 (same reason as the pin above).
+tauri-plugin-window-state = "~2.4.1"
 
-# macOS-only: the background-translation keep-awake activity (keep_awake.rs).
-# Both crates are already in the tree through tauri; only features are added.
+# macOS-only: the background-translation keep-awake activity (keep_awake.rs)
+# and the memory figures (system_memory.rs). All three crates are already in
+# the tree through tauri; only features are added.
 [target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
 objc2 = "0.6"
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSProcessInfo", "NSString"] }
