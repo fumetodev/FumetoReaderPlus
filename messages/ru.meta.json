@@ -6449,6 +6449,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:14:02.946Z"
 	},
+	"settings_translation_keeps_mac_awake": {
+		"sourceHash": "fe371d272107cf1c",
+		"model": "claude-code",
+		"draftedAt": "2026-10-04T17:34:35.004Z"
+	},
 	"settings_translation_label_active_pipeline": {
 		"sourceHash": "75137d468b7c3ca7",
 		"model": "anthropic/claude-sonnet-5",

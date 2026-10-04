@@ -21,7 +21,7 @@
 	import type { ProviderConfig, ProviderType, LLMModel } from '$lib/translation/llm-types.js';
 	import { loadProviderApiKey } from '$lib/settings/secure-storage.js';
 	import { stageProviderKeyDraft } from '$lib/settings/provider-key-drafts.js';
-	import { isAndroid } from '$lib/util/platform.js';
+	import { isAndroid, isMacOS } from '$lib/util/platform.js';
 	import ModelPicker from './ModelPicker.svelte';
 
 	// ============================================================
@@ -509,6 +509,9 @@
 	async function handleBackgroundToggle(e: Event) {
 		const checkbox = e.target as HTMLInputElement;
 		if (!checkbox.checked) return; // Turning OFF needs no permission check
+		// The Mac keeps itself awake natively and needs no notification
+		// permission; the service checks below would switch it straight back off.
+		if (!isAndroid) return;
 
 		try {
 			const { isBackgroundServiceAvailable, hasNotificationPermission, requestNotificationPermission } =
@@ -1464,7 +1467,7 @@
 {/if}
 
 <!-- General translation options (apply to both pipelines) -->
-{#if isAndroid}
+{#if isAndroid || isMacOS}
 <div class="mt-5 border-t border-surface-700 pt-5" data-settings-anchor="background-translation">
 	<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-surface-400">{m.settings_translation_both_pipelines()}</p>
 	<div>
@@ -1474,7 +1477,7 @@
 			label={m.settings_search_background_translation_label()}
 		/>
 		<p class="text-[11px] text-surface-500">
-			{m.settings_translation_prevents_android_from_stopping()}
+			{isAndroid ? m.settings_translation_prevents_android_from_stopping() : m.settings_translation_keeps_mac_awake()}
 		</p>
 	</div>
 </div>
