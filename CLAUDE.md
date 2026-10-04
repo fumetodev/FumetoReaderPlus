@@ -38,6 +38,8 @@ Apple Silicon only (macOS 14+), unsigned, for personal use. Build on the Mac its
 - `build.rs` compiles llama.cpp for a fixed CPU baseline, never the build machine's (`GGML_NATIVE=OFF`; `armv8.4-a+dotprod+fp16` = the M1 baseline on Apple Silicon). CI fails a macOS build whose CMake cache says otherwise. `llama_print_system_info()` is logged at backend init (debug builds only — release builds do not register the log plugin).
 - Installing: a build made on the Mac opens directly. A downloaded one is quarantined and Gatekeeper blocks it; allow it under System Settings → Privacy & Security → Open Anyway, or run `xattr -dr com.apple.quarantine /Applications/FumetoReaderPlus.app`.
 - An ad-hoc signature differs on every build, so macOS asks again for folder and network access after each update. Signing locally with a free "Apple Development" certificate from Xcode (`APPLE_SIGNING_IDENTITY="Apple Development: …" npm run tauri:build`) keeps those grants.
+- Desktop-only native pieces (target-gated in `Cargo.toml`, `#[cfg(not(mobile))]` in `lib.rs`; none reach the Android build): `keep_awake.rs` (`app_keep_awake` — an NSProcessInfo activity while a volume translates with "Keep translating in background" on; JS side `src/lib/desktop/keep-awake.ts`), `system_memory.rs` (RAM for the model advice; `src/lib/device/desktop-memory.ts`), `macos_menu.rs` (Settings… ⌘, and Import… ⌘O, delivered as the `fumeto:menu` event to `src/lib/desktop/app-menu.ts`), plugin-fs's `watch` feature (`src/lib/library/library-watch-sync.ts` keeps watchers in step with the settings), `tauri-plugin-persisted-scope` (folder grants survive a restart) and `tauri-plugin-window-state`. Their permissions live in `capabilities/desktop.json`. `persisted-scope` is pinned to `=2.3.6` and `window-state` to `~2.4.1`: newer releases need tauri 2.12, which would move the npm `@tauri-apps/*` packages and Android with it.
+- Checking macOS-only Rust from Linux: `rustup target add aarch64-apple-darwin`, then `cargo check --target aarch64-apple-darwin` on a copy of `src-tauri` without `llama-bridge/llama.cpp` (so `build.rs` skips the SDK-bound CMake build) and without `tauri-plugin-http` (its `ring` dependency compiles C against the SDK), with `CC_aarch64_apple_darwin=clang`.
 
 ### Release
 
@@ -123,7 +125,7 @@ Each native bridge has a WASM/JS fallback path so the app still works in a plain
 - `overlay-layout/` — V2 canonical render-plan engine (placement, fills, bidi, baked cache). `export/` — CBZ export rendering overlays via the same canonical plans.
 - `tabs/`, `controllers/`, `navigation/`, `stores/` — UI state machines. Components use Svelte 5 runes; `stores/` uses classic `writable`/`derived`.
 - `regions/` — guided regions (user-drawn boxes: draw session, cropper, per-region translation run). `billing/` — Play Billing bridge, entitlement policy, `PRO_FEATURES`. `i18n/` — locale tables, `getLanguageDisplayName`, `UserMessage` renderers; `paraglide/` — generated message functions (gitignored). `diagnostics/` — always-on error ring, boundary and report. `benchmark/` — the in-app PP-OCR/model-candidate benchmark host that the e2e specs drive. `work-coordination/` — the lanes.
-- There is no feature flag for overlay v2 — it is the only overlay system. Desktop-only paths (Rust llama commands, `library-watcher`) are inert on Android.
+- There is no feature flag for overlay v2 — it is the only overlay system. Desktop-only paths (Rust llama commands, `library-watcher`/`library-watch-sync`, `src/lib/desktop/`) are inert on Android.
 
 ## Conventions
 
