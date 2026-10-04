@@ -13,6 +13,12 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init());
 
+    // Desktop: remember the folder access the file/folder pickers grant (a
+    // library on an external drive, say) across restarts. Must come after the
+    // fs plugin, whose scope it restores.
+    #[cfg(not(mobile))]
+    let builder = builder.plugin(tauri_plugin_persisted_scope::init());
+
     // Register llama.cpp Tauri commands on desktop (macOS/Windows/Linux).
     // On Android, llama.cpp is accessed via the JNI bridge instead.
     #[cfg(not(mobile))]

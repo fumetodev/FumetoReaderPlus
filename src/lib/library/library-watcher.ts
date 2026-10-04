@@ -26,6 +26,8 @@ const watchers = new Map<string, WatcherState>();
  * @param libraryId - Unique ID of the library
  * @param libraryPath - Absolute path to the library folder
  * @param onNewFiles - Async callback when new files are detected
+ * @throws when the folder cannot be watched (missing, outside the granted
+ *   scope, the platform refused) — the caller shows it beside the switch.
  */
 export async function startWatchingLibrary(
 	libraryId: string,
@@ -77,6 +79,7 @@ export async function startWatchingLibrary(
 		watchers.set(libraryId, state);
 	} catch (err) {
 		console.error(`Failed to start library watcher (${libraryId}):`, err);
+		throw err;
 	}
 }
 

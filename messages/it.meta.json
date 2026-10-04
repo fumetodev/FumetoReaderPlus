@@ -3769,6 +3769,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:57:25.005Z"
 	},
+	"libraries_watch_failed": {
+		"sourceHash": "580e11c8042318a7",
+		"model": "claude-code",
+		"draftedAt": "2026-10-04T17:43:03.937Z"
+	},
 	"model_variant_custom_description": {
 		"sourceHash": "edc79b34e108cb3e",
 		"model": "anthropic/claude-sonnet-5",
