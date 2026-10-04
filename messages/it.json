@@ -1675,6 +1675,7 @@
 	"settings_translation_hy_mt2_requires_the": "Hy-MT2 richiede l'app Android con supporto nativo llama.cpp STQ1_0.",
 	"settings_translation_include_context_from_other": "Includi il contesto dalle altre traduzioni in questa pagina",
 	"settings_translation_include_context_from_the": "Includi il contesto dalle traduzioni di tutta l'opera",
+	"settings_translation_keeps_mac_awake": "Mantiene il tuo Mac attivo durante la traduzione di un volume, così macOS non mette in pausa l'app quando la sua finestra è nascosta o ridotta a icona.",
 	"settings_translation_label_active_pipeline": "{label} (pipeline attiva)",
 	"settings_translation_language": "Lingua",
 	"settings_translation_literal_0": "Letterale (0)",
