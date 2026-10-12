@@ -55,6 +55,18 @@ export async function ensureDir(path: string): Promise<void> {
 	await mkdir(path, { recursive: true });
 }
 
+/** The folder a file is filed under: libraryPath / [author] / [series]. */
+async function libraryFolder(libraryPath: string, author?: string, series?: string): Promise<string> {
+	let dir = libraryPath;
+	if (author) {
+		dir = await join(dir, sanitizePathSegment(author));
+		if (series) {
+			dir = await join(dir, sanitizePathSegment(series));
+		}
+	}
+	return dir;
+}
+
 /**
  * Build the destination path for a file in the library.
  * Structure: libraryPath / [author] / [series] / filename
@@ -65,15 +77,22 @@ async function buildDestPath(
 	author?: string,
 	series?: string,
 ): Promise<string> {
-	let dir = libraryPath;
-	if (author) {
-		dir = await join(dir, sanitizePathSegment(author));
-		if (series) {
-			dir = await join(dir, sanitizePathSegment(series));
-		}
-	}
+	const dir = await libraryFolder(libraryPath, author, series);
 	await ensureDir(dir);
 	return join(dir, filename);
+}
+
+/**
+ * Where `copyFileToLibrary` would put `sourcePath`, without creating or
+ * copying anything: the caller's chance to see what is already there.
+ */
+export async function libraryDestinationPath(
+	sourcePath: string,
+	libraryPath: string,
+	author?: string,
+	series?: string,
+): Promise<string> {
+	return join(await libraryFolder(libraryPath, author, series), extractArchiveFilename(sourcePath));
 }
 
 /**
