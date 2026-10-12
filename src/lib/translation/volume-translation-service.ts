@@ -52,6 +52,8 @@ import {
 	translatePageOnDevice,
 	type OnDeviceProgressState
 } from './on-device-service.js';
+import { activeHyMT2Variant } from './gguf-model-manager.js';
+import { onDeviceModelLabel } from './on-device-model-label.js';
 import { extractTextWithPPOCR } from './ppocr-text-extractor.js';
 import { isMeaningfulOcrText } from './ocr-text-filter.js';
 import {
@@ -632,7 +634,7 @@ async function runVolumeTranslation(
 			job.diagnostics.provider_type = provider.config.type;
 		} else {
 			const ocr = $settings.onDeviceOCRProvider ?? 'ppocr';
-			job.model = `on-device-hymt2-1.25bit-${ocr}`;
+			job.model = onDeviceModelLabel(activeHyMT2Variant(), ocr);
 		}
 
 		// Pre-load model in LM Studio (ensures exactly one model is loaded).
