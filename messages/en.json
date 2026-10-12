@@ -1761,6 +1761,7 @@
 	"settings_translation_uses_the_available_llama": "Uses the available llama.cpp backend.",
 	"settings_translation_vision_models": "Vision models",
 	"settings_translation_vision_models_desc": "Text detection, text recognition and speech-balloon layout. Downloaded once, then used entirely on your device.",
+	"settings_translation_vision_models_desc_desktop": "Speech-balloon layout. Text detection and recognition come with the app; this model is downloaded once, then used entirely on your computer.",
 	"settings_translation_vision_models_needed": "Needed before any page can be translated, on device or through a cloud provider.",
 	"settings_translation_vision_models_only": "Vision Models Only",
 	"settings_translation_vision_models_only_2": "Vision models only",

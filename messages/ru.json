@@ -1805,6 +1805,7 @@
 	"settings_translation_uses_the_available_llama": "Использует доступный движок llama.cpp.",
 	"settings_translation_vision_models": "Модели распознавания",
 	"settings_translation_vision_models_desc": "Обнаружение текста, распознавание текста и разметка облачков. Загружаются один раз, затем используются полностью на вашем устройстве.",
+	"settings_translation_vision_models_desc_desktop": "Разметка облачков. Обнаружение и распознавание текста встроены в приложение; эта модель загружается один раз, затем используется полностью на вашем компьютере.",
 	"settings_translation_vision_models_needed": "Требуются перед переводом любой страницы — как на устройстве, так и через облачного провайдера.",
 	"settings_translation_vision_models_only": "Только визуальные модели",
 	"settings_translation_vision_models_only_2": "только визуальные модели",
