@@ -1,15 +1,18 @@
 //! llama.cpp FFI bridge for desktop Hy-MT2 translation.
 //!
 //! Exposes model loading, inference, and lifecycle management as Tauri
-//! commands callable from the frontend. Hy-MT2's STQ weights currently run
-//! through llama.cpp's CPU backend on every desktop platform.
+//! commands callable from the frontend. The stock model's 1.25-bit STQ
+//! weights run on llama.cpp's CPU backend everywhere; on a Mac, a caller may
+//! ask for the GPU (Metal) for the Q4_K_M fine-tunes.
 //!
 //! Key design decisions:
 //! - Validate the GGUF's embedded Hunyuan-dense chat template and apply its
 //!   equivalent llama.cpp built-in formatter instead of hard-coding tokens
 //! - Use the phase-tested Hy-MT2 manga translation instruction, with the
 //!   guidance scope the Android bridge gives the same model
-//! - Use the CPU STQ backend (`n_gpu_layers=0`) for portable correctness
+//! - CPU (`n_gpu_layers=0`) unless the caller asks for the GPU and one exists;
+//!   a GPU load that fails is retried on the CPU. STQ1_0 has no Metal kernel,
+//!   so the caller never asks for the stock model
 //! - One worker thread per fast core, clamped to 4..6, as on Android
 //! - n_ctx=512 to minimize RAM for short comic bubble text
 //! - Per-token decode loop with atomic cancellation flag
@@ -56,6 +59,11 @@ pub struct llama_memory {
 pub struct ggml_backend_dev {
     _opaque: [u8; 0],
 }
+
+/// `enum ggml_backend_dev_type` (ggml-backend.h): CPU = 0, GPU = 1, IGPU = 2,
+/// ACCEL = 3, META = 4. A C enum crosses the ABI as an `int`.
+const GGML_BACKEND_DEVICE_TYPE_GPU: i32 = 1;
+const GGML_BACKEND_DEVICE_TYPE_IGPU: i32 = 2;
 
 pub type llama_token = i32;
 pub type llama_pos = i32;
@@ -276,6 +284,13 @@ extern "C" {
     pub fn llama_batch_free(batch: llama_batch);
     pub fn llama_decode(ctx: *mut llama_context, batch: llama_batch) -> i32;
 
+    // Backend devices (ggml-backend.h), to find a GPU llama.cpp can offload to.
+    // The registry is static and immutable once built, so these are safe to
+    // call while another thread decodes.
+    pub fn ggml_backend_dev_count() -> usize;
+    pub fn ggml_backend_dev_get(index: usize) -> *mut ggml_backend_dev;
+    pub fn ggml_backend_dev_type(device: *mut ggml_backend_dev) -> i32;
+    pub fn ggml_backend_dev_description(device: *mut ggml_backend_dev) -> *const c_char;
 }
 
 // ============================================================
@@ -295,6 +310,26 @@ struct LlamaState {
     sampler_temperature: f32,
     /// Which guidance blocks this model's prompts carry; fixed at load.
     guidance: GuidanceScope,
+}
+
+/// Where the loaded model's layers run.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum ComputeBackend {
+    Cpu,
+    /// Offloaded to the GPU llama.cpp describes this way (Metal: "Apple M1").
+    Gpu(String),
+}
+
+impl ComputeBackend {
+    /// The identifier the frontend reads (`getBackend()`/`hasGPU()` in
+    /// llamacpp-bridge.ts): "cpu", or "metal:<GPU>" — Metal is the only GPU
+    /// backend build.rs compiles.
+    fn id(&self) -> String {
+        match self {
+            Self::Cpu => "cpu".into(),
+            Self::Gpu(device) => format!("metal:{device}"),
+        }
+    }
 }
 
 /// Which manga guidance blocks a model's prompts carry. Mirrors
@@ -328,6 +363,9 @@ impl GuidanceScope {
 pub struct LoadOptions {
     /// "all-targets" for the v3 fine-tune, "english-only" for every other model.
     guidance_scope: Option<String>,
+    /// Offload every layer to the GPU when there is one. Never sent for the
+    /// stock model: Metal has no kernel for its STQ1_0 weights.
+    gpu: bool,
 }
 
 fn clamp_temperature(requested: f32) -> f32 {
@@ -361,6 +399,10 @@ unsafe impl Send for LlamaState {}
 unsafe impl Sync for LlamaState {}
 
 static LLAMA_STATE: Mutex<Option<LlamaState>> = Mutex::new(None);
+/// The loaded model's backend, kept apart from LLAMA_STATE so that
+/// `llama_get_backend` — a synchronous command, so it runs on the main thread —
+/// never waits behind a translation holding the state lock for seconds.
+static LOADED_BACKEND: Mutex<Option<ComputeBackend>> = Mutex::new(None);
 static CANCELLED: AtomicBool = AtomicBool::new(false);
 static BACKEND_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -422,6 +464,54 @@ fn fast_core_count() -> Option<i32> {
 fn inference_threads() -> i32 {
     static THREADS: OnceLock<i32> = OnceLock::new();
     *THREADS.get_or_init(|| inference_thread_count(fast_core_count()))
+}
+
+/// The GPU llama.cpp can offload to, by its description (Metal reports the
+/// GPU's name, e.g. "Apple M1"), or None where the build has no GPU backend.
+/// Read once: the device list is fixed for the life of the process.
+fn gpu_device() -> Option<String> {
+    static DEVICE: OnceLock<Option<String>> = OnceLock::new();
+    DEVICE
+        .get_or_init(|| unsafe {
+            (0..ggml_backend_dev_count()).find_map(|index| {
+                let device = ggml_backend_dev_get(index);
+                if device.is_null() {
+                    return None;
+                }
+                let kind = ggml_backend_dev_type(device);
+                if kind != GGML_BACKEND_DEVICE_TYPE_GPU && kind != GGML_BACKEND_DEVICE_TYPE_IGPU {
+                    return None;
+                }
+                let description = ggml_backend_dev_description(device);
+                Some(if description.is_null() {
+                    "GPU".to_string()
+                } else {
+                    CStr::from_ptr(description).to_string_lossy().into_owned()
+                })
+            })
+        })
+        .clone()
+}
+
+/// Load the weights, every layer on the GPU or none of them.
+///
+/// Safety: `path` must stay valid for the duration of the call.
+unsafe fn load_model_weights(path: &CStr, on_gpu: bool) -> *mut llama_model {
+    let mut model_params = llama_model_default_params();
+    // -1 is llama.cpp's "every layer, plus the output layer"; 0 keeps them all
+    // on the CPU, which is what every model got before the GPU was offered.
+    model_params.n_gpu_layers = if on_gpu { -1 } else { 0 };
+    llama_model_load_from_file(path.as_ptr(), model_params)
+}
+
+/// Small n_ctx for comic bubble translation.
+fn translation_context_params(threads: i32) -> llama_context_params {
+    let mut ctx_params = unsafe { llama_context_default_params() };
+    ctx_params.n_ctx = N_CTX;
+    ctx_params.n_batch = N_CTX;
+    ctx_params.n_threads = threads;
+    ctx_params.n_threads_batch = threads;
+    ctx_params
 }
 
 /// Return the exact token prefix which can stay resident for the next prompt.
@@ -588,9 +678,10 @@ fn ensure_backend_init() {
             std::mem::size_of::<llama_context_params>(),
         );
         log::info!(
-            "llama inference threads: {} (fast cores: {:?})",
+            "llama inference threads: {} (fast cores: {:?}); GPU: {:?}",
             inference_threads(),
             fast_core_count(),
+            gpu_device(),
         );
     }
 }
@@ -605,6 +696,7 @@ pub fn llama_load(model_path: String, options: Option<LoadOptions>) -> Result<bo
     let options = options.unwrap_or_default();
     let guidance = GuidanceScope::parse(options.guidance_scope.as_deref());
     let threads = inference_threads();
+    let gpu = if options.gpu { gpu_device() } else { None };
 
     if !Path::new(&model_path).exists() {
         return Err(format!("Model file not found: {}", model_path));
@@ -620,18 +712,22 @@ pub fn llama_load(model_path: String, options: Option<LoadOptions>) -> Result<bo
             llama_model_free(s.model);
         }
     }
+    set_loaded_backend(None);
     CANCELLED.store(false, Ordering::SeqCst);
 
     let c_path = CString::new(model_path.clone()).map_err(|e| e.to_string())?;
 
     unsafe {
-        // STQ1_0 is implemented by llama.cpp's CPU backend. Keeping GPU
-        // offload disabled is required for the same model file to work on
-        // Linux, Windows, and macOS.
-        let mut model_params = llama_model_default_params();
-        model_params.n_gpu_layers = 0;
-
-        let model = llama_model_load_from_file(c_path.as_ptr(), model_params);
+        // The GPU only when asked for and present. Anything that fails there
+        // is retried with exactly the CPU parameters every model loaded with
+        // before the GPU was offered.
+        let mut on_gpu = gpu.is_some();
+        let mut model = load_model_weights(&c_path, on_gpu);
+        if model.is_null() && on_gpu {
+            log::warn!("Model failed to load on the GPU; retrying on the CPU");
+            on_gpu = false;
+            model = load_model_weights(&c_path, false);
+        }
         if model.is_null() {
             return Err("Failed to load model".into());
         }
@@ -643,18 +739,25 @@ pub fn llama_load(model_path: String, options: Option<LoadOptions>) -> Result<bo
             return Err(error);
         }
 
-        // Create context with small n_ctx for comic bubble translation
-        let mut ctx_params = llama_context_default_params();
-        ctx_params.n_ctx = N_CTX;
-        ctx_params.n_batch = N_CTX;
-        ctx_params.n_threads = threads;
-        ctx_params.n_threads_batch = threads;
-
-        let ctx = llama_init_from_model(model, ctx_params);
+        let mut ctx = llama_init_from_model(model, translation_context_params(threads));
+        if ctx.is_null() && on_gpu {
+            log::warn!("Context failed on the GPU; reloading the model on the CPU");
+            llama_model_free(model);
+            on_gpu = false;
+            model = load_model_weights(&c_path, false);
+            if model.is_null() {
+                return Err("Failed to load model".into());
+            }
+            ctx = llama_init_from_model(model, translation_context_params(threads));
+        }
         if ctx.is_null() {
             llama_model_free(model);
             return Err("Failed to create context".into());
         }
+        let backend = match (&gpu, on_gpu) {
+            (Some(device), true) => ComputeBackend::Gpu(device.clone()),
+            _ => ComputeBackend::Cpu,
+        };
 
         // Hy-MT2's mobile-oriented sampling profile. min-p is intentionally
         // omitted (equivalent to disabled/0.0).
@@ -677,12 +780,14 @@ pub fn llama_load(model_path: String, options: Option<LoadOptions>) -> Result<bo
         });
 
         log::info!(
-            "Hy-MT2 model loaded: {}, n_ctx={}, n_threads={}, n_gpu_layers=0, guidance={:?}",
+            "Hy-MT2 model loaded: {}, n_ctx={}, n_threads={}, backend={}, guidance={:?}",
             model_path,
             N_CTX,
             threads,
+            backend.id(),
             guidance,
         );
+        set_loaded_backend(Some(backend));
     }
 
     Ok(true)
@@ -1140,17 +1245,44 @@ fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BackendInfo {
+    /// "metal:<GPU>" while the loaded model runs on the GPU, otherwise "cpu".
     pub backend: String,
     pub description: String,
+    /// The GPU a load could use, whether or not the loaded model does.
+    pub gpu_device: Option<String>,
+    pub threads: i32,
+    /// Whether a model is loaded; without one, `backend` is "cpu".
+    pub loaded: bool,
+}
+
+fn set_loaded_backend(backend: Option<ComputeBackend>) {
+    if let Ok(mut loaded) = LOADED_BACKEND.lock() {
+        *loaded = backend;
+    }
 }
 
 #[tauri::command]
 pub fn llama_get_backend() -> BackendInfo {
     ensure_backend_init();
+    let threads = inference_threads();
+    let loaded = LOADED_BACKEND
+        .lock()
+        .ok()
+        .and_then(|backend| backend.clone());
+    let description = match &loaded {
+        Some(ComputeBackend::Gpu(device)) => format!("llama.cpp Metal ({device})"),
+        _ => format!("llama.cpp CPU ({threads} threads)"),
+    };
     BackendInfo {
-        backend: "cpu".into(),
-        description: format!("llama.cpp STQ CPU ({} threads)", inference_threads()),
+        backend: loaded
+            .as_ref()
+            .map_or_else(|| "cpu".into(), ComputeBackend::id),
+        description,
+        gpu_device: gpu_device(),
+        threads,
+        loaded: loaded.is_some(),
     }
 }
 
@@ -1166,6 +1298,7 @@ pub fn llama_unload() -> Result<(), String> {
         }
         log::info!("Model unloaded");
     }
+    set_loaded_backend(None);
     CANCELLED.store(false, Ordering::SeqCst);
 
     Ok(())
@@ -1364,11 +1497,33 @@ mod tests {
     #[test]
     fn load_options_arrive_in_camel_case_and_default_when_absent() {
         let options: LoadOptions =
-            serde_json::from_str(r#"{"guidanceScope":"all-targets"}"#).unwrap();
+            serde_json::from_str(r#"{"guidanceScope":"all-targets","gpu":true}"#).unwrap();
         assert_eq!(options.guidance_scope.as_deref(), Some("all-targets"));
+        assert!(options.gpu);
 
         let empty: LoadOptions = serde_json::from_str("{}").unwrap();
         assert_eq!(empty.guidance_scope, None);
+        assert!(!empty.gpu);
+    }
+
+    #[test]
+    fn backend_ids_are_what_the_frontend_reads() {
+        assert_eq!(ComputeBackend::Cpu.id(), "cpu");
+        assert_eq!(
+            ComputeBackend::Gpu("Apple M1".into()).id(),
+            "metal:Apple M1"
+        );
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn a_linux_build_has_no_gpu_so_a_gpu_request_loads_on_the_cpu() {
+        // build.rs compiles no GPU backend off macOS, so `gpu: true` resolves
+        // to no device and llama_load takes exactly the CPU parameters.
+        assert_eq!(gpu_device(), None);
+        let info = llama_get_backend();
+        assert_eq!(info.gpu_device, None);
+        assert_eq!(info.threads, inference_threads());
     }
 
     #[test]

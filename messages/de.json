@@ -1755,6 +1755,8 @@
 	"settings_translation_translation_backend": "Übersetzungs-Backend",
 	"settings_translation_translation_pipeline_sections": "Abschnitte der Übersetzungs-Pipeline",
 	"settings_translation_translation_temperature": "Übersetzungstemperatur",
+	"settings_translation_use_gpu": "GPU verwenden (Metal)",
+	"settings_translation_use_gpu_desc": "Führt die verbesserten Modelle und dein importiertes Modell auf der GPU des Mac aus, was meist deutlich schneller ist. Das Standardmodell läuft immer auf der CPU.",
 	"settings_translation_use_name_for_translations": "{name} für Übersetzungen verwenden",
 	"settings_translation_use_pipeline": "{pipeline} verwenden",
 	"settings_translation_uses_pp_ocr_text": "Verwendet PP-OCR-Texterkennung. Funktioniert mit jedem Modell.",

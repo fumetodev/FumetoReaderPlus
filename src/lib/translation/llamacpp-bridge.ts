@@ -350,6 +350,29 @@ export async function getBackend(): Promise<string> {
 	}
 }
 
+/** The desktop app's `llama_get_backend` answer (`BackendInfo` in llama.rs). */
+export interface DesktopBackendInfo {
+	/** "metal:<GPU>" while the loaded model runs on the GPU, otherwise "cpu". */
+	backend: string;
+	description: string;
+	/** The GPU a load could use, whether or not the loaded model does. */
+	gpuDevice: string | null;
+	threads: number;
+	/** Whether a model is loaded; without one, `backend` is "cpu". */
+	loaded: boolean;
+}
+
+/** The desktop app's backend report; null on Android, in a browser, or when it fails. */
+export async function getBackendInfo(): Promise<DesktopBackendInfo | null> {
+	if (!isDesktop) return null;
+	try {
+		const { invoke } = await import('@tauri-apps/api/core');
+		return await invoke<DesktopBackendInfo>('llama_get_backend');
+	} catch {
+		return null;
+	}
+}
+
 /**
  * Check if the device has GPU acceleration available.
  * Android: OpenCL driver. macOS: Metal (always available on Apple Silicon).
@@ -428,17 +451,24 @@ export interface ModelLoadOptions {
 	 * saw would be an unmeasured change to a model people already use.
 	 */
 	multilingualGuidance?: boolean;
+	/**
+	 * Offload the model to the GPU (Metal, in the Mac app). Desktop only; the
+	 * Android bridge keeps every model on the CPU.
+	 */
+	gpu?: boolean;
 }
 
 /** The desktop `llama_load` command's `options` argument (`LoadOptions` in llama.rs). */
 export interface DesktopLoadOptions {
 	guidanceScope: 'all-targets' | 'english-only';
+	gpu: boolean;
 }
 
 export function desktopLoadOptions(options?: ModelLoadOptions): DesktopLoadOptions {
 	return {
 		// The same two values the Android bridge takes, parsed the same way.
-		guidanceScope: options?.multilingualGuidance ? 'all-targets' : 'english-only'
+		guidanceScope: options?.multilingualGuidance ? 'all-targets' : 'english-only',
+		gpu: options?.gpu === true
 	};
 }
 
