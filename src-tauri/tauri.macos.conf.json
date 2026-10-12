@@ -15,7 +15,12 @@
         "fullscreen": false,
         "backgroundThrottling": "disabled"
       }
-    ]
+    ],
+    "security": {
+      "headers": {
+        "Cross-Origin-Embedder-Policy": "require-corp"
+      }
+    }
   },
   "bundle": {
     "macOS": {

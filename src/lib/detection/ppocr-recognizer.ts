@@ -13,6 +13,7 @@
 
 import type { DetectedTextRegion } from '$lib/types/index.js';
 import { loadPPOcrWasmModelBuffer } from './ppocr-wasm-model-loader.js';
+import { applyOrtWasmThreads } from './ort-wasm-threads.js';
 import {
 	DEFAULT_NATIVE_PPOCR_RECOGNIZER_CONFIG,
 	getNativePPOcrRuntimeInfo,
@@ -111,7 +112,7 @@ export async function initRecognizerWasm(): Promise<void> {
 		ort = ortModule;
 		ort.env.wasm.wasmPaths = `${window.location.origin}/wasm/`;
 		ort.env.wasm.proxy = false;
-		ort.env.wasm.numThreads = 1;
+		applyOrtWasmThreads(ort.env.wasm, 'ppocr');
 
 		// Android builds prune this model from the web bundle (native ORT owns
 		// det/rec there); the loader falls back to the APK's native asset copy
