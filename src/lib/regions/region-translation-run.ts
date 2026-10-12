@@ -104,7 +104,7 @@ async function translateOne(
 				volume_uuid: volumeUuid,
 				page_index: region.page_index,
 				mode: 1,
-				model: `on-device-hymt2-1.25bit-${appSettings.onDeviceOCRProvider ?? 'ppocr'}`,
+				model: result.model,
 				original_text: result.original_text,
 				translated_text: result.translated_text,
 				prompt_tokens: 0,
