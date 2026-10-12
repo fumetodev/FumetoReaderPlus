@@ -8,9 +8,8 @@
  *
  * On Android the native engine falls back to the APK's own bundled model asset,
  * so tier 1 resolves without any pushed file. Elsewhere, rtmdet-wasm needs the
- * model in the app-data `models/` directory (pushed by the eval suite today; a
- * production download-manager entry is the follow-up before shipping to devices
- * we don't provision by adb).
+ * model in the app-data `models/` directory: the desktop app downloads it
+ * (`DESKTOP_OCR_MODELS` in ocr-model-specs.ts), and the eval suite pushes it.
  *
  * There is deliberately no third tier. A legacy YOLO11n segmenter used to sit
  * here as a safety net, but it was an Ultralytics/AGPL-3.0 artifact that could

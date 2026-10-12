@@ -1761,6 +1761,7 @@
 	"settings_translation_uses_the_available_llama": "Usa el backend de llama.cpp disponible.",
 	"settings_translation_vision_models": "Modelos de visión",
 	"settings_translation_vision_models_desc": "Detección de texto, reconocimiento de texto y disposición de bocadillos. Se descargan una vez y luego se usan completamente en tu dispositivo.",
+	"settings_translation_vision_models_desc_desktop": "Disposición de bocadillos. La detección y el reconocimiento de texto vienen con la app; este modelo se descarga una vez y luego se usa completamente en tu equipo.",
 	"settings_translation_vision_models_needed": "Necesarios antes de poder traducir cualquier página, ya sea en el dispositivo o mediante un proveedor en la nube.",
 	"settings_translation_vision_models_only": "Solo Modelos de Visión",
 	"settings_translation_vision_models_only_2": "Solo modelos de visión",
