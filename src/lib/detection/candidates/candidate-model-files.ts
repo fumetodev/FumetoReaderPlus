@@ -16,6 +16,7 @@
 
 import { exists as fsExists, readFile } from '@tauri-apps/plugin-fs';
 import { appDataDir, join } from '@tauri-apps/api/path';
+import { applyOrtWasmThreads } from '../ort-wasm-threads.js';
 
 export type CandidateModelId =
 	| 'manga-ocr'
@@ -124,13 +125,8 @@ async function ort(): Promise<OrtModule> {
 	ortModule = await import('onnxruntime-web/wasm');
 	ortModule.env.wasm.wasmPaths = `${window.location.origin}/wasm/`;
 	ortModule.env.wasm.proxy = false;
-	// Threads need SharedArrayBuffer (cross-origin isolation); ort falls back
-	// to 1 silently when unavailable, so this is a free upside on devices
-	// where the WebView grants isolation.
-	ortModule.env.wasm.numThreads =
-		typeof SharedArrayBuffer !== 'undefined'
-			? Math.min(4, navigator.hardwareConcurrency || 1)
-			: 1;
+	// Shared with PP-OCR: ORT reads the count once per page (ort-wasm-threads.ts).
+	applyOrtWasmThreads(ortModule.env.wasm, 'candidate');
 	return ortModule;
 }
 

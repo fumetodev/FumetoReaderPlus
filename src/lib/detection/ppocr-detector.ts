@@ -26,6 +26,7 @@ import {
 } from './native-ppocr-detector.js';
 import { groupRawTextComponents } from './ppocr-grouping.js';
 import { loadPPOcrWasmModelBuffer } from './ppocr-wasm-model-loader.js';
+import { applyOrtWasmThreads } from './ort-wasm-threads.js';
 
 // Model path — bundled in static/models/
 export const PPOCR_DETECTOR_MODEL_PATH = '/models/ppocr-det-v6-medium.onnx';
@@ -308,7 +309,7 @@ export async function initDetectorWasm(): Promise<void> {
 		ort = await import('onnxruntime-web/wasm');
 		ort.env.wasm.wasmPaths = `${window.location.origin}/wasm/`;
 		ort.env.wasm.proxy = false;
-		ort.env.wasm.numThreads = 1;
+		applyOrtWasmThreads(ort.env.wasm, 'ppocr');
 
 		// Android builds prune this model from the web bundle (native ORT owns
 		// det/rec there); the loader falls back to the APK's native asset copy
