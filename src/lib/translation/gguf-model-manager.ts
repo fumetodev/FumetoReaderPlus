@@ -27,9 +27,12 @@ import {
 	translateWithHyMT2,
 	cancelDownload as cancelBridgeDownload,
 	ggufDownloadProgress,
+	getBackend,
+	getBackendInfo,
 	type ManualPromptFormat
 } from './llamacpp-bridge.js';
-import { hyMT2LoadOptions } from './hymt2-load-options.js';
+import { hyMT2LoadOptions, plannedBackend, type GpuChoice } from './hymt2-load-options.js';
+import { isMacOS, isTauriDesktop } from '$lib/util/platform.js';
 import { exists as fsExists, remove as fsRemove, stat as fsStat } from '@tauri-apps/plugin-fs';
 import { appDataDir, join } from '@tauri-apps/api/path';
 
@@ -259,7 +262,7 @@ async function validateDownloadedHyMT2Model(
 
 	// Loaded exactly as a translation would load it: the model stays resident
 	// afterwards, and translation reuses whatever is loaded.
-	await loadHyMT2Model(modelPath, undefined, hyMT2LoadOptions(variant));
+	await loadHyMT2Model(modelPath, undefined, hyMT2LoadOptions(variant, gpuChoice()));
 	const probe = (await translateWithHyMT2('行くぞ！', 'ja', 'en')).trim();
 	if (!probe || probe === '行くぞ！' || !/[A-Za-z]/.test(probe) || /\[ERROR\]/i.test(probe)) {
 		throw new Error('Hy-MT2 loaded but failed its Japanese-to-English inference validation');
@@ -439,7 +442,34 @@ export function customPromptFormat(): ManualPromptFormat | undefined {
 export async function loadActiveHyMT2Model(signal?: AbortSignal): Promise<void> {
 	const variant = activeHyMT2Variant();
 	const path = await getModelPath(variant);
-	return loadHyMT2Model(path, signal, hyMT2LoadOptions(variant, { promptFormat: customPromptFormat() }));
+	return loadHyMT2Model(
+		path,
+		signal,
+		hyMT2LoadOptions(variant, { promptFormat: customPromptFormat(), ...gpuChoice() })
+	);
+}
+
+/** Only the Mac app can offload, through Metal. */
+function gpuCapable(): boolean {
+	return isMacOS && isTauriDesktop();
+}
+
+/** The GPU half of every load's options: the Settings switch, and whether this app has a GPU path at all. */
+function gpuChoice(): GpuChoice {
+	const stored = get(settings) as { onDeviceUseGpu?: boolean };
+	return { useGpu: stored.onDeviceUseGpu !== false, gpuCapable: gpuCapable() };
+}
+
+/**
+ * What the Compute line in Settings shows for `variant`: the loaded model's
+ * backend, or with nothing loaded the one `variant` would load on. Android
+ * and the browser answer as they always have.
+ */
+export async function plannedHyMT2Backend(variant: HyMT2Variant, useGpu: boolean): Promise<string> {
+	const info = await getBackendInfo();
+	if (!info) return getBackend();
+	const { gpu } = hyMT2LoadOptions(variant, { useGpu, gpuCapable: gpuCapable() });
+	return plannedBackend(info, gpu === true);
 }
 
 /**
@@ -461,7 +491,7 @@ async function probeCustomModel(
 	format: ManualPromptFormat | undefined
 ): Promise<{ status: CustomModelImportStatus; error?: string }> {
 	try {
-		await loadHyMT2Model(path, undefined, hyMT2LoadOptions('custom', { promptFormat: format }));
+		await loadHyMT2Model(path, undefined, hyMT2LoadOptions('custom', { promptFormat: format, ...gpuChoice() }));
 	} catch (err) {
 		const message = err instanceof Error ? err.message : 'Load failed';
 		return {

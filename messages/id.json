@@ -1733,6 +1733,8 @@
 	"settings_translation_translation_backend": "Backend Terjemahan",
 	"settings_translation_translation_pipeline_sections": "Bagian pipeline terjemahan",
 	"settings_translation_translation_temperature": "Temperatur Terjemahan",
+	"settings_translation_use_gpu": "Gunakan GPU (Metal)",
+	"settings_translation_use_gpu_desc": "Menjalankan model yang ditingkatkan dan model impor Anda di GPU Mac, yang biasanya jauh lebih cepat. Model standar selalu berjalan di CPU.",
 	"settings_translation_use_name_for_translations": "Gunakan {name} untuk terjemahan",
 	"settings_translation_use_pipeline": "Gunakan {pipeline}",
 	"settings_translation_uses_pp_ocr_text": "Menggunakan ekstraksi teks PP-OCR. Berfungsi dengan model apa pun.",

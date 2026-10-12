@@ -6849,6 +6849,16 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:14:02.946Z"
 	},
+	"settings_translation_use_gpu": {
+		"sourceHash": "123474ae3610ef8f",
+		"model": "claude-code",
+		"draftedAt": "2026-10-12T16:32:47.658Z"
+	},
+	"settings_translation_use_gpu_desc": {
+		"sourceHash": "048c8b2b1d0872f8",
+		"model": "claude-code",
+		"draftedAt": "2026-10-12T16:32:47.658Z"
+	},
 	"settings_translation_use_name_for_translations": {
 		"sourceHash": "0f839a53e118c531",
 		"model": "anthropic/claude-sonnet-5",

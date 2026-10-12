@@ -322,6 +322,12 @@ export interface FumetoSettings {
 	onDeviceSourceLang: string;
 	/** On-device target language */
 	onDeviceTargetLang: string;
+	/**
+	 * Run the on-device model on the GPU where the app can (the Mac, through
+	 * Metal). The stock 1.25-bit model always runs on the CPU: Metal has no
+	 * kernel for its STQ1_0 weights. Changing it unloads the model.
+	 */
+	onDeviceUseGpu: boolean;
 
 	// Background translation (Android)
 	/** Enable Android foreground service for background batch translation */
@@ -427,6 +433,7 @@ export const DEFAULT_SETTINGS: FumetoSettings = {
 	onDeviceTemperature: ON_DEVICE_TEMPERATURE_DEFAULT,
 	onDeviceSourceLang: 'auto',
 	onDeviceTargetLang: 'en',
+	onDeviceUseGpu: true,
 
 	backgroundTranslation: false,
 
