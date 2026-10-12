@@ -107,15 +107,16 @@ function describeArgs(remoteObjects = []) {
 }
 
 const debuggerUrl = await resolveDebuggerUrl();
-// `ws` ships with the repo's dev dependencies; there is no runtime dependency
-// on it in the app itself.
-const { default: WebSocket } = await import('ws');
-const socket = new WebSocket(debuggerUrl, { perMessageDeflate: false });
+// Node 22 and later ship a WebSocket client, which is all this needs. The
+// `ws` package is only a fallback for an older Node, and is not a dependency of
+// this repository — the import used to be unconditional and failed here.
+const WebSocketClient = globalThis.WebSocket ?? (await import('ws')).default;
+const socket = new WebSocketClient(debuggerUrl);
 
 let nextId = 1;
 const send = (method, params) => socket.send(JSON.stringify({ id: nextId++, method, params }));
 
-socket.on('open', () => {
+socket.addEventListener('open', () => {
 	if (EVAL_EXPRESSION) {
 		send('Runtime.evaluate', {
 			expression: EVAL_EXPRESSION,
@@ -129,8 +130,8 @@ socket.on('open', () => {
 	emit({ kind: 'attached', target: debuggerUrl.replace(/\/devtools\/.*/, '/devtools/…') });
 });
 
-socket.on('message', (raw) => {
-	const message = JSON.parse(raw);
+socket.addEventListener('message', (event) => {
+	const message = JSON.parse(typeof event.data === 'string' ? event.data : String(event.data));
 
 	if (EVAL_EXPRESSION && message.id === 1) {
 		const details = message.result?.exceptionDetails;
@@ -170,14 +171,14 @@ socket.on('message', (raw) => {
 	}
 });
 
-socket.on('error', (err) => {
-	console.error(`[android-webview-console] socket error: ${err.message}`);
+socket.addEventListener('error', (event) => {
+	console.error(`[android-webview-console] socket error: ${event.message ?? event.error?.message ?? 'connection failed'}`);
 	process.exit(4);
 });
 
 // A closed socket means the WebView went away (app killed, or a renderer
 // crash) — that is itself a result worth reporting rather than hanging.
-socket.on('close', () => {
+socket.addEventListener('close', () => {
 	emit({ kind: 'detached' });
 	process.exit(0);
 });
