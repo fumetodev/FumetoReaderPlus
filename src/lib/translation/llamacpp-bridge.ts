@@ -430,6 +430,18 @@ export interface ModelLoadOptions {
 	multilingualGuidance?: boolean;
 }
 
+/** The desktop `llama_load` command's `options` argument (`LoadOptions` in llama.rs). */
+export interface DesktopLoadOptions {
+	guidanceScope: 'all-targets' | 'english-only';
+}
+
+export function desktopLoadOptions(options?: ModelLoadOptions): DesktopLoadOptions {
+	return {
+		// The same two values the Android bridge takes, parsed the same way.
+		guidanceScope: options?.multilingualGuidance ? 'all-targets' : 'english-only'
+	};
+}
+
 /**
  * Load the Hy-MT2 local-translation GGUF model from the given path.
  */
@@ -439,7 +451,14 @@ async function performHyMT2ModelLoad(
 ): Promise<void> {
 	if (isDesktop) {
 		const { invoke } = await import('@tauri-apps/api/core');
-		await invoke('llama_load', { modelPath });
+		try {
+			await invoke('llama_load', { modelPath, options: desktopLoadOptions(options) });
+		} catch (error) {
+			// A Tauri command rejects with its error STRING. Callers read
+			// `.message` (the custom-model probe looks there for the
+			// needs-prompt-format tag), so hand them an Error carrying it.
+			throw parseBridgeRejection(error);
+		}
 		return;
 	}
 
