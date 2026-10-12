@@ -9,7 +9,7 @@
 	import { ggufDownloadState, downloadHyMT2Model, cancelModelDownload as cancelGgufDownload, deleteHyMT2Model, isModelDownloaded, HYMT2_VARIANTS, BUNDLED_HYMT2_VARIANTS, bundledSpec, type HyMT2Variant, type BundledHyMT2Variant } from '$lib/translation/gguf-model-manager.js';
 	import { modelMemoryAdvice, readDeviceMemory } from '$lib/device/device-memory.js';
 	import { refreshDesktopMemory } from '$lib/device/desktop-memory.js';
-	import { ocrModelDownloadState, downloadOcrModels, cancelOcrModelDownload, deleteOcrModels, areOcrModelsReady, OCR_MODELS_TOTAL_BYTES } from '$lib/detection/ocr-model-manager.js';
+	import { ocrModelDownloadState, downloadOcrModels, cancelOcrModelDownload, deleteOcrModels, areOcrModelsReady, ocrModelsTotalBytes } from '$lib/detection/ocr-model-manager.js';
 
 	// Read once — the same advice the future Pro purchase flow must show
 	// BEFORE purchase, so a 4 GB device learns its limits before paying.
@@ -32,7 +32,7 @@
 	import type { ProviderConfig, ProviderType, LLMModel } from '$lib/translation/llm-types.js';
 	import { loadProviderApiKey } from '$lib/settings/secure-storage.js';
 	import { stageProviderKeyDraft } from '$lib/settings/provider-key-drafts.js';
-	import { isAndroid, isMacOS } from '$lib/util/platform.js';
+	import { isAndroid, isMacOS, isTauriDesktop } from '$lib/util/platform.js';
 	import ModelPicker from './ModelPicker.svelte';
 
 	// ============================================================
@@ -348,11 +348,12 @@
 	});
 	let hyMT2Backend = $state('unknown');
 
-	// Vision models (PP-OCR detector + recogniser, rtmdet layout). Downloaded
-	// on demand; the readiness flag drives the card below and nothing else, so
-	// a failed probe simply shows the download button again.
+	// Vision models (PP-OCR detector + recogniser, rtmdet layout; the desktop
+	// downloads only the layout model). Downloaded on demand; the readiness flag
+	// drives the card below and nothing else, so a failed probe simply shows the
+	// download button again.
 	let ocrModelsReady = $state(false);
-	const ocrModelsTotalMB = Math.round(OCR_MODELS_TOTAL_BYTES / 1024 / 1024);
+	const ocrModelsTotalMB = Math.round(ocrModelsTotalBytes() / 1024 / 1024);
 
 	async function refreshOcrModels(): Promise<void> {
 		ocrModelsReady = await areOcrModelsReady().catch(() => false);
@@ -1419,7 +1420,7 @@
 			{#if $ocrModelDownloadState.status === 'error'}
 				<p class="mt-1.5 text-[11px] text-red-400">{$ocrModelDownloadState.error}</p>
 			{/if}
-			<p class="mt-1.5 text-[11px] italic text-surface-500">{m.settings_translation_vision_models_desc()}</p>
+			<p class="mt-1.5 text-[11px] italic text-surface-500">{isTauriDesktop() ? m.settings_translation_vision_models_desc_desktop() : m.settings_translation_vision_models_desc()}</p>
 			{#if !ocrModelsReady}
 				<p class="mt-1 text-[11px] text-amber-400/90">{m.settings_translation_vision_models_needed()}</p>
 			{/if}

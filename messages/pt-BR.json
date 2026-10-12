@@ -1761,6 +1761,7 @@
 	"settings_translation_uses_the_available_llama": "Usa o backend llama.cpp disponível.",
 	"settings_translation_vision_models": "Modelos de visão",
 	"settings_translation_vision_models_desc": "Detecção de texto, reconhecimento de texto e layout de balões de fala. Baixados uma vez e depois usados totalmente no seu dispositivo.",
+	"settings_translation_vision_models_desc_desktop": "Layout de balões de fala. A detecção e o reconhecimento de texto já vêm com o app; este modelo é baixado uma vez e depois usado totalmente no seu computador.",
 	"settings_translation_vision_models_needed": "Necessário antes que qualquer página possa ser traduzida, no dispositivo ou por um provedor na nuvem.",
 	"settings_translation_vision_models_only": "Somente Modelos de Visão",
 	"settings_translation_vision_models_only_2": "Somente modelos de visão",

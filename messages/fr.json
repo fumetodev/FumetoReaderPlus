@@ -1761,6 +1761,7 @@
 	"settings_translation_uses_the_available_llama": "Utilise le moteur llama.cpp disponible.",
 	"settings_translation_vision_models": "Modèles de vision",
 	"settings_translation_vision_models_desc": "Détection de texte, reconnaissance de texte et mise en page des bulles. Téléchargés une fois, puis utilisés entièrement sur votre appareil.",
+	"settings_translation_vision_models_desc_desktop": "Mise en page des bulles. La détection et la reconnaissance de texte sont incluses dans l’application. Ce modèle est téléchargé une fois, puis utilisé entièrement sur votre ordinateur.",
 	"settings_translation_vision_models_needed": "Nécessaires avant de pouvoir traduire une page, sur l'appareil ou via un fournisseur cloud.",
 	"settings_translation_vision_models_only": "Modèles de vision uniquement",
 	"settings_translation_vision_models_only_2": "Modèles de vision uniquement",

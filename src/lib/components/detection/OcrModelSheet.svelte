@@ -15,7 +15,7 @@
 		downloadOcrModels,
 		cancelOcrModelDownload,
 		areOcrModelsReady,
-		OCR_MODELS_TOTAL_BYTES
+		ocrModelsTotalBytes
 	} from '$lib/detection/ocr-model-manager.js';
 	import {
 		ocrModelPromptOpen,
@@ -23,7 +23,7 @@
 		resumeAfterOcrModels
 	} from '$lib/detection/ocr-model-gate.js';
 
-	const totalMB = Math.round(OCR_MODELS_TOTAL_BYTES / 1024 / 1024);
+	const totalMB = Math.round(ocrModelsTotalBytes() / 1024 / 1024);
 
 	let downloading = $derived($ocrModelDownloadState.status === 'downloading');
 	let pct = $derived.by(() => {

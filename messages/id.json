@@ -1739,6 +1739,7 @@
 	"settings_translation_uses_the_available_llama": "Menggunakan backend llama.cpp yang tersedia.",
 	"settings_translation_vision_models": "Model visi",
 	"settings_translation_vision_models_desc": "Deteksi teks, pengenalan teks, dan tata letak balon bicara. Diunduh sekali, lalu digunakan sepenuhnya di perangkat Anda.",
+	"settings_translation_vision_models_desc_desktop": "Tata letak balon bicara. Deteksi dan pengenalan teks sudah termasuk dalam aplikasi; model ini diunduh sekali, lalu digunakan sepenuhnya di komputer Anda.",
 	"settings_translation_vision_models_needed": "Diperlukan sebelum halaman apa pun dapat diterjemahkan, baik di perangkat maupun melalui penyedia cloud.",
 	"settings_translation_vision_models_only": "Hanya Model Visi",
 	"settings_translation_vision_models_only_2": "Hanya model visi",

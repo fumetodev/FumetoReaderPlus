@@ -1761,6 +1761,7 @@
 	"settings_translation_uses_the_available_llama": "Usa il backend llama.cpp disponibile.",
 	"settings_translation_vision_models": "Modelli di visione",
 	"settings_translation_vision_models_desc": "Rilevamento del testo, riconoscimento del testo e disposizione delle nuvolette. Scaricati una sola volta, poi usati interamente sul tuo dispositivo.",
+	"settings_translation_vision_models_desc_desktop": "Disposizione delle nuvolette. Il rilevamento e il riconoscimento del testo sono inclusi nell'app; questo modello si scarica una sola volta, poi si usa interamente sul tuo computer.",
 	"settings_translation_vision_models_needed": "Necessari prima di poter tradurre qualsiasi pagina, sul dispositivo o tramite un provider cloud.",
 	"settings_translation_vision_models_only": "Solo Modelli Vision",
 	"settings_translation_vision_models_only_2": "Solo modelli vision",
