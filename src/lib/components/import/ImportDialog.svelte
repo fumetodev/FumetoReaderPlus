@@ -10,6 +10,7 @@
 	import { db } from '$lib/db/index.js';
 	import { open } from '@tauri-apps/plugin-dialog';
 	import { filePathToFile } from '$lib/import/tauri-file-bridge.js';
+	import { triagePicks } from '$lib/import/pick-triage.js';
 	import { isMobile } from '$lib/util/platform.js';
 	import { settings, isLocalLibrary } from '$lib/settings/settings.js';
 	import { recallLocalTarget, rememberLocalTarget, selectedLibraryId } from '$lib/stores/catalog-state.js';
@@ -22,12 +23,20 @@
 
 	let dragOver = $state(false);
 	let errorMessage = $state('');
-	let importResult = $state<{ succeeded: number; failed: { name: string; error: string }[]; deleteFailures?: string[] } | null>(null);
+	let importResult = $state<{
+		succeeded: number;
+		failed: { name: string; error: string }[];
+		deleteFailures?: string[];
+		/** Picks that were left out on purpose, as ready-to-show lines. */
+		notes?: string[];
+	} | null>(null);
 
 	// Mobile multi-step state
 	type MobileStep = 'select' | 'assign' | 'importing' | 'results';
 	let mobileStep = $state<MobileStep>('select');
 	let selectedPaths = $state<string[]>([]);
+	/** Display names of picks the import cannot take; the rest go ahead. */
+	let skippedUnsupported = $state<string[]>([]);
 	let assignAuthor = $state('');
 	let assignSeries = $state('');
 	let deleteOriginals = $state(false);
@@ -105,7 +114,16 @@
 		const paths = Array.isArray(selected) ? selected : [selected];
 		if (paths.length === 0) return;
 
-		selectedPaths = paths;
+		// One pick that is not a comic must not cost the ones that are.
+		const picks = triagePicks(paths, supportedExtensions, resolveDisplayName);
+		if (picks.accepted.length === 0) {
+			errorMessage = m.import_unsupported_types({ names: picks.unsupported.join(', '), formats: supportedLabel });
+			return;
+		}
+
+		errorMessage = '';
+		selectedPaths = picks.accepted;
+		skippedUnsupported = picks.unsupported;
 		assignAuthor = '';
 		assignSeries = '';
 		deleteOriginals = false;
@@ -141,22 +159,24 @@
 				(msg) => importProgressMessage.set(msg),
 			);
 
-			// Indexing failures are import failures from the user's perspective: a
-			// file that copied but did not index never appears in the library.
-			const scanFailures = (result.scan?.failed ?? []).map((f) => ({
-				name: resolveDisplayName(f.path),
-				error: m.import_indexing_failed({ detail: f.error }),
-			}));
+			// `succeeded` and `failed` are already this import's own: a file that
+			// copied but did not index is a failure there, and what the scan found
+			// wrong elsewhere in the library is not.
+			const notes: string[] = [];
+			if (skippedUnsupported.length > 0) {
+				notes.push(m.import_skipped_unsupported({ names: skippedUnsupported.join(', ') }));
+			}
+			if (result.alreadyInLibrary.length > 0) {
+				notes.push(m.import_already_imported({ names: result.alreadyInLibrary.map(resolveDisplayName).join(', ') }));
+			}
 			importResult = {
-				succeeded: result.succeeded.length - scanFailures.length,
-				failed: [
-					...result.failed.map(f => ({
-						name: resolveDisplayName(f.path),
-						error: f.error,
-					})),
-					...scanFailures,
-				],
+				succeeded: result.succeeded.length,
+				failed: result.failed.map((f) => ({
+					name: resolveDisplayName(f.path),
+					error: f.error,
+				})),
 				deleteFailures: result.deleteFailures,
+				notes,
 			};
 		} catch (err) {
 			importResult = {
@@ -169,7 +189,12 @@
 		importProgressMessage.set('');
 		mobileStep = 'results';
 
-		if (importResult.failed.length === 0 && (!importResult.deleteFailures || importResult.deleteFailures.length === 0)) {
+		// A result with anything to read stays up until it is dismissed.
+		if (
+			importResult.failed.length === 0 &&
+			(!importResult.deleteFailures || importResult.deleteFailures.length === 0) &&
+			(!importResult.notes || importResult.notes.length === 0)
+		) {
 			setTimeout(() => {
 				importResult = null;
 				mobileStep = 'select';
@@ -335,6 +360,7 @@
 			errorMessage = '';
 			mobileStep = 'select';
 			selectedPaths = [];
+			skippedUnsupported = [];
 			importDialogOpen.set(false);
 		}
 	}
@@ -376,7 +402,7 @@
 						{#if importResult.failed.length > 0}
 							<div class="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5">
 								<p class="mb-2 text-sm text-red-400">
-									{importResult.failed.length} import{importResult.failed.length !== 1 ? 's' : ''} failed:
+									{m.import_failed_count({ n: importResult.failed.length })}
 								</p>
 								<ul class="space-y-1">
 									{#each importResult.failed as f}
@@ -388,6 +414,11 @@
 								</ul>
 							</div>
 						{/if}
+						{#each importResult.notes ?? [] as note}
+							<div class="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2.5" data-import-note>
+								<p class="break-words text-xs text-yellow-400">{note}</p>
+							</div>
+						{/each}
 						{#if importResult.deleteFailures && importResult.deleteFailures.length > 0}
 							<div class="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2.5">
 								<p class="text-xs text-yellow-400">
@@ -426,6 +457,11 @@
 								{/each}
 							</ul>
 						</div>
+						{#if skippedUnsupported.length > 0}
+							<div class="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2.5" data-import-note>
+								<p class="break-words text-xs text-yellow-400">{m.import_skipped_unsupported({ names: skippedUnsupported.join(', ') })}</p>
+							</div>
+						{/if}
 
 						<div>
 							<label for="import-author" class="mb-1 block text-xs font-medium text-surface-400">{m.import_author_label()}</label>
@@ -472,7 +508,7 @@
 					</div>
 
 					<div class="mt-5 flex justify-end gap-2">
-						<button onclick={() => { mobileStep = 'select'; selectedPaths = []; }} class="rounded-lg px-4 py-2 text-sm text-surface-400 transition-colors active:text-surface-200">
+						<button onclick={() => { mobileStep = 'select'; selectedPaths = []; skippedUnsupported = []; }} class="rounded-lg px-4 py-2 text-sm text-surface-400 transition-colors active:text-surface-200">
 							{m.common_back()}
 						</button>
 						<button onclick={handleMobileImport} class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors active:bg-primary-700">

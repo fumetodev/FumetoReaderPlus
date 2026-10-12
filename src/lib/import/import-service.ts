@@ -20,7 +20,7 @@ import { getArchiveType } from './types.js';
 import { beginVolumeImport } from './import-registry.js';
 import { extractFirstZipImage, streamZipArchivePages, type StreamedPage } from './archive-extraction.js';
 import { isMobile } from '$lib/util/platform.js';
-import { copyFileToLibrary, tryDeleteFile } from '$lib/util/file-utils.js';
+import { copyFileToLibrary, libraryDestinationPath, resolveDisplayName, tryDeleteFile } from '$lib/util/file-utils.js';
 import { scanLibrary, type ScanResult } from '$lib/library/library-scanner.js';
 import { revokeThumbnailUrl } from '$lib/stores/thumbnail-cache.js';
 import { naturalCompare } from '$lib/util/natural-sort.js';
@@ -651,8 +651,12 @@ export async function volumeHasTranslationData(volumeUuid: string): Promise<bool
 // ================================================================
 
 export interface ImportToLibraryResult {
+	/** Library paths of the picks that were copied and indexed. */
 	succeeded: string[];
+	/** Picks that did not make it in, each under the path it was picked at. */
 	failed: { path: string; error: string }[];
+	/** Picks left out because the library already holds that file. */
+	alreadyInLibrary: string[];
 	deleteFailures: string[];
 	/**
 	 * The indexing scan's outcome, or null when no files were copied. Discarding
@@ -663,11 +667,25 @@ export interface ImportToLibraryResult {
 	scan: ScanResult | null;
 }
 
+/** The scanner's spelling of a path, so its failures can be matched to a copy. */
+function comparablePath(path: string): string {
+	return path.replace(/\\/g, '/').replace(/\/{2,}/g, '/').replace(/\/$/, '');
+}
+
 /**
  * Import archives into the local library by copying them to organized
  * Author/Series subfolders, then triggering a library scan.
  *
  * This does NOT create IndexedDB entries directly — the scanner handles that.
+ *
+ * Each pick stands or falls alone, and a pick that falls leaves nothing behind:
+ *   - one the library already holds is not copied. Rewriting the file would
+ *     make the scanner see a changed archive and re-import it from scratch,
+ *     which discards every translation made on that volume;
+ *   - one that copies but will not index has its copy removed. Left in the
+ *     folder it would fail every later scan, and nothing in the app could
+ *     open or delete it;
+ *   - an original is deleted only once its copy is a volume.
  */
 export async function importToLibrary(
 	filePaths: string[],
@@ -677,26 +695,39 @@ export async function importToLibrary(
 	deleteOriginals: boolean,
 	onProgress?: (msg: string) => void,
 ): Promise<ImportToLibraryResult> {
-	const succeeded: string[] = [];
 	const failed: { path: string; error: string }[] = [];
-	const deleteFailures: string[] = [];
+	const alreadyInLibrary: string[] = [];
+	const copied: { source: string; destination: string }[] = [];
+
+	// A file in the folder with no record is not a volume: it is what an
+	// earlier failed import left, and replacing it is the way to retry.
+	const taken = new Set(
+		(await db.library_imports.toArray()).map((record) => comparablePath(record.file_path)),
+	);
 
 	for (let i = 0; i < filePaths.length; i++) {
 		const srcPath = filePaths[i];
 		const assignment = assignments[i] || {};
-		const filename = srcPath.split(/[\\/]/).pop() || 'archive.cbz';
-		onProgress?.(m.import_progress_copying({ index: i + 1, total: filePaths.length, name: filename }));
+		onProgress?.(m.import_progress_copying({
+			index: i + 1,
+			total: filePaths.length,
+			name: resolveDisplayName(srcPath),
+		}));
 
 		try {
-			const destPath = await copyFileToLibrary(
+			const planned = comparablePath(
+				await libraryDestinationPath(srcPath, libraryPath, assignment.author, assignment.series),
+			);
+			if (taken.has(planned)) {
+				alreadyInLibrary.push(srcPath);
+				continue;
+			}
+			const destination = await copyFileToLibrary(
 				srcPath, libraryPath, assignment.author, assignment.series
 			);
-			succeeded.push(destPath);
-
-			if (deleteOriginals) {
-				const deleted = await tryDeleteFile(srcPath);
-				if (!deleted) deleteFailures.push(srcPath);
-			}
+			// Two picks of one name would otherwise land on the same file.
+			taken.add(planned);
+			copied.push({ source: srcPath, destination });
 		} catch (err) {
 			failed.push({
 				path: srcPath,
@@ -710,10 +741,35 @@ export async function importToLibrary(
 	// scan: identical scopes chain a follow-up whose traversal postdates the
 	// copies above, so the returned result genuinely covers these files.
 	let scan: ScanResult | null = null;
-	if (succeeded.length > 0) {
+	let scanError: string | null = null;
+	if (copied.length > 0) {
 		onProgress?.(m.import_progress_scanning());
-		scan = await scanLibrary(libraryPath, undefined, libraryId);
+		try {
+			scan = await scanLibrary(libraryPath, undefined, libraryId);
+		} catch (err) {
+			// The copies are intact and the next scan will index them; what is
+			// true now is that none of them is in the library.
+			scanError = err instanceof Error ? err.message : String(err);
+		}
 	}
 
-	return { succeeded, failed, deleteFailures, scan };
+	// The scan covers the whole library, so only its failures on these copies
+	// belong to this import.
+	const notIndexed = new Map(
+		(scan?.failed ?? []).map((failure) => [comparablePath(failure.path), failure.error]),
+	);
+	const succeeded: string[] = [];
+	const deleteFailures: string[] = [];
+	for (const { source, destination } of copied) {
+		const reason = scanError ?? notIndexed.get(comparablePath(destination));
+		if (reason !== undefined) {
+			failed.push({ path: source, error: m.import_indexing_failed({ detail: reason }) });
+			if (scanError === null) await tryDeleteFile(destination);
+			continue;
+		}
+		succeeded.push(destination);
+		if (deleteOriginals && !(await tryDeleteFile(source))) deleteFailures.push(source);
+	}
+
+	return { succeeded, failed, alreadyInLibrary, deleteFailures, scan };
 }

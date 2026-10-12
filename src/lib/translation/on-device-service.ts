@@ -25,6 +25,7 @@ import {
 	HYMT2_VARIANTS,
 	isModelDownloaded
 } from './gguf-model-manager.js';
+import { onDeviceModelLabel } from './on-device-model-label.js';
 import {
 	extractTextWithPPOCR,
 	type PPOCRExtractionMetrics
@@ -664,7 +665,7 @@ export async function translatePageOnDevice(
 		id: randomUUID(),
 		createdAt: new Date().toISOString()
 	};
-	const pageModel = `on-device-hymt2-1.25bit-${ocrProvider}`;
+	const pageModel = onDeviceModelLabel(activeHyMT2Variant(), ocrProvider);
 	const pageTranslationSnapshot = (
 		entries: PageTranslationEntry[],
 		overlayData: PageOverlayData,
@@ -1148,10 +1149,13 @@ export async function translateRegionOnDevice(
 	region: TranslationRegion,
 	imageFile: File,
 	signal?: AbortSignal
-): Promise<{ original_text: string; translated_text: string }> {
+): Promise<{ original_text: string; translated_text: string; model: string }> {
 	throwIfTranslationCancelled(signal);
 	const currentSettings = get(settings);
 	const ocrProvider = currentSettings.onDeviceOCRProvider ?? 'ppocr';
+	// Named before any work starts, like the page pipeline's: the record should
+	// say what was selected when the translation was asked for.
+	const model = onDeviceModelLabel(activeHyMT2Variant(), ocrProvider);
 
 	let blocks: RecognizedBlock[];
 	blocks = (await recognizeWithPPOCR(imageFile, {
@@ -1179,14 +1183,14 @@ export async function translateRegionOnDevice(
 	});
 
 	if (matchingBlocks.length === 0) {
-		return { original_text: '', translated_text: '[No text detected in region]' };
+		return { original_text: '', translated_text: '[No text detected in region]', model };
 	}
 
 	// Concatenate all matching block texts
 	const recognizedText = matchingBlocks.map((b) => b.text).join('');
 
 	if (!recognizedText.trim()) {
-		return { original_text: '', translated_text: '[No text detected in region]' };
+		return { original_text: '', translated_text: '[No text detected in region]', model };
 	}
 
 	// Translate through the backend selected in settings. The serialized
@@ -1215,5 +1219,5 @@ export async function translateRegionOnDevice(
 	}
 	throwIfTranslationCancelled(signal);
 
-	return { original_text: recognizedText, translated_text: translatedText };
+	return { original_text: recognizedText, translated_text: translatedText, model };
 }

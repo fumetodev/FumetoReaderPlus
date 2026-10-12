@@ -47,7 +47,20 @@
 		clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.2 2"/>',
 		download: '<path d="M12 3v12M7 10l5 5 5-5M4.5 20.5h15"/>',
 		trash:
-			'<path d="M4 7h16M9 7V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2M6.5 7l1 12a2 2 0 0 0 2 1.8h5a2 2 0 0 0 2-1.8l1-12"/><path d="M10 11v6M14 11v6"/>'
+			'<path d="M4 7h16M9 7V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2M6.5 7l1 12a2 2 0 0 0 2 1.8h5a2 2 0 0 0 2-1.8l1-12"/><path d="M10 11v6M14 11v6"/>',
+		// あ⇄A, source to target. The one glyph here that is not stroke-drawn:
+		// the two letters are filled text, so they opt out of the inherited
+		// stroke, and the arrows carry their own lighter weight to sit beside
+		// them. The reader bar and the region strip both mean the same action
+		// by it, which is why it lives in the set rather than in either.
+		translate:
+			'<text x="0.5" y="11" font-size="10.5" font-weight="600" fill="currentColor" stroke="none">あ</text><text x="14.5" y="22.5" font-size="11" font-weight="700" fill="currentColor" stroke="none">A</text><path d="M14 5h6m0 0-2.2-2.2M20 5l-2.2 2.2M10 19H4m0 0 2.2-2.2M4 19l2.2 2.2" stroke-width="1.4"/>',
+		// A stack of three sheets with a plus where the lower two would have
+		// run on: every sheet is the same 18×9 rhombus on a 4.5 pitch, and the
+		// lower two stop 1.4 past the centre line so the plus keeps a clear
+		// unit of air on its left arm at 22 px.
+		'layers-plus':
+			'<path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 1.4-.7"/><path d="M3 16.5l9 4.5 1.4-.7"/><path d="M19 14v6M16 17h6"/>'
 	} as const;
 
 	export type IconName = keyof typeof ICONS;
