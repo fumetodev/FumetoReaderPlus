@@ -56,6 +56,7 @@ export class SettingsDraft {
 	onDeviceTranslationBackend = $state<'translategemma'>('translategemma');
 	hyMT2Variant = $state<FumetoSettings['hyMT2Variant']>('stock');
 	onDeviceTemperature = $state(ON_DEVICE_TEMPERATURE_DEFAULT);
+	onDeviceUseGpu = $state(true);
 	backgroundTranslation = $state(false);
 	localProviderConcurrency = $state(1);
 	debugLogging = $state(false);
@@ -127,6 +128,7 @@ export class SettingsDraft {
 			: (s.hyMT2Variant as string) === 'manga-v4' ? 'manga-v5'
 			: (s.hyMT2Variant ?? 'stock');
 		this.onDeviceTemperature = s.onDeviceTemperature ?? ON_DEVICE_TEMPERATURE_DEFAULT;
+		this.onDeviceUseGpu = s.onDeviceUseGpu ?? true;
 		this.backgroundTranslation = s.backgroundTranslation;
 		this.localProviderConcurrency = s.localProviderConcurrency;
 		this.debugLogging = s.debugLogging;
@@ -179,6 +181,7 @@ export class SettingsDraft {
 			onDeviceTemperature: this.onDeviceTemperature,
 			onDeviceSourceLang: this.onDeviceSourceLang,
 			onDeviceTargetLang: this.onDeviceTargetLang,
+			onDeviceUseGpu: this.onDeviceUseGpu,
 			backgroundTranslation: this.backgroundTranslation,
 			localProviderConcurrency: Math.max(1, Math.min(8, this.localProviderConcurrency || 1)),
 			debugLogging: this.debugLogging,

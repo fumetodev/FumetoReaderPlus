@@ -6,7 +6,7 @@
 	import Switch from '$lib/components/ui/Switch.svelte';
 	import { slidingSelection } from '$lib/util/sliding-selection.js';
 	import { randomUUID } from '$lib/util/uuid.js';
-	import { ggufDownloadState, downloadHyMT2Model, cancelModelDownload as cancelGgufDownload, deleteHyMT2Model, isModelDownloaded, HYMT2_VARIANTS, BUNDLED_HYMT2_VARIANTS, bundledSpec, type HyMT2Variant, type BundledHyMT2Variant } from '$lib/translation/gguf-model-manager.js';
+	import { ggufDownloadState, downloadHyMT2Model, cancelModelDownload as cancelGgufDownload, deleteHyMT2Model, isModelDownloaded, plannedHyMT2Backend, HYMT2_VARIANTS, BUNDLED_HYMT2_VARIANTS, bundledSpec, type HyMT2Variant, type BundledHyMT2Variant } from '$lib/translation/gguf-model-manager.js';
 	import { modelMemoryAdvice, readDeviceMemory } from '$lib/device/device-memory.js';
 	import { refreshDesktopMemory } from '$lib/device/desktop-memory.js';
 	import { ocrModelDownloadState, downloadOcrModels, cancelOcrModelDownload, deleteOcrModels, areOcrModelsReady, ocrModelsTotalBytes } from '$lib/detection/ocr-model-manager.js';
@@ -14,7 +14,7 @@
 	// Read once — the same advice the future Pro purchase flow must show
 	// BEFORE purchase, so a 4 GB device learns its limits before paying.
 	const deviceMemory = readDeviceMemory();
-	import { isLlamaBridgeAvailable, unloadModel as unloadHyMT2Model, getBackend, getAvailableMemoryGB } from '$lib/translation/llamacpp-bridge.js';
+	import { isLlamaBridgeAvailable, unloadModel as unloadHyMT2Model, getAvailableMemoryGB } from '$lib/translation/llamacpp-bridge.js';
 	import { settings, DEFAULT_OPENROUTER_MODEL, SUPPORTED_LANGUAGES, ON_DEVICE_SOURCE_LANGUAGES, ON_DEVICE_TARGET_LANGUAGES, ON_DEVICE_TEMPERATURE_DEFAULT, ON_DEVICE_TEMPERATURE_MIN, ON_DEVICE_TEMPERATURE_MAX } from '$lib/settings/settings.js';
 	import { untrack } from 'svelte';
 
@@ -347,6 +347,27 @@
 		custom: false
 	});
 	let hyMT2Backend = $state('unknown');
+	let backendQuery = 0;
+
+	/**
+	 * The Compute line: the loaded model's backend, or the one the selected
+	 * model will load on. Called after anything that unloads the model, so it
+	 * never reports a model on its way out.
+	 */
+	async function refreshHyMT2Backend(): Promise<void> {
+		const query = ++backendQuery;
+		const backend = await plannedHyMT2Backend(draft.hyMT2Variant, draft.onDeviceUseGpu).catch(() => 'unknown');
+		if (query === backendQuery) hyMT2Backend = backend;
+	}
+
+	/** The Mac's GPU switch. Applied at once, so the next translation loads where it says. */
+	async function handleGpuToggle(): Promise<void> {
+		await flushPendingApply();
+		// The loaded model keeps the backend it was loaded on; drop it so the
+		// next translation reloads it on the new one.
+		await unloadHyMT2Model().catch(() => undefined);
+		await refreshHyMT2Backend();
+	}
 
 	// Vision models (PP-OCR detector + recogniser, rtmdet layout; the desktop
 	// downloads only the layout model). Downloaded on demand; the readiness flag
@@ -386,6 +407,7 @@
 		// Next translation loads the newly selected file; drop the old one now.
 		const { unloadModel } = await import('$lib/translation/llamacpp-bridge.js');
 		await unloadModel().catch(() => undefined);
+		await refreshHyMT2Backend();
 	}
 
 	// ============================================================
@@ -512,7 +534,7 @@
 	$effect(() => {
 		if (draft.onDeviceTranslationBackend === 'translategemma' && !hyMT2CheckStarted) {
 			hyMT2CheckStarted = true;
-			getBackend().then(b => { hyMT2Backend = b; }).catch(() => { hyMT2Backend = 'unknown'; });
+			void refreshHyMT2Backend();
 			refreshHyMT2Downloaded()
 				.finally(() => { hyMT2ChecksLoaded = true; });
 		}
@@ -1016,6 +1038,17 @@
 							</p>
 						{/if}
 					</div>
+					{#if isMacOS && isTauriDesktop()}
+						<div class="mt-2">
+							<Switch
+								bind:checked={draft.onDeviceUseGpu}
+								onchange={() => void handleGpuToggle()}
+								label={m.settings_translation_use_gpu()}
+								dataTestid="hymt2-use-gpu"
+							/>
+							<p class="text-[11px] text-surface-500">{m.settings_translation_use_gpu_desc()}</p>
+						</div>
+					{/if}
 				{:else}
 					<div class="flex items-center gap-2">
 						<span class="h-2 w-2 rounded-full bg-red-500"></span>

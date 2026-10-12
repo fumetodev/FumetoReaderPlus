@@ -1799,6 +1799,8 @@
 	"settings_translation_translation_backend": "Движок перевода",
 	"settings_translation_translation_pipeline_sections": "Разделы конвейера перевода",
 	"settings_translation_translation_temperature": "Температура перевода",
+	"settings_translation_use_gpu": "Использовать GPU (Metal)",
+	"settings_translation_use_gpu_desc": "Запускает улучшенные модели и импортированную вами модель на GPU Mac — обычно это намного быстрее. Стандартная модель всегда работает на CPU.",
 	"settings_translation_use_name_for_translations": "Использовать {name} для перевода",
 	"settings_translation_use_pipeline": "Использовать {pipeline}",
 	"settings_translation_uses_pp_ocr_text": "Использует извлечение текста PP-OCR. Работает с любой моделью.",
