@@ -153,13 +153,17 @@ class LlamaBridge(
      *   the one checkpoint trained with a per-target terminology block.
      *   Anything else keeps the English-only behaviour every earlier model
      *   shipped with.
+     * @param promptProfile "index-translate" for a model of that family, which
+     *   has its own instruction, chat wrapping and sampler. Anything else is
+     *   the Hy-MT2 behaviour, so an older caller that omits it changes nothing.
      */
     private external fun nativeLoadModel(
         modelPath: String,
         manualPrefix: String,
         manualSuffix: String,
         manualStops: String,
-        guidanceScope: String
+        guidanceScope: String,
+        promptProfile: String
     ): Boolean
     private external fun nativeTranslate(
         text: String,
@@ -324,7 +328,8 @@ class LlamaBridge(
         manualPrefix: String = "",
         manualSuffix: String = "",
         manualStops: String = "",
-        guidanceScope: String = ""
+        guidanceScope: String = "",
+        promptProfile: String = ""
     ) {
         if (destroyed.get()) return
         scope.launch {
@@ -382,7 +387,10 @@ class LlamaBridge(
                     clearModelOwner()
                     nativeReplacementStarted = true
                     val success =
-                        nativeLoadModel(modelPath, manualPrefix, manualSuffix, manualStops, guidanceScope)
+                        nativeLoadModel(
+                            modelPath, manualPrefix, manualSuffix, manualStops,
+                            guidanceScope, promptProfile
+                        )
                     if (!success) {
                         InferenceForegroundService.stop(activity)
                         // Carry the native cause so the UI can tell "this

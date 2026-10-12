@@ -17,9 +17,10 @@ import { randomUUID } from '$lib/util/uuid.js';
 import { readingDirection } from '$lib/stores/reader-state.js';
 import { db } from '$lib/db/index.js';
 import type { RecognizedBlock } from './recognized-block.js';
-import { translateWithHyMT2, isModelLoaded as isHyMT2ModelLoaded } from './llamacpp-bridge.js';
+import { translateWithHyMT2 } from './llamacpp-bridge.js';
 import {
 	activeHyMT2Variant,
+	isActiveHyMT2ModelLoaded,
 	loadActiveHyMT2Model,
 	HYMT2_VARIANTS,
 	isModelDownloaded
@@ -832,10 +833,11 @@ export async function translatePageOnDevice(
 		}
 	};
 
-	// Lazy-load Hy-MT2 on first use per session.
-	// The settings literal is still 'translategemma' for migration stability even
-	// though the underlying GGUF is now Hy-MT2 1.8B 1.25-bit.
-	if (translationBackend === 'translategemma' && !(await isHyMT2ModelLoaded())) {
+	// Lazy-load the selected model on first use per session, and again whenever
+	// the resident one is not it (a download or an import leaves the model it
+	// validated loaded). The settings literal is still 'translategemma' for
+	// migration stability even though the GGUF is whichever variant is selected.
+	if (translationBackend === 'translategemma' && !(await isActiveHyMT2ModelLoaded())) {
 		throwIfTranslationCancelled(signal);
 		const variantLabel = HYMT2_VARIANTS[activeHyMT2Variant()].label;
 		console.warn(`[on-device] Loading ${variantLabel} model...`);
@@ -1198,7 +1200,7 @@ export async function translateRegionOnDevice(
 	if (sfxResult) {
 		translatedText = sfxResult;
 	} else {
-		if (!(await isHyMT2ModelLoaded())) {
+		if (!(await isActiveHyMT2ModelLoaded())) {
 			throwIfTranslationCancelled(signal);
 			await requireDownloadedModel();
 			await loadActiveHyMT2Model(signal);

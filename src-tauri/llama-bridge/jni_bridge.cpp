@@ -14,6 +14,12 @@
  *   top-p 0.6 (min_keep=1), repeat penalty 1.05, and seed 42.
  * - n_ctx=512 bounds memory for short comic text, and generation remains
  *   cancellable between tokens through an atomic flag.
+ *
+ * Index-Translate (Qwen3.5 based) is a second, explicitly requested prompt
+ * profile: its own Chinese instruction in plain ChatML, greedy decoding, and a
+ * recurrent-state snapshot in place of the KV rewind its hybrid memory cannot
+ * do. Nothing about it is reachable unless the load asks for that profile, so
+ * the Hy-MT2 path above is unchanged by it.
  */
 
 #include <jni.h>
@@ -34,6 +40,8 @@
 #include "prompt_cache.h"
 #include "cpu_topology.h"
 #include "manga_guidance.h"
+#include "index_translate_prompt.h"
+#include "recurrent_prefix.h"
 
 #define LOG_TAG "FumetoLlama"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -134,10 +142,13 @@ static std::string getLangName(const std::string & code) {
 //                 (llama2/3, chatml, gemma, qwen, mistral, phi3, deepseek, ...).
 //   Manual        a user-supplied prefix/suffix, for a model llama.cpp does not
 //                 recognise.
+//   ChatML        plain ChatML written by this bridge, for the Index-Translate
+//                 profile. Never inferred: only a load that names that profile
+//                 selects it.
 //
 // A model that fits none of these is rejected at load rather than being run
 // with the wrong protocol, which produces confident nonsense.
-enum class TemplateMode { HunyuanDense, Builtin, Manual };
+enum class TemplateMode { HunyuanDense, Builtin, Manual, ChatML };
 
 // All guarded by g_mutex like every other model global; written during load
 // and never mutated afterwards.
@@ -145,6 +156,35 @@ static TemplateMode g_template_mode = TemplateMode::HunyuanDense;
 static std::string g_manual_prefix;
 static std::string g_manual_suffix;
 static std::vector<std::string> g_manual_stops;
+
+// Which model family's prompt contract the loaded model follows: the
+// instruction text, the chat wrapping and the sampler all hang off it.
+//
+//   HyMT2           everything this bridge did before a second family existed,
+//                   including user-imported models, which are prompted with
+//                   the Hy-MT2 instruction.
+//   IndexTranslate  the Index-Translate family; see index_translate_prompt.h.
+//
+// Chosen by the caller at load, never guessed from the file: a fine-tune
+// answers to the prompt it was trained with, and the file alone does not say
+// which one that was. A file that cannot follow the requested profile is
+// rejected instead.
+enum class PromptProfile { HyMT2, IndexTranslate };
+static PromptProfile g_prompt_profile = PromptProfile::HyMT2;
+
+// True for a model whose memory cannot drop a prompt tail (recurrent_prefix.h).
+// Such a model reuses its instruction prefix through g_recurrent_prefix; every
+// other model keeps the KV rewind and never touches these.
+static bool g_recurrent_memory = false;
+static fumeto::RecurrentPrefix g_recurrent_prefix;
+// The tokens every prompt for one language pair begins with, and the pair they
+// were worked out for.
+static std::string g_static_prefix_key;
+static std::vector<llama_token> g_static_prefix_tokens;
+// What the last request did with the snapshot, for the runtime metrics.
+static const char * g_last_prefix_snapshot = "none";
+// Below this many tokens a snapshot costs more to restore than to decode.
+static constexpr size_t MIN_SNAPSHOT_PREFIX_TOKENS = 8;
 
 // Which terminology blocks the LOADED checkpoint was trained with.
 //
@@ -178,6 +218,12 @@ static void freeModelStateLocked() {
     g_guidance_scope = GuidanceScope::EnglishOnly;
     g_last_load_error.clear();
     g_sampler_temperature = DEFAULT_TEMPERATURE;
+    g_prompt_profile = PromptProfile::HyMT2;
+    g_recurrent_memory = false;
+    g_recurrent_prefix.clear();
+    g_static_prefix_key.clear();
+    g_static_prefix_tokens.clear();
+    g_last_prefix_snapshot = "none";
 }
 
 static float clampTemperature(float requested) {
@@ -185,6 +231,14 @@ static float clampTemperature(float requested) {
     if (requested < MIN_TEMPERATURE) return MIN_TEMPERATURE;
     if (requested > MAX_TEMPERATURE) return MAX_TEMPERATURE;
     return requested;
+}
+
+// The temperature a request decodes at. Index-Translate is always greedy, so
+// the user's setting is not consulted for it: its published scores are greedy
+// ones, and the Hy-MT2 chain below measured lower on it.
+static float effectiveTemperature(float requested) {
+    if (g_prompt_profile == PromptProfile::IndexTranslate) return 0.0f;
+    return clampTemperature(requested);
 }
 
 /**
@@ -203,18 +257,23 @@ static float clampTemperature(float requested) {
  * model reload.
  */
 static bool rebuildSamplerLocked(float temperature) {
-    const float value = clampTemperature(temperature);
+    const float value = effectiveTemperature(temperature);
     llama_sampler * built = llama_sampler_chain_init(llama_sampler_chain_default_params());
     if (!built) {
         LOGE("Failed to initialize sampler chain");
         return false;
     }
-    llama_sampler_chain_add(built, llama_sampler_init_penalties(
-        REPEAT_LAST_N, 1.05f, /*frequency=*/0.0f, /*presence=*/0.0f));
-    llama_sampler_chain_add(built, llama_sampler_init_top_k(20));
-    llama_sampler_chain_add(built, llama_sampler_init_top_p(0.6f, /*min_keep=*/1));
-    llama_sampler_chain_add(built, llama_sampler_init_temp(value));
-    llama_sampler_chain_add(built, llama_sampler_init_dist(SAMPLER_SEED));
+    if (g_prompt_profile == PromptProfile::IndexTranslate) {
+        // Argmax and nothing else: no repeat penalty, no truncation.
+        llama_sampler_chain_add(built, llama_sampler_init_greedy());
+    } else {
+        llama_sampler_chain_add(built, llama_sampler_init_penalties(
+            REPEAT_LAST_N, 1.05f, /*frequency=*/0.0f, /*presence=*/0.0f));
+        llama_sampler_chain_add(built, llama_sampler_init_top_k(20));
+        llama_sampler_chain_add(built, llama_sampler_init_top_p(0.6f, /*min_keep=*/1));
+        llama_sampler_chain_add(built, llama_sampler_init_temp(value));
+        llama_sampler_chain_add(built, llama_sampler_init_dist(SAMPLER_SEED));
+    }
 
     if (g_sampler) llama_sampler_free(g_sampler);
     g_sampler = built;
@@ -379,6 +438,20 @@ static std::string buildMangaTranslationInstruction(
         "Output only the translated result without any explanation:\n\n" + text;
 }
 
+// The user turn for the loaded model's prompt profile.
+static std::string buildTranslationInstruction(
+        const std::string & text,
+        const std::string & sourceCode,
+        const std::string & targetCode,
+        const std::string & sourceName,
+        const std::string & targetName) {
+    if (g_prompt_profile == PromptProfile::IndexTranslate) {
+        return fumeto::index_translate::buildInstruction(
+            text, sourceCode, targetCode, sourceName, targetName);
+    }
+    return buildMangaTranslationInstruction(text, sourceCode, targetCode, sourceName, targetName);
+}
+
 // ============================================================
 // Chat template resolution
 // ============================================================
@@ -436,6 +509,26 @@ static bool modelSupportsBuiltinTemplate() {
     if (tmpl == nullptr) return false;
     const llama_chat_message probe = {"user", "probe"};
     return llama_chat_apply_template(tmpl, &probe, 1, /*add_ass=*/true, nullptr, 0) > 0;
+}
+
+// Whether the loaded model can follow the ChatML wrapping this bridge writes
+// for the Index-Translate profile: both markers must be single control tokens,
+// and the turn terminator must end generation. Checked on the vocabulary, not
+// on the embedded template text, because the wrapping does not come from the
+// template.
+static bool modelSpeaksChatML() {
+    if (!g_model) return false;
+    const llama_vocab * vocab = llama_model_get_vocab(g_model);
+    const auto singleControlToken = [vocab](const char * marker) -> llama_token {
+        llama_token tokens[4];
+        const int32_t count = llama_tokenize(
+            vocab, marker, static_cast<int32_t>(std::strlen(marker)),
+            tokens, 4, /*add_special=*/false, /*parse_special=*/true);
+        return count == 1 ? tokens[0] : LLAMA_TOKEN_NULL;
+    };
+    const llama_token start = singleControlToken("<|im_start|>");
+    const llama_token end = singleControlToken("<|im_end|>");
+    return start != LLAMA_TOKEN_NULL && end != LLAMA_TOKEN_NULL && llama_vocab_is_eog(vocab, end);
 }
 
 static bool hasHunyuanDenseTemplate() {
@@ -509,6 +602,10 @@ static bool applyChatTemplate(const std::string & userContent, std::string & pro
 
         case TemplateMode::Manual:
             prompt = g_manual_prefix + userContent + g_manual_suffix;
+            return true;
+
+        case TemplateMode::ChatML:
+            prompt = fumeto::index_translate::wrapChatML(userContent);
             return true;
 
         case TemplateMode::Builtin: {
@@ -692,31 +789,22 @@ extern "C" JNIEXPORT void JNICALL JNI_OnUnload(JavaVM * /*vm*/, void * /*reserve
 // Model Loading
 // ============================================================
 
-extern "C" JNIEXPORT jboolean JNICALL
-Java_com_fumeto_reader_llama_LlamaBridge_nativeLoadModel(
-        JNIEnv * env, jobject /*obj*/, jstring jModelPath,
-        jstring jManualPrefix, jstring jManualSuffix, jstring jManualStops,
-        jstring jGuidanceScope) {
-    std::lock_guard<std::mutex> lock(g_mutex);
-
+// The model work behind nativeLoadModel, kept free of JNI types so the same
+// code can be driven from a host build. The caller holds g_mutex.
+//
+// A manual prompt format is supplied only for a user-imported model whose
+// template llama.cpp does not recognise. It arrives as three plain strings
+// rather than JSON so the bridge keeps its zero parsing dependencies; all
+// empty means "no manual format available".
+static bool loadModelLocked(
+        const std::string & modelPath,
+        const std::string & manualPrefix,
+        const std::string & manualSuffix,
+        const std::string & manualStops,
+        const std::string & guidanceScope,
+        const std::string & promptProfile) {
     freeModelStateLocked();
 
-    std::string modelPath;
-    if (!jstringToUtf8(env, jModelPath, modelPath)) {
-        LOGE("Failed to read model path");
-        return JNI_FALSE;
-    }
-
-    // A manual prompt format, supplied only for a user-imported model whose
-    // template llama.cpp does not recognise. Passed as three plain strings
-    // rather than JSON so the bridge keeps its zero parsing dependencies; all
-    // empty means "no manual format available".
-    std::string manualPrefix;
-    std::string manualSuffix;
-    std::string manualStops;
-    jstringToUtf8(env, jManualPrefix, manualPrefix);
-    jstringToUtf8(env, jManualSuffix, manualSuffix);
-    jstringToUtf8(env, jManualStops, manualStops);
     // Stop strings count as a format. A model whose template is unrecognised
     // but whose wrapping is genuinely empty still needs its terminators, and
     // ignoring them here rejected the model after the user had filled the
@@ -724,8 +812,6 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeLoadModel(
     const bool hasManualFormat =
         !manualPrefix.empty() || !manualSuffix.empty() || !manualStops.empty();
 
-    std::string guidanceScope;
-    jstringToUtf8(env, jGuidanceScope, guidanceScope);
     g_guidance_scope = guidanceScope == "all-targets" ? GuidanceScope::AllTargets
                                                       : GuidanceScope::EnglishOnly;
     LOGI("Loading model from: %s", modelPath.c_str());
@@ -740,13 +826,31 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeLoadModel(
     if (!g_model) {
         LOGE("Failed to load model");
         g_last_load_error = "unreadable";
-        return JNI_FALSE;
+        return false;
+    }
+
+    // An explicitly requested profile is settled before anything is inferred
+    // from the file. It is the only way into the Index-Translate path, and a
+    // file that cannot follow it is refused rather than run under Hy-MT2's
+    // prompt, which it would answer plausibly and worse.
+    const bool wantsIndexTranslate = promptProfile == "index-translate";
+    if (wantsIndexTranslate && !modelSpeaksChatML()) {
+        LOGE("Rejected model: the Index-Translate profile needs ChatML control tokens");
+        freeModelStateLocked();
+        g_last_load_error = "wrong-model-family";
+        return false;
     }
 
     // Resolve how this model's prompts get wrapped. Hunyuan-dense is checked
-    // first so the three bundled variants take exactly the path they always
-    // have; only a model that fails that check reaches the new branches.
-    if (hasHunyuanDenseTemplate()) {
+    // first so the bundled Hy-MT2 variants take exactly the path they always
+    // have; only a model that fails that check reaches the later branches.
+    if (wantsIndexTranslate) {
+        g_prompt_profile = PromptProfile::IndexTranslate;
+        g_template_mode = TemplateMode::ChatML;
+        // The terminator is an end-of-generation token in this family's
+        // vocabulary; these only matter if a file's metadata says otherwise.
+        g_manual_stops = {"<|im_end|>", "<|im_start|>", "<|endoftext|>"};
+    } else if (hasHunyuanDenseTemplate()) {
         g_template_mode = TemplateMode::HunyuanDense;
     } else if (modelSupportsBuiltinTemplate()) {
         g_template_mode = TemplateMode::Builtin;
@@ -769,7 +873,7 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeLoadModel(
         // Set AFTER teardown: freeModelStateLocked clears this field, and the
         // caller needs the reason to survive.
         g_last_load_error = "needs-prompt-format";
-        return JNI_FALSE;
+        return false;
     }
 
     // Create context with small n_ctx for comic bubble translation
@@ -787,23 +891,25 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeLoadModel(
     if (!g_ctx) {
         LOGE("Failed to create context");
         freeModelStateLocked();
-        return JNI_FALSE;
+        return false;
     }
 
     if (!rebuildSamplerLocked(DEFAULT_TEMPERATURE)) {
         freeModelStateLocked();
-        return JNI_FALSE;
+        return false;
     }
 
     // Exercise the embedded template once during load, before reporting the
     // model ready. Every real request still applies the complete template.
     std::string templateProbe;
     if (!applyChatTemplate(
-            buildMangaTranslationInstruction("test", "ja", "en", "Japanese", "English"),
+            buildTranslationInstruction("test", "ja", "en", "Japanese", "English"),
             templateProbe)) {
         freeModelStateLocked();
-        return JNI_FALSE;
+        return false;
     }
+
+    g_recurrent_memory = llama_model_is_hybrid(g_model) || llama_model_is_recurrent(g_model);
 
     char modelDescription[256] = {};
     llama_model_desc(g_model, modelDescription, sizeof(modelDescription));
@@ -814,76 +920,138 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeLoadModel(
     const char * modeName =
         g_template_mode == TemplateMode::HunyuanDense ? "hunyuan-dense"
         : g_template_mode == TemplateMode::Builtin ? "embedded-template"
+        : g_template_mode == TemplateMode::ChatML ? "chatml"
         : "manual-format";
-    LOGI("Model loaded: %s; template=%s, n_ctx=%d, threads=%d, n_gpu_layers=0, seed=%u, temp=%.2f, load_ms=%.2f",
+    LOGI("Model loaded: %s; profile=%s, template=%s, prefix=%s, n_ctx=%d, threads=%d, n_gpu_layers=0, seed=%u, temp=%.2f, load_ms=%.2f",
          modelDescription[0] ? modelDescription : "unknown",
-         modeName, N_CTX, g_thread_count, SAMPLER_SEED, g_sampler_temperature, g_last_load_ms);
-    return JNI_TRUE;
+         g_prompt_profile == PromptProfile::IndexTranslate ? "index-translate" : "hy-mt2",
+         modeName, g_recurrent_memory ? "state-snapshot" : "kv-rewind",
+         N_CTX, g_thread_count, SAMPLER_SEED, g_sampler_temperature, g_last_load_ms);
+    return true;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_fumeto_reader_llama_LlamaBridge_nativeLoadModel(
+        JNIEnv * env, jobject /*obj*/, jstring jModelPath,
+        jstring jManualPrefix, jstring jManualSuffix, jstring jManualStops,
+        jstring jGuidanceScope, jstring jPromptProfile) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+
+    std::string modelPath;
+    if (!jstringToUtf8(env, jModelPath, modelPath)) {
+        // A load request always releases the resident model first, including
+        // one that fails before it reaches the loader.
+        freeModelStateLocked();
+        LOGE("Failed to read model path");
+        return JNI_FALSE;
+    }
+
+    std::string manualPrefix;
+    std::string manualSuffix;
+    std::string manualStops;
+    std::string guidanceScope;
+    std::string promptProfile;
+    jstringToUtf8(env, jManualPrefix, manualPrefix);
+    jstringToUtf8(env, jManualSuffix, manualSuffix);
+    jstringToUtf8(env, jManualStops, manualStops);
+    jstringToUtf8(env, jGuidanceScope, guidanceScope);
+    jstringToUtf8(env, jPromptProfile, promptProfile);
+
+    return loadModelLocked(
+            modelPath, manualPrefix, manualSuffix, manualStops, guidanceScope, promptProfile)
+        ? JNI_TRUE : JNI_FALSE;
 }
 
 // ============================================================
 // Inference
 // ============================================================
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_fumeto_reader_llama_LlamaBridge_nativeTranslate(
-        JNIEnv * env, jobject /*obj*/,
-        jstring jText, jstring jSourceLang, jstring jTargetLang, jfloat jTemperature) {
-    std::lock_guard<std::mutex> lock(g_mutex);
+// The tokens every prompt for one language pair starts with: the chat wrapping
+// and the instruction, up to where the source text begins. Found by rendering
+// the prompt for two texts that share no first character and keeping what the
+// two have in common, so it holds for any profile and template without knowing
+// how either is laid out. Worked out once per pair. All callers hold g_mutex.
+static const std::vector<llama_token> & staticPromptPrefixLocked(
+        const std::string & sourceCode,
+        const std::string & targetCode,
+        const std::string & sourceName,
+        const std::string & targetName) {
+    const std::string key = sourceCode + '\n' + targetCode;
+    if (key == g_static_prefix_key) return g_static_prefix_tokens;
 
+    g_static_prefix_key = key;
+    g_static_prefix_tokens.clear();
+    std::string prompt;
+    std::vector<llama_token> first;
+    std::vector<llama_token> second;
+    if (applyChatTemplate(
+            buildTranslationInstruction("あ", sourceCode, targetCode, sourceName, targetName),
+            prompt) &&
+        tokenizeFullPrompt(prompt, first) &&
+        applyChatTemplate(
+            buildTranslationInstruction("Z", sourceCode, targetCode, sourceName, targetName),
+            prompt) &&
+        tokenizeFullPrompt(prompt, second)) {
+        first.resize(fumeto::commonPrefixLength(first, second));
+        g_static_prefix_tokens = std::move(first);
+    }
+    return g_static_prefix_tokens;
+}
+
+// The inference behind nativeTranslate, kept free of JNI types so the same
+// code can be driven from a host build. The caller holds g_mutex. Failures are
+// returned as "[ERROR] ..." strings, which the Kotlin side turns into a
+// rejection.
+static std::string translateLocked(
+        const std::string & text,
+        const std::string & srcLang,
+        const std::string & tgtLang,
+        float temperature) {
     if (!g_model || !g_ctx || !g_sampler) {
-        return utf8ToJString(env, "[ERROR] Model not loaded");
+        return "[ERROR] Model not loaded";
     }
 
     // The setting travels with the request rather than through a separate
     // setter: it is then applied under the same lock that guards the chain, so
     // there is no window where a request can run against a half-applied change.
-    const float requestedTemperature = clampTemperature(static_cast<float>(jTemperature));
+    const float requestedTemperature = effectiveTemperature(temperature);
     if (requestedTemperature != g_sampler_temperature &&
         !rebuildSamplerLocked(requestedTemperature)) {
-        return utf8ToJString(env, "[ERROR] Failed to apply sampler temperature");
-    }
-
-    std::string text;
-    std::string srcLang;
-    std::string tgtLang;
-    if (!jstringToUtf8(env, jText, text) ||
-        !jstringToUtf8(env, jSourceLang, srcLang) ||
-        !jstringToUtf8(env, jTargetLang, tgtLang)) {
-        return utf8ToJString(env, "[ERROR] Unable to read translation input");
+        return "[ERROR] Failed to apply sampler temperature";
     }
 
     const std::string textValue = trimWhitespace(text);
     const std::string sourceName = getLangName(srcLang);
     const std::string targetName = getLangName(tgtLang);
 
-    if (textValue.empty()) return utf8ToJString(env, "");
+    if (textValue.empty()) return "";
     const int64_t inferenceStartedUs = llama_time_us();
 
-    // Phase-tested Hy-MT2 manga instruction, represented as a single user
-    // message with no system prompt. llama_chat_apply_template adds the
-    // Hunyuan user/assistant markers; tokenizeFullPrompt prepends GGUF BOS.
-    const std::string userInstruction = buildMangaTranslationInstruction(
+    // The loaded profile's instruction, represented as a single user message
+    // with no system prompt. For Hy-MT2 that is the phase-tested manga
+    // instruction: llama_chat_apply_template adds the Hunyuan user/assistant
+    // markers and tokenizeFullPrompt prepends GGUF BOS.
+    const std::string userInstruction = buildTranslationInstruction(
         textValue, srcLang, tgtLang, sourceName, targetName);
 
     std::string prompt;
     if (!applyChatTemplate(userInstruction, prompt)) {
-        return utf8ToJString(env, "[ERROR] Chat template failed");
+        return "[ERROR] Chat template failed";
     }
 
     std::vector<llama_token> promptTokens;
     if (!tokenizeFullPrompt(prompt, promptTokens)) {
-        return utf8ToJString(env, "[ERROR] Tokenization failed");
+        return "[ERROR] Tokenization failed";
     }
     if (promptTokens.size() >= static_cast<size_t>(N_CTX)) {
         LOGE("Prompt exceeds context: %zu/%d tokens", promptTokens.size(), N_CTX);
-        return utf8ToJString(env, "[ERROR] Input is too long for the local model");
+        return "[ERROR] Input is too long for the local model";
     }
 
     const int maxPredict = std::min(
         N_PREDICT, N_CTX - static_cast<int>(promptTokens.size()));
     if (maxPredict <= 0) {
-        return utf8ToJString(env, "[ERROR] No context space remains for translation");
+        return "[ERROR] No context space remains for translation";
     }
 
     const llama_vocab * vocab = llama_model_get_vocab(g_model);
@@ -892,9 +1060,13 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeTranslate(
     // Reuse only an exact token prefix that is verifiably present in sequence
     // zero. Re-decode at least the last prompt token even for identical input,
     // because generation leaves the context's active logits at a later token.
-    size_t reusedPromptTokens = reusablePromptPrefix(
-        g_cached_prompt_tokens, promptTokens);
-    if (!g_cached_prompt_tokens.empty()) {
+    //
+    // A model with recurrent memory cannot rewind, so it skips this block and
+    // goes through its state snapshot below instead.
+    size_t reusedPromptTokens = g_recurrent_memory
+        ? 0
+        : reusablePromptPrefix(g_cached_prompt_tokens, promptTokens);
+    if (!g_recurrent_memory && !g_cached_prompt_tokens.empty()) {
         llama_synchronize(g_ctx);
         const llama_pos minPosition = llama_memory_seq_pos_min(memory, 0);
         const llama_pos maxPosition = llama_memory_seq_pos_max(memory, 0);
@@ -909,6 +1081,32 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeTranslate(
             reusedPromptTokens = 0;
         }
     }
+
+    // Recurrent memory: put the state back to the end of the instruction when
+    // the last prompt and this one both start with it. Otherwise decode from
+    // the start, and take a new snapshot on the way if this prompt has an
+    // instruction worth keeping.
+    size_t snapshotAt = 0;
+    g_last_prefix_snapshot = "none";
+    if (g_recurrent_memory) {
+        llama_synchronize(g_ctx);
+        reusedPromptTokens = fumeto::restoreRecurrentPrefix(
+            g_ctx, g_recurrent_prefix, g_cached_prompt_tokens, promptTokens);
+        if (reusedPromptTokens > 0) {
+            g_last_prefix_snapshot = "restored";
+        } else {
+            // The memory is about to be cleared, and the snapshot describes
+            // the attention entries that go with it.
+            g_recurrent_prefix.clear();
+            const std::vector<llama_token> & staticPrefix =
+                staticPromptPrefixLocked(srcLang, tgtLang, sourceName, targetName);
+            if (staticPrefix.size() >= MIN_SNAPSHOT_PREFIX_TOKENS &&
+                promptTokens.size() > staticPrefix.size() &&
+                fumeto::startsWith(promptTokens, staticPrefix)) {
+                snapshotAt = staticPrefix.size();
+            }
+        }
+    }
     if (reusedPromptTokens == 0) {
         llama_memory_clear(memory, /*data=*/true);
     }
@@ -916,10 +1114,12 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeTranslate(
     llama_sampler_reset(g_sampler); // resets the dist RNG to seed 42
     llama_perf_context_reset(g_ctx);
 
-    auto decodePromptFrom = [&](size_t firstToken) -> bool {
+    // Decodes prompt tokens [firstToken, endToken). Only the prompt's final
+    // token asks for logits, so a range that stops short of it produces none.
+    auto decodePromptRange = [&](size_t firstToken, size_t endToken) -> bool {
         llama_batch promptBatch = llama_batch_init(
-            static_cast<int32_t>(promptTokens.size() - firstToken), 0, 1);
-        for (size_t i = firstToken; i < promptTokens.size(); ++i) {
+            static_cast<int32_t>(endToken - firstToken), 0, 1);
+        for (size_t i = firstToken; i < endToken; ++i) {
             promptBatch.token[promptBatch.n_tokens] = promptTokens[i];
             promptBatch.pos[promptBatch.n_tokens] = static_cast<llama_pos>(i);
             promptBatch.n_seq_id[promptBatch.n_tokens] = 1;
@@ -931,8 +1131,27 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeTranslate(
         llama_batch_free(promptBatch);
         return succeeded;
     };
+    auto decodePromptFrom = [&](size_t firstToken) -> bool {
+        return decodePromptRange(firstToken, promptTokens.size());
+    };
 
-    bool promptDecoded = decodePromptFrom(reusedPromptTokens);
+    bool promptDecoded;
+    if (snapshotAt > 0) {
+        // Stop at the end of the instruction, copy the recurrent state, then
+        // decode the rest. A failed copy costs the next bubble its reuse and
+        // nothing else.
+        promptDecoded = decodePromptRange(0, snapshotAt);
+        if (promptDecoded) {
+            const std::vector<llama_token> prefixTokens(
+                promptTokens.begin(), promptTokens.begin() + static_cast<std::ptrdiff_t>(snapshotAt));
+            if (fumeto::captureRecurrentPrefix(g_ctx, prefixTokens, g_recurrent_prefix)) {
+                g_last_prefix_snapshot = "captured";
+            }
+            promptDecoded = decodePromptFrom(snapshotAt);
+        }
+    } else {
+        promptDecoded = decodePromptFrom(reusedPromptTokens);
+    }
     if (!promptDecoded && reusedPromptTokens > 0) {
         // A backend/cache change must degrade to the old full-prefill behavior,
         // never to a failed translation or a partially resident prompt.
@@ -943,6 +1162,8 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeTranslate(
         llama_synchronize(g_ctx);
         reusedPromptTokens = 0;
         g_cached_prompt_tokens.clear();
+        g_recurrent_prefix.clear();
+        g_last_prefix_snapshot = "none";
         llama_memory_clear(memory, /*data=*/true);
         llama_perf_context_reset(g_ctx);
         promptDecoded = decodePromptFrom(0);
@@ -952,10 +1173,11 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeTranslate(
         LOGE("Initial prompt decode failed (%zu tokens)", promptTokens.size());
         llama_synchronize(g_ctx);
         g_cached_prompt_tokens.clear();
+        g_recurrent_prefix.clear();
         llama_memory_clear(memory, /*data=*/true);
         llama_perf_context_reset(g_ctx);
         llama_sampler_reset(g_sampler);
-        return utf8ToJString(env, "[ERROR] Decode failed");
+        return "[ERROR] Decode failed";
     }
     g_cached_prompt_tokens = promptTokens;
     const size_t promptDecodedTokens = promptTokens.size() - reusedPromptTokens;
@@ -1050,14 +1272,16 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeTranslate(
         "\"prompt_tps\":%.3f,\"generated_tokens\":%d,\"sampled_tokens\":%d,"
         "\"generation_decoded_tokens\":%d,"
         "\"generation_ms\":%.3f,"
-        "\"generation_tps\":%.3f,\"total_ms\":%.3f,\"cancelled\":%s,\"eog\":%s}",
+        "\"generation_tps\":%.3f,\"total_ms\":%.3f,\"cancelled\":%s,\"eog\":%s,"
+        "\"prefix_snapshot\":\"%s\"}",
         g_thread_count, reusedPromptTokens > 0 ? "true" : "false",
         static_cast<int>(promptDecodedTokens), promptTokens.size(), reusedPromptTokens,
         promptDecodedTokens,
         promptMs, promptTps,
         generated, generated, generationDecodedTokens,
         generationMs, generationTps, totalMs,
-        wasCancelled ? "true" : "false", stoppedOnEog ? "true" : "false");
+        wasCancelled ? "true" : "false", stoppedOnEog ? "true" : "false",
+        g_last_prefix_snapshot);
     g_last_inference_metrics.assign(metrics);
 
     LOGI("Inference complete: %d tokens, eog=%d, cancelled=%d",
@@ -1070,10 +1294,30 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeTranslate(
         // Discard it rather than trusting the next request's prefix rewind.
         llama_memory_clear(memory, /*data=*/true);
         g_cached_prompt_tokens.clear();
-        return utf8ToJString(env, "[ERROR] Decode failed");
+        g_recurrent_prefix.clear();
+        return "[ERROR] Decode failed";
     }
-    if (wasCancelled) return utf8ToJString(env, "[ERROR] Translation cancelled");
-    return utf8ToJString(env, output);
+    if (wasCancelled) return "[ERROR] Translation cancelled";
+    return output;
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_fumeto_reader_llama_LlamaBridge_nativeTranslate(
+        JNIEnv * env, jobject /*obj*/,
+        jstring jText, jstring jSourceLang, jstring jTargetLang, jfloat jTemperature) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+
+    std::string text;
+    std::string srcLang;
+    std::string tgtLang;
+    if (!jstringToUtf8(env, jText, text) ||
+        !jstringToUtf8(env, jSourceLang, srcLang) ||
+        !jstringToUtf8(env, jTargetLang, tgtLang)) {
+        return utf8ToJString(env, "[ERROR] Unable to read translation input");
+    }
+
+    return utf8ToJString(
+        env, translateLocked(text, srcLang, tgtLang, static_cast<float>(jTemperature)));
 }
 
 // ============================================================
@@ -1100,6 +1344,7 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeSetThreadCount(
         // with the selected worker count; production never changes this value.
         llama_memory_clear(llama_get_memory(g_ctx), /*data=*/true);
         g_cached_prompt_tokens.clear();
+        g_recurrent_prefix.clear();
     }
     LOGI("Inference thread count set to %d", g_thread_count);
     return JNI_TRUE;
@@ -1113,11 +1358,13 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeGetRuntimeInfo(
     std::snprintf(runtimeInfo, sizeof(runtimeInfo),
         "{\"backend\":\"cpu\",\"threads\":%d,"
         "\"cores\":%d,\"fast_cores\":%d,\"unreadable_cores\":%d,"
-        "\"model_loaded\":%s,"
+        "\"model_loaded\":%s,\"prompt_profile\":\"%s\",\"prefix_reuse\":\"%s\","
         "\"neon\":%s,\"dotprod\":%s,\"i8mm\":%s,\"sve\":%s,\"sme\":%s,"
         "\"last_load_ms\":%.3f,\"temperature\":%.3f,\"last_inference\":%s}",
         g_thread_count, g_core_census.cores, g_core_census.fast, g_core_census.unreadable,
         g_model && g_ctx && g_sampler ? "true" : "false",
+        g_prompt_profile == PromptProfile::IndexTranslate ? "index-translate" : "hy-mt2",
+        g_recurrent_memory ? "state-snapshot" : "kv-rewind",
         ggml_cpu_has_neon() ? "true" : "false",
         ggml_cpu_has_dotprod() ? "true" : "false",
         ggml_cpu_has_matmul_int8() ? "true" : "false",
