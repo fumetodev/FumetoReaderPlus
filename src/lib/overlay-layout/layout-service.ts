@@ -52,7 +52,7 @@ import { recordGate, recordGateResult } from './gate-telemetry.js';
 import { bidiVisualOrder, paragraphDirection, requiresExplicitBidiRuns, resolveBidiRuns } from './bidi.js';
 import { createCooperativeYieldBudget, type CooperativeYieldBudget } from './cooperative-yield.js';
 
-export const OVERLAY_ALGORITHM_VERSION = 'overlay-layout-v2-policy-31';
+export const OVERLAY_ALGORITHM_VERSION = 'overlay-layout-v2-policy-32';
 
 /**
  * Bench-only switches.
@@ -768,6 +768,14 @@ function harmonizePageFonts(
 					verticalBias: context.profile.verticalBias
 				});
 			if (!laidOut.complete || laidOut.lines.length === 0) continue;
+			// The clamp must not buy a smaller font with a cut word. The fill
+			// refinement refuses growth on the same ground, and without its
+			// mirror here a one-word answer that sat whole on one line was shrunk
+			// to a size where two rows fit and came out as "Su / re.". An item
+			// left unclamped stays larger than its neighbours and stays readable.
+			const cutWords = (lines: OverlayRenderLineV2[]): number =>
+				lines.filter((line) => line.breakAfter === 'emergency').length;
+			if (cutWords(laidOut.lines) > cutWords(member.planned.lines ?? [])) continue;
 			// Containment is checked against the region the member OWNS. For a
 			// balloon that is its contour. For a stacked band or the
 			// height-locked window over an unenclosed vertical run — the
@@ -2119,6 +2127,33 @@ function horizontalLines(input: {
 			});
 			if (widthsChanged) layout = input.textLayout.layout(handle, recentered);
 		}
+	}
+	// A cut word is not always the best a size can do. Rows fill from the top
+	// of the stack, and in a round balloon the top row is the narrowest: a
+	// short utterance whose word does not fit there is cut in two, while a row
+	// nearer the middle would have held it whole. The recentring above rescues
+	// a text that ended early; this rescues the one that used every row it was
+	// offered. A shorter stack sits nearer the middle, so try them longest
+	// first and keep the first that takes the whole text uncut. A window with
+	// no contour has rows of one width, and nothing to gain.
+	const cutsAWord = (result: LineLayout): boolean =>
+		result.lines.some((line) => line.breakAfter === 'emergency');
+	if (input.polygon && layout.lines.length > 1 && cutsAWord(layout)) {
+		const rowsBefore = lastRows;
+		let rescued = false;
+		for (let rowCount = layout.lines.length - 1; rowCount >= 1; rowCount -= 1) {
+			const shorter = buildConstraints(rowCount);
+			if (shorter.length !== rowCount) continue;
+			const attempt = input.textLayout.layout(handle, shorter);
+			if (attempt.complete && attempt.lines.length === rowCount && !cutsAWord(attempt)) {
+				layout = attempt;
+				rescued = true;
+				break;
+			}
+		}
+		// The multi-lobe signature below reads the last band grid built; a
+		// search that found nothing must leave it as it was.
+		if (!rescued) lastRows = rowsBefore;
 	}
 	const top = stackTop(layout.lines.length);
 	const composed = composeLines(layout, top);
