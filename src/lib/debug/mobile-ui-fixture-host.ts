@@ -758,13 +758,16 @@ export function installMobileUiFixtureHost(target: Window = window): () => void 
 			// arguments make the multilingual targets checkable on device —
 			// "into zh-Hans" was a shipped prompt bug precisely because nothing
 			// exercised a non-English target end to end.
-			const [{ getModelPath, activeHyMT2Variant, loadActiveHyMT2Model }, { translateWithHyMT2 }] = await Promise.all([
+			const [{ getModelPath, activeHyMT2Variant, isActiveHyMT2ModelLoaded, loadActiveHyMT2Model }, { translateWithHyMT2 }] = await Promise.all([
 				import('$lib/translation/gguf-model-manager.js'),
 				import('$lib/translation/llamacpp-bridge.js')
 			]);
 			const variant = activeHyMT2Variant();
 			const path = await getModelPath();
-			await loadActiveHyMT2Model();
+			// Loads only when the selected model is not the resident one, as the
+			// translation service does. Reloading on every call made each
+			// request a cold one, which no reader ever runs.
+			if (!(await isActiveHyMT2ModelLoaded())) await loadActiveHyMT2Model();
 			const out = await translateWithHyMT2(text, sourceLang, targetLang);
 			return { variant, path, sourceLang, targetLang, out };
 		},

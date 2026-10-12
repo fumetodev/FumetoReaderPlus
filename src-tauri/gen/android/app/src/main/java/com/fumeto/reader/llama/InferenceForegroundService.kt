@@ -91,6 +91,14 @@ class InferenceForegroundService : Service() {
         private val MANGA_VARIANT = Regex("manga-v(\\d+)([a-z]*)", RegexOption.IGNORE_CASE)
 
         /**
+         * The Index-Translate fine-tune's filename also carries "manga-v<n>",
+         * so it has to be recognised before the Hy-MT2 pattern above gets to
+         * it — otherwise the notification names a model that is not the one
+         * running.
+         */
+        private const val INDEX_TRANSLATE_MARKER = "index-translate"
+
+        /**
          * A user-imported GGUF is stored under this fixed name (see
          * HYMT2_VARIANTS.custom in gguf-model-manager.ts). It matches no
          * revision pattern, and without its own case it would inherit the
@@ -104,7 +112,16 @@ class InferenceForegroundService : Service() {
         fun modelLabelForPath(modelPath: String): String {
             val filename = modelPath.substringAfterLast('/')
             if (filename.equals(CUSTOM_MODEL_FILENAME, ignoreCase = true)) return CUSTOM_MODEL_LABEL
-            val match = MANGA_VARIANT.find(filename) ?: return DEFAULT_MODEL_LABEL
+            val match = MANGA_VARIANT.find(filename)
+            if (filename.contains(INDEX_TRANSLATE_MARKER, ignoreCase = true)) {
+                val revision = match?.let { it.groupValues[1] + it.groupValues[2].lowercase() }
+                return if (revision != null) {
+                    "Index-Translate 2B manga-tuned v$revision (Q4_K_M)"
+                } else {
+                    "Index-Translate 2B"
+                }
+            }
+            if (match == null) return DEFAULT_MODEL_LABEL
             // v3 ships as "manga-v3a": the trailing letter is part of the
             // revision and belongs in the label, not silently dropped.
             val revision = match.groupValues[1] + match.groupValues[2].lowercase()

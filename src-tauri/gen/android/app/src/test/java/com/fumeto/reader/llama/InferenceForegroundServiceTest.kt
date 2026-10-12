@@ -48,6 +48,14 @@ class InferenceForegroundServiceTest {
     }
 
     @Test
+    fun `the Index-Translate fine-tune is not labelled as a Hy-MT2 one`() {
+        assertEquals(
+            "Index-Translate 2B manga-tuned v1 (Q4_K_M)",
+            label("Index-Translate-2B-Manga-v1-Q4_K_M.gguf")
+        )
+    }
+
+    @Test
     fun `a bare filename with no directory still resolves`() {
         assertEquals(
             "Hy-MT2 1.8B manga-tuned v3a (Q4_K_M)",

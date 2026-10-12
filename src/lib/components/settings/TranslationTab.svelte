@@ -6,7 +6,7 @@
 	import Switch from '$lib/components/ui/Switch.svelte';
 	import { slidingSelection } from '$lib/util/sliding-selection.js';
 	import { randomUUID } from '$lib/util/uuid.js';
-	import { ggufDownloadState, downloadHyMT2Model, cancelModelDownload as cancelGgufDownload, deleteHyMT2Model, isModelDownloaded, HYMT2_VARIANTS, BUNDLED_HYMT2_VARIANTS, bundledSpec, type HyMT2Variant, type BundledHyMT2Variant } from '$lib/translation/gguf-model-manager.js';
+	import { ggufDownloadState, downloadHyMT2Model, cancelModelDownload as cancelGgufDownload, deleteHyMT2Model, isModelDownloaded, variantUsesFixedSampling, variantCannotTranslatePair, HYMT2_VARIANTS, BUNDLED_HYMT2_VARIANTS, bundledSpec, type HyMT2Variant, type BundledHyMT2Variant } from '$lib/translation/gguf-model-manager.js';
 	import { modelMemoryAdvice, readDeviceMemory } from '$lib/device/device-memory.js';
 	import { ocrModelDownloadState, downloadOcrModels, cancelOcrModelDownload, deleteOcrModels, areOcrModelsReady, OCR_MODELS_TOTAL_BYTES } from '$lib/detection/ocr-model-manager.js';
 
@@ -333,9 +333,14 @@
 		'manga-v2': false,
 		'manga-v3': false,
 		'manga-v5': false,
+		'index-manga-v1': false,
 		custom: false
 	});
 	let hyMT2Backend = $state('unknown');
+	// The selected model's family, for the labels that name the engine.
+	let selectedIsIndexTranslate = $derived(
+		HYMT2_VARIANTS[draft.hyMT2Variant]?.promptProfile === 'index-translate'
+	);
 
 	// Vision models (PP-OCR detector + recogniser, rtmdet layout). Downloaded
 	// on demand; the readiness flag drives the card below and nothing else, so
@@ -360,6 +365,7 @@
 			'manga-v2': false,
 			'manga-v3': false,
 			'manga-v5': false,
+			'index-manga-v1': false,
 			custom: false
 		};
 		for (const variant of Object.keys(HYMT2_VARIANTS) as HyMT2Variant[]) {
@@ -968,12 +974,17 @@
 	<!-- Translation Backend -->
 	<div data-settings-anchor="on-device-backend">
 		<p class="mb-2 block text-xs font-semibold uppercase tracking-wider text-surface-400">{m.settings_translation_translation_backend()}</p>
-		<!-- Hy-MT2 is the only on-device engine; ML Kit was dropped 2026-07-24. -->
+		<!-- llama.cpp is the only on-device engine (ML Kit was dropped
+		     2026-07-24); the name shown is the family of the selected model. -->
 		<div class="rounded-lg bg-surface-800 px-3 py-2">
-			<span class="text-xs font-medium text-primary-400">{m.settings_translation_hy_mt2_1_8b()}</span>
+			<span class="text-xs font-medium text-primary-400" data-on-device-backend-name>{selectedIsIndexTranslate ? m.settings_translation_index_translate_2b() : m.settings_translation_hy_mt2_1_8b()}</span>
 		</div>
 		<p class="mt-1.5 text-[11px] text-surface-500">
-			{m.settings_translation_hy_mt2_intro({ note: isAndroid ? m.settings_translation_optimized_for_low_memory() : m.settings_translation_uses_the_available_llama() })}
+			{#if selectedIsIndexTranslate}
+				{m.settings_translation_index_translate_intro()}
+			{:else}
+				{m.settings_translation_hy_mt2_intro({ note: isAndroid ? m.settings_translation_optimized_for_low_memory() : m.settings_translation_uses_the_available_llama() })}
+			{/if}
 		</p>
 	</div>
 
@@ -1017,7 +1028,7 @@
 
 	<!-- Local Hy-MT2 Model Download -->
 	<div data-settings-anchor="hymt2-model">
-		<h3 class="mb-2 block text-xs font-semibold uppercase tracking-wider text-surface-400">{m.settings_translation_hy_mt2_1_8b_2()}</h3>
+		<h3 class="mb-2 block text-xs font-semibold uppercase tracking-wider text-surface-400">{m.settings_search_hymt2_model_label()}</h3>
 		{#if !hyMT2ChecksLoaded && $ggufDownloadState.status !== 'downloading'}
 			<div class="rounded-lg border border-surface-700 bg-surface-800/50 px-4 py-3">
 				<div class="flex items-center gap-2">
@@ -1290,7 +1301,9 @@
 			{/if}
 		</div>
 		{/if}
-		{#if hyMT2ChecksLoaded && hyMT2Backend === 'cpu'}
+		<!-- True of one file on one architecture: the stock model's 1.25-bit
+		     format, on ARM. It used to show under every model and on desktop. -->
+		{#if hyMT2ChecksLoaded && hyMT2Backend === 'cpu' && isAndroid && draft.hyMT2Variant === 'stock'}
 			<p class="mt-1.5 text-[11px] text-green-400">{m.settings_translation_stq1_0_is_using()}</p>
 		{/if}
 	</div>
@@ -1338,6 +1351,11 @@
 			<p class="mt-1 text-[11px] text-surface-500">
 				{m.settings_translation_applies_to_on_device()}
 			</p>
+			{#if variantUsesFixedSampling(draft.hyMT2Variant)}
+				<p class="mt-1 text-[11px] text-amber-400/90" data-on-device-temperature-unused>
+					{m.settings_translation_temperature_not_used()}
+				</p>
+			{/if}
 		</div>
 	</div>
 
@@ -1445,6 +1463,11 @@
 			<p class="text-[11px] text-surface-500">
 				{m.settings_translation_hy_mt2_is_multilingual()}
 			</p>
+			{#if variantCannotTranslatePair(draft.hyMT2Variant, draft.onDeviceSourceLang, draft.onDeviceTargetLang)}
+				<p class="text-[11px] text-amber-400/90" data-on-device-language-pair-warning>
+					{m.settings_translation_selected_model_ja_en_only()}
+				</p>
+			{/if}
 		</div>
 	</div>
 

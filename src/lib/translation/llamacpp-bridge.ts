@@ -424,12 +424,67 @@ export interface ModelLoadOptions {
 	 * saw would be an unmeasured change to a model people already use.
 	 */
 	multilingualGuidance?: boolean;
+	/**
+	 * Which model family's prompt contract the native layer applies: the
+	 * instruction, the chat wrapping and the sampler. Absent means Hy-MT2,
+	 * which is also what a user-imported model gets.
+	 */
+	promptProfile?: PromptProfile;
+}
+
+/** The model families the native layer knows how to prompt. */
+export type PromptProfile = 'hy-mt2' | 'index-translate';
+
+/**
+ * What is resident in the native layer, as far as this page knows: the path
+ * and the options of the last load that succeeded, or null when nothing is
+ * known to be loaded. "Is a model loaded" is not the question a translation
+ * needs answered — a model stays resident after a download validates it, so
+ * the loaded one can be a different file, or the right file under the wrong
+ * options, than the one selected in Settings.
+ */
+let residentModelKey: string | null = null;
+
+export function modelLoadKey(modelPath: string, options?: ModelLoadOptions): string {
+	return JSON.stringify([
+		modelPath,
+		options?.promptProfile ?? 'hy-mt2',
+		options?.multilingualGuidance ? 'all-targets' : 'english-only',
+		options?.promptFormat?.prefix ?? '',
+		options?.promptFormat?.suffix ?? '',
+		options?.promptFormat?.stops ?? []
+	]);
+}
+
+/**
+ * Whether the resident model is this file, loaded with these options. False
+ * when nothing is loaded, and false when a model is loaded that this page did
+ * not load itself (a page reload over a model the process kept): its options
+ * are unknown, so the caller loads again rather than trust them.
+ */
+export async function isModelLoadedAs(
+	modelPath: string,
+	options?: ModelLoadOptions
+): Promise<boolean> {
+	if (residentModelKey !== modelLoadKey(modelPath, options)) return false;
+	return isModelLoaded();
 }
 
 /**
  * Load the Hy-MT2 local-translation GGUF model from the given path.
  */
 async function performHyMT2ModelLoad(
+	modelPath: string,
+	options?: ModelLoadOptions
+): Promise<void> {
+	// A load releases whatever was resident before it reads the new file, so
+	// from here until it succeeds nothing is known to be loaded.
+	residentModelKey = null;
+	await performNativeModelLoad(modelPath, options);
+	residentModelKey = modelLoadKey(modelPath, options);
+}
+
+async function performNativeModelLoad(
 	modelPath: string,
 	options?: ModelLoadOptions
 ): Promise<void> {
@@ -453,7 +508,8 @@ async function performHyMT2ModelLoad(
 			options?.promptFormat?.prefix ?? '',
 			options?.promptFormat?.suffix ?? '',
 			(options?.promptFormat?.stops ?? []).join('\n'),
-			options?.multilingualGuidance ? 'all-targets' : 'english-only'
+			options?.multilingualGuidance ? 'all-targets' : 'english-only',
+			options?.promptProfile ?? 'hy-mt2'
 		);
 	});
 
@@ -700,6 +756,7 @@ export const translateWithGemma = translateWithHyMT2;
  * and activation scratch memory.
  */
 export async function unloadModel(): Promise<void> {
+	residentModelKey = null;
 	if (isDesktop) {
 		try {
 			const { invoke } = await import('@tauri-apps/api/core');
