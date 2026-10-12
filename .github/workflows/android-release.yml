@@ -37,7 +37,12 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      # The action's default package list still names "tools", which the SDK
+      # repository no longer offers, and sdkmanager fails the step on it.
+      # platform-tools is the other half of that default and all it ever added.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - name: Install NDK
         run: sdkmanager "ndk;29.0.13846066"
 
