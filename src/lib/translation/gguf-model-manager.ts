@@ -29,6 +29,7 @@ import {
 	ggufDownloadProgress,
 	type ManualPromptFormat
 } from './llamacpp-bridge.js';
+import { hyMT2LoadOptions } from './hymt2-load-options.js';
 import { exists as fsExists, remove as fsRemove, stat as fsStat } from '@tauri-apps/plugin-fs';
 import { appDataDir, join } from '@tauri-apps/api/path';
 
@@ -242,7 +243,11 @@ let downloadInProgress = false;
  * native load validates the GGUF/STQ/template contract; the fixed probe covers
  * tokenization, prefill, generation, and output decoding.
  */
-async function validateDownloadedHyMT2Model(modelPath: string, expectedBytes: number): Promise<void> {
+async function validateDownloadedHyMT2Model(
+	variant: BundledHyMT2Variant,
+	modelPath: string,
+	expectedBytes: number
+): Promise<void> {
 	const modelStat = await fsStat(modelPath);
 	if (modelStat.size !== expectedBytes) {
 		throw new Error(
@@ -250,7 +255,9 @@ async function validateDownloadedHyMT2Model(modelPath: string, expectedBytes: nu
 		);
 	}
 
-	await loadHyMT2Model(modelPath);
+	// Loaded exactly as a translation would load it: the model stays resident
+	// afterwards, and translation reuses whatever is loaded.
+	await loadHyMT2Model(modelPath, undefined, hyMT2LoadOptions(variant));
 	const probe = (await translateWithHyMT2('行くぞ！', 'ja', 'en')).trim();
 	if (!probe || probe === '行くぞ！' || !/[A-Za-z]/.test(probe) || /\[ERROR\]/i.test(probe)) {
 		throw new Error('Hy-MT2 loaded but failed its Japanese-to-English inference validation');
@@ -329,7 +336,7 @@ export async function downloadHyMT2Model(variant: BundledHyMT2Variant): Promise<
 		const destPath = await getModelPath(variant);
 		await downloadModelFile(spec.url, destPath);
 		replacementWritten = true;
-		await validateDownloadedHyMT2Model(destPath, spec.sizeBytes);
+		await validateDownloadedHyMT2Model(variant, destPath, spec.sizeBytes);
 		await cleanupLegacyModelsAfterSuccessfulDownload();
 
 		ggufDownloadState.set({
@@ -430,12 +437,7 @@ export function customPromptFormat(): ManualPromptFormat | undefined {
 export async function loadActiveHyMT2Model(signal?: AbortSignal): Promise<void> {
 	const variant = activeHyMT2Variant();
 	const path = await getModelPath(variant);
-	return loadHyMT2Model(path, signal, {
-		promptFormat: variant === 'custom' ? customPromptFormat() : undefined,
-		// v3 is the only checkpoint trained with per-target terminology blocks.
-		// Stock, v2 and v4 keep the English-only guidance they shipped with.
-		multilingualGuidance: variant === 'manga-v3'
-	});
+	return loadHyMT2Model(path, signal, hyMT2LoadOptions(variant, { promptFormat: customPromptFormat() }));
 }
 
 /**
@@ -457,7 +459,7 @@ async function probeCustomModel(
 	format: ManualPromptFormat | undefined
 ): Promise<{ status: CustomModelImportStatus; error?: string }> {
 	try {
-		await loadHyMT2Model(path, undefined, { promptFormat: format });
+		await loadHyMT2Model(path, undefined, hyMT2LoadOptions('custom', { promptFormat: format }));
 	} catch (err) {
 		const message = err instanceof Error ? err.message : 'Load failed';
 		return {

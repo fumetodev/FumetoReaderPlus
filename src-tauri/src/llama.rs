@@ -7,8 +7,10 @@
 //! Key design decisions:
 //! - Validate the GGUF's embedded Hunyuan-dense chat template and apply its
 //!   equivalent llama.cpp built-in formatter instead of hard-coding tokens
-//! - Use the phase-tested Hy-MT2 manga translation instruction
+//! - Use the phase-tested Hy-MT2 manga translation instruction, with the
+//!   guidance scope the Android bridge gives the same model
 //! - Use the CPU STQ backend (`n_gpu_layers=0`) for portable correctness
+//! - One worker thread per fast core, clamped to 4..6, as on Android
 //! - n_ctx=512 to minimize RAM for short comic bubble text
 //! - Per-token decode loop with atomic cancellation flag
 //! - Global mutex protects all llama.cpp operations (single-threaded requirement)
@@ -20,10 +22,10 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::time::Instant;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 // ============================================================
 // llama.cpp FFI declarations
@@ -291,6 +293,41 @@ struct LlamaState {
     /// Temperature the current chain was built with, so a request only pays for
     /// a rebuild when the setting actually moved.
     sampler_temperature: f32,
+    /// Which guidance blocks this model's prompts carry; fixed at load.
+    guidance: GuidanceScope,
+}
+
+/// Which manga guidance blocks a model's prompts carry. Mirrors
+/// `jni_bridge.cpp`: only the v3 fine-tune was trained with a block for every
+/// target, so every other model keeps the English-only guidance it shipped
+/// with — handing v2 a Korean glossary preamble it never saw would be an
+/// unmeasured change to a model people already use.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum GuidanceScope {
+    EnglishOnly,
+    AllTargets,
+}
+
+impl GuidanceScope {
+    /// Anything but "all-targets" is English-only, exactly as the Android
+    /// bridge parses the same value.
+    fn parse(value: Option<&str>) -> Self {
+        if value == Some("all-targets") {
+            Self::AllTargets
+        } else {
+            Self::EnglishOnly
+        }
+    }
+}
+
+/// `llama_load`'s optional second argument (`DesktopLoadOptions` in
+/// llamacpp-bridge.ts). Every field defaults, so a caller that sends none gets
+/// what the bundled models other than v3 get.
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct LoadOptions {
+    /// "all-targets" for the v3 fine-tune, "english-only" for every other model.
+    guidance_scope: Option<String>,
 }
 
 fn clamp_temperature(requested: f32) -> f32 {
@@ -329,13 +366,63 @@ static BACKEND_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 const N_CTX: u32 = 512;
 const N_PREDICT: i32 = 128;
-const N_THREADS: i32 = 6;
+/// Worker threads when the fast-core count is unknown: the fixed count every
+/// desktop used before it was read, and `cpu_topology.h`'s fallback.
+const FALLBACK_THREADS: i32 = 6;
+const MIN_THREADS: i32 = 4;
+const MAX_THREADS: i32 = 6;
 const REPEAT_LAST_N: i32 = 64;
 /// Kept byte-for-byte in step with `jni_bridge.cpp`'s DEFAULT_TEMPERATURE.
 /// Measured 2026-08-21; see the fine-tune eval changelog (item 5).
 const DEFAULT_TEMPERATURE: f32 = 0.15;
 const MIN_TEMPERATURE: f32 = 0.0;
 const MAX_TEMPERATURE: f32 = 1.0;
+
+/// One worker per fast core, clamped to 4..6 — the rule `cpu_topology.h`
+/// applies on Android (`inferenceThreadCount(census, 6, 4, 6)`). ggml's per-op
+/// barrier runs at the slowest worker's pace, so a worker on an efficiency
+/// core slows every op; an unknown count keeps the old fixed 6.
+fn inference_thread_count(fast_cores: Option<i32>) -> i32 {
+    match fast_cores {
+        Some(cores) if cores > 0 => cores.clamp(MIN_THREADS, MAX_THREADS),
+        _ => FALLBACK_THREADS,
+    }
+}
+
+/// Apple Silicon's performance cores: `hw.perflevel0` is the fastest cluster.
+/// `hw.physicalcpu` where the system reports no performance levels.
+#[cfg(target_os = "macos")]
+fn fast_core_count() -> Option<i32> {
+    fn sysctl_i32(name: &CStr) -> Option<i32> {
+        let mut value: i32 = 0;
+        let mut size = std::mem::size_of::<i32>();
+        // SAFETY: `name` is NUL-terminated and `value`/`size` describe a
+        // writable buffer of exactly `size` bytes.
+        let status = unsafe {
+            libc::sysctlbyname(
+                name.as_ptr(),
+                (&mut value as *mut i32).cast(),
+                &mut size,
+                std::ptr::null_mut(),
+                0,
+            )
+        };
+        (status == 0 && size == std::mem::size_of::<i32>()).then_some(value)
+    }
+    sysctl_i32(c"hw.perflevel0.physicalcpu").or_else(|| sysctl_i32(c"hw.physicalcpu"))
+}
+
+/// Not read on Windows and Linux, which keep the fixed fallback.
+#[cfg(not(target_os = "macos"))]
+fn fast_core_count() -> Option<i32> {
+    None
+}
+
+/// The worker count for every context, read once.
+fn inference_threads() -> i32 {
+    static THREADS: OnceLock<i32> = OnceLock::new();
+    *THREADS.get_or_init(|| inference_thread_count(fast_core_count()))
+}
 
 /// Return the exact token prefix which can stay resident for the next prompt.
 ///
@@ -444,6 +531,7 @@ fn build_manga_translation_instruction(
     target_code: &str,
     source_name: &str,
     target_name: &str,
+    scope: GuidanceScope,
 ) -> String {
     // The compact reference keeps common isolated manga bubbles from losing a
     // concrete place noun or inventing the wrong implied subject.
@@ -452,7 +540,15 @@ fn build_manga_translation_instruction(
     // block, so a Simplified Chinese target wants the Chinese terminology
     // rather than English's. English's block is byte-identical to the literal
     // this replaced.
-    let guidance = crate::manga_guidance::manga_guidance_for(source_code, target_code);
+    //
+    // Scoped to the loaded checkpoint, as in jni_bridge.cpp: only v3 saw the
+    // non-English blocks, so every other model keeps exactly the ja->en-only
+    // behaviour it shipped with.
+    let guidance = if scope == GuidanceScope::AllTargets || target_code == "en" {
+        crate::manga_guidance::manga_guidance_for(source_code, target_code)
+    } else {
+        ""
+    };
 
     format!(
         "{guidance}Translate the following text from {source_name} into {target_name} as natural, concise manga dialogue. Preserve specific nouns, exact meaning, speaker intent, tone, punctuation, and sound effects. Output only the translated result without any explanation:\n\n{text}"
@@ -491,6 +587,11 @@ fn ensure_backend_init() {
             std::mem::size_of::<llama_model_params>(),
             std::mem::size_of::<llama_context_params>(),
         );
+        log::info!(
+            "llama inference threads: {} (fast cores: {:?})",
+            inference_threads(),
+            fast_core_count(),
+        );
     }
 }
 
@@ -499,8 +600,11 @@ fn ensure_backend_init() {
 // ============================================================
 
 #[tauri::command(async)]
-pub fn llama_load(model_path: String) -> Result<bool, String> {
+pub fn llama_load(model_path: String, options: Option<LoadOptions>) -> Result<bool, String> {
     ensure_backend_init();
+    let options = options.unwrap_or_default();
+    let guidance = GuidanceScope::parse(options.guidance_scope.as_deref());
+    let threads = inference_threads();
 
     if !Path::new(&model_path).exists() {
         return Err(format!("Model file not found: {}", model_path));
@@ -543,8 +647,8 @@ pub fn llama_load(model_path: String) -> Result<bool, String> {
         let mut ctx_params = llama_context_default_params();
         ctx_params.n_ctx = N_CTX;
         ctx_params.n_batch = N_CTX;
-        ctx_params.n_threads = N_THREADS;
-        ctx_params.n_threads_batch = N_THREADS;
+        ctx_params.n_threads = threads;
+        ctx_params.n_threads_batch = threads;
 
         let ctx = llama_init_from_model(model, ctx_params);
         if ctx.is_null() {
@@ -569,13 +673,15 @@ pub fn llama_load(model_path: String) -> Result<bool, String> {
             sampler,
             cached_prompt_tokens: Vec::new(),
             sampler_temperature: DEFAULT_TEMPERATURE,
+            guidance,
         });
 
         log::info!(
-            "Hy-MT2 model loaded: {}, n_ctx={}, n_threads={}, n_gpu_layers=0",
+            "Hy-MT2 model loaded: {}, n_ctx={}, n_threads={}, n_gpu_layers=0, guidance={:?}",
             model_path,
             N_CTX,
-            N_THREADS,
+            threads,
+            guidance,
         );
     }
 
@@ -749,8 +855,14 @@ pub fn llama_translate(
     // Phase-tested Hy-MT2 manga prompt. Full language names disambiguate short
     // OCR samples while the explicit constraints keep speech and SFX concise.
     let src_name = get_lang_name(&source_lang);
-    let instruction =
-        build_manga_translation_instruction(text, &source_lang, &target_lang, &src_name, &tgt_name);
+    let instruction = build_manga_translation_instruction(
+        text,
+        &source_lang,
+        &target_lang,
+        &src_name,
+        &tgt_name,
+        s.guidance,
+    );
     log::debug!(
         "Hy-MT2 translation request: {} -> {}",
         source_lang,
@@ -1038,7 +1150,7 @@ pub fn llama_get_backend() -> BackendInfo {
     ensure_backend_init();
     BackendInfo {
         backend: "cpu".into(),
-        description: format!("llama.cpp STQ CPU ({} threads)", N_THREADS),
+        description: format!("llama.cpp STQ CPU ({} threads)", inference_threads()),
     }
 }
 
@@ -1117,15 +1229,28 @@ mod tests {
 
     #[test]
     fn japanese_english_prompt_includes_phase_tested_manga_guidance() {
-        let prompt =
-            build_manga_translation_instruction("ついたー", "ja", "en", "Japanese", "English");
+        let prompt = build_manga_translation_instruction(
+            "ついたー",
+            "ja",
+            "en",
+            "Japanese",
+            "English",
+            GuidanceScope::EnglishOnly,
+        );
         assert!(prompt.contains("部室 translates to clubroom"));
         assert!(prompt.contains("ついたー translates to I'm here!"));
         assert!(prompt.ends_with("ついたー"));
 
         // A non-Japanese source carries no terminology block: every frozen
         // block is Japanese-source and would be noise in another direction.
-        let other = build_manga_translation_instruction("Bonjour", "fr", "en", "French", "English");
+        let other = build_manga_translation_instruction(
+            "Bonjour",
+            "fr",
+            "en",
+            "French",
+            "English",
+            GuidanceScope::AllTargets,
+        );
         assert!(!other.contains("部室"));
         assert!(other.contains("from French into English"));
     }
@@ -1135,15 +1260,28 @@ mod tests {
         // The v3 fine-tune was trained with a per-target terminology block.
         // Sending English's block (or none) to a Chinese target is the shape
         // of mistake that produced v2's 99.7% off-target rate there.
-        let english =
-            build_manga_translation_instruction("x", "ja", "en", "Japanese", "English");
+        let english = build_manga_translation_instruction(
+            "x",
+            "ja",
+            "en",
+            "Japanese",
+            "English",
+            GuidanceScope::AllTargets,
+        );
         for (code, name) in [
             ("zh-Hans", "Simplified Chinese"),
             ("fa", "Persian"),
             ("ko", "Korean"),
             ("ar", "Arabic"),
         ] {
-            let prompt = build_manga_translation_instruction("x", "ja", code, "Japanese", name);
+            let prompt = build_manga_translation_instruction(
+                "x",
+                "ja",
+                code,
+                "Japanese",
+                name,
+                GuidanceScope::AllTargets,
+            );
             assert!(
                 prompt.contains("Reference the following manga translations:"),
                 "{code} lost its guidance block"
@@ -1166,10 +1304,85 @@ mod tests {
 
     #[test]
     fn an_unknown_target_gets_no_guidance_rather_than_english() {
-        let prompt = build_manga_translation_instruction("x", "ja", "el", "Japanese", "Greek");
+        let prompt = build_manga_translation_instruction(
+            "x",
+            "ja",
+            "el",
+            "Japanese",
+            "Greek",
+            GuidanceScope::AllTargets,
+        );
         assert!(!prompt.contains("Reference the following manga translations:"));
         assert!(!prompt.contains("部室"));
         assert!(prompt.contains("from Japanese into Greek"));
+    }
+
+    #[test]
+    fn english_only_models_keep_their_guidance_to_english_targets() {
+        // Every model but v3: Korean gets no block at all, and English gets
+        // exactly the block the multilingual scope gives it.
+        let korean = build_manga_translation_instruction(
+            "x",
+            "ja",
+            "ko",
+            "Japanese",
+            "Korean",
+            GuidanceScope::EnglishOnly,
+        );
+        assert!(!korean.contains("Reference the following manga translations:"));
+        assert!(korean.contains("from Japanese into Korean"));
+
+        let english_only = build_manga_translation_instruction(
+            "x",
+            "ja",
+            "en",
+            "Japanese",
+            "English",
+            GuidanceScope::EnglishOnly,
+        );
+        let all_targets = build_manga_translation_instruction(
+            "x",
+            "ja",
+            "en",
+            "Japanese",
+            "English",
+            GuidanceScope::AllTargets,
+        );
+        assert!(english_only.contains("Reference the following manga translations:"));
+        assert_eq!(english_only, all_targets);
+    }
+
+    #[test]
+    fn guidance_scope_parses_like_the_android_bridge() {
+        use GuidanceScope::{AllTargets, EnglishOnly};
+        assert_eq!(GuidanceScope::parse(Some("all-targets")), AllTargets);
+        assert_eq!(GuidanceScope::parse(Some("english-only")), EnglishOnly);
+        assert_eq!(GuidanceScope::parse(Some("All-Targets")), EnglishOnly);
+        assert_eq!(GuidanceScope::parse(None), EnglishOnly);
+    }
+
+    #[test]
+    fn load_options_arrive_in_camel_case_and_default_when_absent() {
+        let options: LoadOptions =
+            serde_json::from_str(r#"{"guidanceScope":"all-targets"}"#).unwrap();
+        assert_eq!(options.guidance_scope.as_deref(), Some("all-targets"));
+
+        let empty: LoadOptions = serde_json::from_str("{}").unwrap();
+        assert_eq!(empty.guidance_scope, None);
+    }
+
+    #[test]
+    fn one_thread_per_fast_core_clamped_to_four_to_six() {
+        assert_eq!(inference_thread_count(None), 6);
+        assert_eq!(inference_thread_count(Some(0)), 6);
+        assert_eq!(inference_thread_count(Some(-1)), 6);
+        assert_eq!(inference_thread_count(Some(2)), 4);
+        // An M1 or M2: four performance cores.
+        assert_eq!(inference_thread_count(Some(4)), 4);
+        assert_eq!(inference_thread_count(Some(5)), 5);
+        // An M1 Pro or M4 Pro: more than six.
+        assert_eq!(inference_thread_count(Some(8)), 6);
+        assert_eq!(inference_thread_count(Some(10)), 6);
     }
 
     #[test]
@@ -1186,7 +1399,7 @@ mod tests {
     fn live_hymt_translation_smoke() {
         let model_path = std::env::var("HYM_T2_TEST_MODEL")
             .expect("HYM_T2_TEST_MODEL must point to a Hy-MT2 GGUF");
-        assert!(llama_load(model_path).expect("Hy-MT2 model must load"));
+        assert!(llama_load(model_path, None).expect("Hy-MT2 model must load"));
 
         // Official tokenizer contract for one rendered User/test/Assistant
         // turn. This proves BOS is present even though the 1.25-bit GGUF does
