@@ -297,8 +297,12 @@ export interface FumetoSettings {
 	 * 'custom' means the user's own imported GGUF and is only honoured while
 	 * `customModel` is populated; `activeHyMT2Variant()` degrades it to 'stock'
 	 * otherwise, so deleting the file cannot leave the picker unchecked.
+	 *
+	 * 'index-manga-v1' is not a Hy-MT2 file at all but a fine-tune of
+	 * Index-Translate 2B; the setting keeps its name because stored profiles
+	 * are keyed on it.
 	 */
-	hyMT2Variant: 'stock' | 'manga-v2' | 'manga-v3' | 'manga-v5' | 'custom';
+	hyMT2Variant: 'stock' | 'manga-v2' | 'manga-v3' | 'manga-v5' | 'index-manga-v1' | 'custom';
 	/**
 	 * The user's imported on-device model, if any. Absent until an import
 	 * succeeds; cleared when it is deleted.

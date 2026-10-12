@@ -29,6 +29,7 @@ licence files vendored into this repository are the authoritative texts.
 | PP-OCRv6 detection + recognition (ONNX) | `static/models/` — converted from PaddleOCR upstream releases | Apache-2.0 (PaddlePaddle/PaddleOCR) |
 | rtmdet-manga-layout | downloaded at build/run time from `huggingface.co/fumetodev/rtmdet-manga-layout-onnx` | Apache-2.0 (this project's own fine-tune) |
 | Hy-MT2 manga fine-tunes (GGUF) | downloaded by the user in-app from `huggingface.co/fumetodev/…` | This project's fine-tunes of Tencent's Hy-MT2; base-model terms per the upstream Hugging Face model page (`tencent/Hy-MT2-1.8B`), which publishes them as Apache-2.0 |
+| Index-Translate manga fine-tune (GGUF) | downloaded by the user in-app from `huggingface.co/fumetodev/…` | This project's fine-tune of Index-Translate 2B; base-model terms per the upstream Hugging Face model page (`IndexTeam/Index-Translate-2B`), which publishes it as Apache-2.0 |
 
 ## npm runtime dependencies (bundled into the app)
 

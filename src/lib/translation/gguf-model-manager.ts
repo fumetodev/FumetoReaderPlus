@@ -12,6 +12,11 @@
  * STQ quantization. The official GGUF is about 440 MiB and is designed for
  * low-latency local translation. It requires a llama.cpp build with Tencent's
  * STQ1_0 support; native runtime integration lives outside this manager.
+ *
+ * The catalogue below also carries a model of a second family,
+ * Index-Translate. The names here still say "HyMT2" because settings, stored
+ * selections and extensions are keyed on them; they mean "the on-device
+ * translation model", whichever family it is.
  */
 
 import * as m from '$lib/paraglide/messages.js';
@@ -23,11 +28,14 @@ import {
 	downloadModelFile,
 	importModelFile,
 	loadHyMT2Model,
+	isModelLoadedAs,
 	unloadModel,
 	translateWithHyMT2,
 	cancelDownload as cancelBridgeDownload,
 	ggufDownloadProgress,
-	type ManualPromptFormat
+	type ManualPromptFormat,
+	type ModelLoadOptions,
+	type PromptProfile
 } from './llamacpp-bridge.js';
 import { exists as fsExists, remove as fsRemove, stat as fsStat } from '@tauri-apps/plugin-fs';
 import { appDataDir, join } from '@tauri-apps/api/path';
@@ -46,7 +54,12 @@ export interface GgufDownloadState {
  * unpinned `main` URL could silently start serving files the kernel cannot
  * load. Pin bumps are deliberate, verified changes.
  */
-export type BundledHyMT2Variant = 'stock' | 'manga-v2' | 'manga-v3' | 'manga-v5';
+export type BundledHyMT2Variant =
+	| 'stock'
+	| 'manga-v2'
+	| 'manga-v3'
+	| 'manga-v5'
+	| 'index-manga-v1';
 export type HyMT2Variant = BundledHyMT2Variant | 'custom';
 
 export interface HyMT2VariantSpec {
@@ -72,6 +85,26 @@ export interface HyMT2VariantSpec {
 	quantLabel: string;
 	/** Italic one-liner under the spec lines in the Settings variant picker — a message getter. */
 	description: () => string;
+	/**
+	 * The model family whose prompt the native layer must use. Absent means
+	 * Hy-MT2. A fine-tune answers to the prompt it was trained with, so this
+	 * belongs to the file: sending the wrong family's prompt still produces a
+	 * translation, only a worse one, and nothing reports it.
+	 */
+	promptProfile?: PromptProfile;
+	/**
+	 * True when the family decodes with fixed sampling, so the on-device
+	 * temperature setting does not reach it.
+	 */
+	fixedSampling?: boolean;
+	/**
+	 * True for a fine-tune that only translates Japanese to English. Such a
+	 * model does not fail on another pair, it just does it badly — the
+	 * Index-Translate fine-tune answers in English whatever target was asked
+	 * for — and nothing downstream can tell that from a translation. Settings
+	 * warns when the chosen pair is not the one the model does.
+	 */
+	japaneseToEnglishOnly?: boolean;
 }
 
 export const HYMT2_VARIANTS: Record<HyMT2Variant, HyMT2VariantSpec> = {
@@ -131,7 +164,28 @@ export const HYMT2_VARIANTS: Record<HyMT2Variant, HyMT2VariantSpec> = {
 		modelName: 'Hy-MT2-1.8B-finetuned-v5',
 		sizeLabel: '~1.13GB',
 		quantLabel: 'Q4_K_M',
-		description: () => m.model_variant_manga_v5_description()
+		description: () => m.model_variant_manga_v5_description(),
+		japaneseToEnglishOnly: true
+	},
+	'index-manga-v1': {
+		kind: 'bundled',
+		// A different base model from every entry above (Index-Translate 2B,
+		// Qwen3.5 based) with its own prompt, chat format and sampler — see
+		// `promptProfile`. Japanese to English only. The name on disk carries
+		// the family, because "Manga-v1-Q4_K_M.gguf" is the retired first Hy-MT2
+		// fine-tune and is deleted by the legacy cleanup below.
+		filename: 'Index-Translate-2B-Manga-v1-Q4_K_M.gguf',
+		url: 'https://huggingface.co/fumetodev/Index-Translate-2B-JP-Manga-Finetune-v1-GGUF/resolve/bf7c2ac273896387903b10f03adef17bffc1c8f8/index-translate-2b-manga-v1-Q4_K_M.gguf',
+		sizeBytes: 1_274_389_024,
+		label: 'Index-Translate 2B manga-tuned v1 (Q4_K_M)',
+		title: () => m.model_variant_index_manga_v1_title(),
+		modelName: 'Index-Translate-2B-finetuned-v1',
+		sizeLabel: '~1.27GB',
+		quantLabel: 'Q4_K_M',
+		description: () => m.model_variant_index_manga_v1_description(),
+		promptProfile: 'index-translate',
+		fixedSampling: true,
+		japaneseToEnglishOnly: true
 	},
 	custom: {
 		kind: 'custom',
@@ -149,7 +203,13 @@ export const HYMT2_VARIANTS: Record<HyMT2Variant, HyMT2VariantSpec> = {
 };
 
 /** The bundled variants, in picker order. `custom` is deliberately excluded. */
-export const BUNDLED_HYMT2_VARIANTS = ['stock', 'manga-v2', 'manga-v3', 'manga-v5'] as const;
+export const BUNDLED_HYMT2_VARIANTS = [
+	'stock',
+	'manga-v2',
+	'manga-v3',
+	'manga-v5',
+	'index-manga-v1'
+] as const;
 
 export function isBundledVariant(variant: HyMT2Variant): variant is BundledHyMT2Variant {
 	return HYMT2_VARIANTS[variant].kind === 'bundled';
@@ -184,6 +244,7 @@ export function bundledSpec(
 export function activeHyMT2Variant(): HyMT2Variant {
 	const stored = get(settings) as { hyMT2Variant?: string; customModel?: unknown };
 	const value = stored.hyMT2Variant;
+	if (value === 'index-manga-v1') return 'index-manga-v1';
 	if (value === 'manga-v5' || value === 'manga-v4') return 'manga-v5';
 	if (value === 'manga-v3') return 'manga-v3';
 	if (value === 'manga-v2' || value === 'manga-v1') return 'manga-v2';
@@ -244,18 +305,33 @@ let downloadInProgress = false;
  * native load validates the GGUF/STQ/template contract; the fixed probe covers
  * tokenization, prefill, generation, and output decoding.
  */
-async function validateDownloadedHyMT2Model(modelPath: string, expectedBytes: number): Promise<void> {
+async function validateDownloadedHyMT2Model(
+	variant: BundledHyMT2Variant,
+	modelPath: string,
+	expectedBytes: number
+): Promise<void> {
+	const label = HYMT2_VARIANTS[variant].label;
 	const modelStat = await fsStat(modelPath);
 	if (modelStat.size !== expectedBytes) {
 		throw new Error(
-			`Downloaded Hy-MT2 model has an unexpected size (${modelStat.size} bytes; expected ${expectedBytes})`
+			`Downloaded ${label} model has an unexpected size (${modelStat.size} bytes; expected ${expectedBytes})`
 		);
 	}
 
-	await loadHyMT2Model(modelPath);
-	const probe = (await translateWithHyMT2('行くぞ！', 'ja', 'en')).trim();
-	if (!probe || probe === '行くぞ！' || !/[A-Za-z]/.test(probe) || /\[ERROR\]/i.test(probe)) {
-		throw new Error('Hy-MT2 loaded but failed its Japanese-to-English inference validation');
+	// Loaded the way a translation will load it. A probe run under another
+	// variant's options proves a configuration nobody uses, and for a model of
+	// a different family it would not even be that model's prompt.
+	await loadHyMT2Model(modelPath, undefined, loadOptionsFor(variant));
+	try {
+		const probe = (await translateWithHyMT2('行くぞ！', 'ja', 'en')).trim();
+		if (!probe || probe === '行くぞ！' || !/[A-Za-z]/.test(probe) || /\[ERROR\]/i.test(probe)) {
+			throw new Error(`${label} loaded but failed its Japanese-to-English inference validation`);
+		}
+	} finally {
+		// The probe leaves its model resident. That is welcome when it is the
+		// one selected (the first translation skips the load) and a gigabyte of
+		// memory held for nothing when it is not.
+		if (variant !== activeHyMT2Variant()) await unloadModel().catch(() => undefined);
 	}
 }
 
@@ -331,7 +407,7 @@ export async function downloadHyMT2Model(variant: BundledHyMT2Variant): Promise<
 		const destPath = await getModelPath(variant);
 		await downloadModelFile(spec.url, destPath);
 		replacementWritten = true;
-		await validateDownloadedHyMT2Model(destPath, spec.sizeBytes);
+		await validateDownloadedHyMT2Model(variant, destPath, spec.sizeBytes);
 		await cleanupLegacyModelsAfterSuccessfulDownload();
 
 		ggufDownloadState.set({
@@ -432,12 +508,54 @@ export function customPromptFormat(): ManualPromptFormat | undefined {
 export async function loadActiveHyMT2Model(signal?: AbortSignal): Promise<void> {
 	const variant = activeHyMT2Variant();
 	const path = await getModelPath(variant);
-	return loadHyMT2Model(path, signal, {
+	return loadHyMT2Model(path, signal, loadOptionsFor(variant));
+}
+
+/**
+ * How a variant has to be loaded. One function, used by the translation paths
+ * and by download validation alike, so the two cannot drift.
+ */
+export function loadOptionsFor(variant: HyMT2Variant): ModelLoadOptions {
+	return {
 		promptFormat: variant === 'custom' ? customPromptFormat() : undefined,
 		// v3 is the only checkpoint trained with per-target terminology blocks.
 		// Stock, v2 and v4 keep the English-only guidance they shipped with.
-		multilingualGuidance: variant === 'manga-v3'
-	});
+		multilingualGuidance: variant === 'manga-v3',
+		promptProfile: HYMT2_VARIANTS[variant].promptProfile
+	};
+}
+
+/**
+ * Whether the model selected in Settings is the one resident, loaded the way
+ * that selection needs.
+ *
+ * Translation paths ask this instead of "is a model loaded". Downloading a
+ * variant validates it by loading it, and importing a model probes it the same
+ * way, so a model can be resident that is not the selected one — and until it
+ * was unloaded every page was translated by whichever file was touched last.
+ */
+export async function isActiveHyMT2ModelLoaded(): Promise<boolean> {
+	const variant = activeHyMT2Variant();
+	return isModelLoadedAs(await getModelPath(variant), loadOptionsFor(variant));
+}
+
+/**
+ * True when the model cannot serve this on-device language pair. `auto` is
+ * Japanese here, as it is everywhere the on-device pipeline resolves it.
+ */
+export function variantCannotTranslatePair(
+	variant: HyMT2Variant,
+	sourceLang: string,
+	targetLang: string
+): boolean {
+	if (!HYMT2_VARIANTS[variant].japaneseToEnglishOnly) return false;
+	const source = sourceLang === 'auto' ? 'ja' : sourceLang;
+	return source !== 'ja' || targetLang !== 'en';
+}
+
+/** True when the selected model ignores the on-device temperature setting. */
+export function variantUsesFixedSampling(variant: HyMT2Variant): boolean {
+	return HYMT2_VARIANTS[variant].fixedSampling === true;
 }
 
 /**
