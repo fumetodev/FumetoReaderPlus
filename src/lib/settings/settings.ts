@@ -635,6 +635,19 @@ export function migratePersistedSettings(rawValue: unknown): SettingsMigrationRe
 		}
 	}
 
+	// The filter strength indexes a calibration table; anything outside 0..1
+	// (or not a number) falls back to the default rather than an extreme.
+	{
+		const stored = parsed.sfxFilterStrength;
+		const usable = typeof stored === 'number' && Number.isFinite(stored)
+			? Math.min(1, Math.max(0, stored))
+			: DEFAULT_SETTINGS.sfxFilterStrength;
+		if (usable !== stored) {
+			parsed.sfxFilterStrength = usable;
+			needsSave = needsSave || raw.sfxFilterStrength !== undefined;
+		}
+	}
+
 		// Migration: the manga fine-tune moved from v1 to v2 on
 		// 2026-07-31. Same filename shape, same 1.13 GB, same speed, but
 		// a measurably better model — so a stored 'manga-v1' choice is
