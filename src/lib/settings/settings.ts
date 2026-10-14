@@ -260,6 +260,14 @@ export interface FumetoSettings {
 	 * translations are still listed in the panel. Balloon text is unaffected.
 	 */
 	overlaySfx: boolean;
+	/**
+	 * Learned sound-effect filter strength, 0 (off) to 1 (strongest). Decides
+	 * how confident the filter must be before an unenclosed group is treated as
+	 * a sound effect while `overlaySfx` is off. Higher catches more drawn SFX
+	 * the rules miss, at a small, calibrated risk of hiding a short line of
+	 * unenclosed narration or speech. Balloon text is never filtered.
+	 */
+	sfxFilterStrength: number;
 
 	// Deprecated overlay fields (kept for deserialization compat; ignored by UI)
 	/** @deprecated Use overlayMode instead */
@@ -422,6 +430,7 @@ export const DEFAULT_SETTINGS: FumetoSettings = {
 	overlayDetectionMethod: 'ppocr',
 	overlayFontScaleDefault: 1.0,
 	overlaySfx: false,
+	sfxFilterStrength: 0.5,
 
 	translationPipeline: 'off-device',
 	onDeviceOCRProvider: 'ppocr',
