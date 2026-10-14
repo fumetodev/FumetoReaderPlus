@@ -514,6 +514,14 @@ export interface DetectedTextRegion {
 	 * to translate garbage (report T5).
 	 */
 	recognitionConfidence?: number;
+	/**
+	 * The learned sound-effect filter's probability that this unenclosed group
+	 * is drawn sound-effect lettering (`detection/sfx-filter.ts`). Balloon text
+	 * is never scored. Kept separate from `groupKind`, which stays the rules'
+	 * verdict, because the reader's filter strength decides what counts as SFX
+	 * at layout time — a stored type could not follow the strength back down.
+	 */
+	sfxScore?: number;
 	/** Bubble and inferred-panel attribution from the grouping stage. */
 	bubbleId?: number;
 	panelId?: string;
@@ -658,6 +666,14 @@ export interface OverlayItemV2 {
 	 * type did not come from the production classifier.
 	 */
 	classificationConfidence?: number;
+	/**
+	 * The learned sound-effect filter's score for this item's source group,
+	 * quantized to 0.01 because it enters the layout input hash. The layout
+	 * gate compares it with the threshold for the reader's current filter
+	 * strength. Missing for balloon text, for pages extracted before the
+	 * filter existed, and whenever the filter model was unavailable.
+	 */
+	sfxScore?: number;
 	/**
 	 * This item is the continuation of the item before it in reading order
 	 * inside the same container: one utterance the grouper had to split at its
