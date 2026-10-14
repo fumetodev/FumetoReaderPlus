@@ -109,6 +109,13 @@ export interface OverlayLayoutSettingsV2 {
 	 * the entries list either way.
 	 */
 	sfxOverlays: boolean;
+	/**
+	 * Score at which the learned sound-effect filter's verdict counts, for
+	 * items that carry an `sfxScore`; derived from the reader's filter
+	 * strength. Undefined = filter off. Only consulted while `sfxOverlays` is
+	 * off, like every other SFX signal.
+	 */
+	sfxFilterThreshold?: number;
 	paddingRatio: number;
 	protectedArtWeight: number;
 	maxCandidatesPerItem: number;

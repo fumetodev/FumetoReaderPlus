@@ -31,6 +31,7 @@ import {
 	type PPOCRExtractionMetrics
 } from './ppocr-text-extractor.js';
 import { detectTextRegionsForRecognition } from '$lib/detection/ppocr-detector.js';
+import { DEFAULT_SFX_FILTER_STRENGTH, isLearnedSfx, sfxThresholdForStrength } from '$lib/detection/sfx-filter.js';
 import { looksLikeMimeticSfx } from '$lib/overlay-layout/layout-service.js';
 import { type BubbleRegion } from '$lib/detection/bubble-geometry.js';
 import { detectLayout } from '$lib/detection/layout-detector.js';
@@ -139,6 +140,7 @@ export interface OnDeviceBlockResult {
 		| 'ok'
 		| 'sfx-dictionary'
 		| 'skipped-meta-or-low-confidence'
+		| 'skipped-sfx'
 		| 'invariant-hidden'
 		| 'invalid'
 		| 'error';
@@ -656,6 +658,12 @@ export async function translatePageOnDevice(
 		?? currentSettings.onDeviceTranslationBackend
 		?? 'translategemma';
 	const overlayMode = options?.runtimeOverrides?.overlayMode ?? currentSettings.overlayMode;
+	// While SFX overlays are hidden, a group the learned filter calls a sound
+	// effect at the reader's strength would be translated only to be hidden by
+	// the layout gate; skip the model call (about a second each) instead.
+	const sfxSkipThreshold = currentSettings.overlaySfx
+		? undefined
+		: sfxThresholdForStrength(currentSettings.sfxFilterStrength ?? DEFAULT_SFX_FILTER_STRENGTH);
 	// A background volume job runs against a volume that is not necessarily the
 	// one open in the reader, so it supplies the direction it resolved. Reader
 	// invocations fall back to the live store, which openReader already set from
@@ -898,6 +906,12 @@ export async function translatePageOnDevice(
 		) {
 			console.warn(`[on-device] Phase 2: block=${block.blockIndex} skipped (non-dialogue meta / low OCR confidence)`);
 			emitBlockResult(blockResult('skipped-meta-or-low-confidence'));
+			continue;
+		}
+
+		if (!region.inBubble && isLearnedSfx(region.sfxScore, sfxSkipThreshold)) {
+			console.warn(`[on-device] Phase 2: block=${block.blockIndex} skipped (learned sound-effect filter)`);
+			emitBlockResult(blockResult('skipped-sfx'));
 			continue;
 		}
 

@@ -14,6 +14,7 @@ import type {
 	Point,
 	Rect
 } from '$lib/types/index.js';
+import { isLearnedSfx } from '$lib/detection/sfx-filter.js';
 import type {
 	FontRegistryPort,
 	FontRunSpec,
@@ -2737,7 +2738,11 @@ export class JointOverlayLayoutService implements OverlayLayoutService {
 			// label decides — and when the LLM's label is ALSO unconfident, a
 			// translation composed entirely of asterisk-wrapped tokens
 			// ("*flump*") is the prompt contract's self-declared SFX styling.
-			if (!input.settings.sfxOverlays && isSfxTyped(item, translations.get(item.translationEntryId))) {
+			// The learned filter's score is one more such signal, weighed
+			// against the threshold for the reader's filter strength.
+			if (!input.settings.sfxOverlays
+				&& (isSfxTyped(item, translations.get(item.translationEntryId))
+					|| isLearnedSfx(item.sfxScore, input.settings.sfxFilterThreshold))) {
 				const container = item.containerId ? containersForVisibility.get(item.containerId) : undefined;
 				if (!container || container.kind === 'free') return false;
 			}

@@ -77,6 +77,7 @@ export class SettingsDraft {
 	overlayDetectionMethod = $state<'ppocr'>('ppocr');
 	overlayFontScaleDefault = $state(1.0);
 	overlaySfx = $state(false);
+	sfxFilterStrength = $state(0.5);
 
 	// Reading defaults
 	defaultReadingDirection = $state<'rtl' | 'ltr'>('rtl');
@@ -146,6 +147,7 @@ export class SettingsDraft {
 		this.overlayDetectionMethod = s.overlayDetectionMethod;
 		this.overlayFontScaleDefault = s.overlayFontScaleDefault;
 		this.overlaySfx = s.overlaySfx;
+		this.sfxFilterStrength = s.sfxFilterStrength ?? 0.5;
 		this.defaultReadingDirection = s.defaultReadingDirection;
 		this.readerMode = s.readerMode;
 		this.pageTurnMode = s.pageTurnMode;
@@ -200,6 +202,7 @@ export class SettingsDraft {
 			overlayDetectionMethod: this.overlayDetectionMethod,
 			overlayFontScaleDefault: Math.max(0.5, Math.min(3, this.overlayFontScaleDefault || 1)),
 			overlaySfx: this.overlaySfx,
+			sfxFilterStrength: Math.max(0, Math.min(1, Number.isFinite(this.sfxFilterStrength) ? this.sfxFilterStrength : 0.5)),
 			defaultReadingDirection: this.defaultReadingDirection,
 			readerMode: this.readerMode,
 			pageTurnMode: this.pageTurnMode,
