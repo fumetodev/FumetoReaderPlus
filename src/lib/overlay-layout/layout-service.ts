@@ -14,6 +14,7 @@ import type {
 	Point,
 	Rect
 } from '$lib/types/index.js';
+import { isLearnedSfx } from '$lib/detection/sfx-filter.js';
 import type {
 	FontRegistryPort,
 	FontRunSpec,
@@ -409,6 +410,36 @@ export function looksLikeMimeticSfx(source: string): boolean {
  * 'unknown' as SFX wholesale is what would make those policies dead code on
  * real pages; this is the discrimination that already exists.
  */
+/**
+ * Whether a free-floating item is hidden as a sound effect while SFX overlays
+ * are off. When the learned filter scored the item and the reader's strength
+ * gives a threshold, its verdict REPLACES the rules' own SFX guesses (the
+ * geometry type and the mimetic-text heuristic): measured on held-out labelled
+ * pages it hides several times more drawn SFX than those rules at a lower loss
+ * of unenclosed dialogue, so OR-ing the two would only add the rules' false
+ * hits back. A translation provider's own SFX label stays an independent
+ * signal. Unscored items (older pages, a missing model, strength 0) keep the
+ * rules alone.
+ */
+function isHiddenSfx(
+	item: OverlayItemV2,
+	entry: PageTranslationEntry | undefined,
+	sfxFilterThreshold: number | undefined
+): boolean {
+	if (sfxFilterThreshold === undefined || item.sfxScore === undefined) return isSfxTyped(item, entry);
+	return isLearnedSfx(item.sfxScore, sfxFilterThreshold) || isProviderLabelledSfx(item, entry);
+}
+
+/** The provider-side arms of `isSfxTyped`: the LLM's own label and its asterisk SFX styling. */
+function isProviderLabelledSfx(item: OverlayItemV2, entry: PageTranslationEntry | undefined): boolean {
+	const entryTypeUnknown = entry?.type === undefined || entry.type === 'unknown'
+		|| entry.type === item.type;
+	return entry?.type === 'sfx'
+		|| ((item.type === 'unknown' || item.type === 'sign')
+			&& entryTypeUnknown
+			&& ASTERISK_ONLY_SFX.test(entry?.translated_text ?? ''));
+}
+
 function isSfxTyped(item: OverlayItemV2, entry: PageTranslationEntry | undefined): boolean {
 	// The adapter canonicalizes stored entry types to the region classifier's
 	// verdict (adapter.ts canonicalInputEntries), so entry.type === item.type
@@ -2737,7 +2768,10 @@ export class JointOverlayLayoutService implements OverlayLayoutService {
 			// label decides — and when the LLM's label is ALSO unconfident, a
 			// translation composed entirely of asterisk-wrapped tokens
 			// ("*flump*") is the prompt contract's self-declared SFX styling.
-			if (!input.settings.sfxOverlays && isSfxTyped(item, translations.get(item.translationEntryId))) {
+			// A learned-filter score, when present, decides in place of the
+			// rules' guesses (see isHiddenSfx).
+			if (!input.settings.sfxOverlays
+				&& isHiddenSfx(item, translations.get(item.translationEntryId), input.settings.sfxFilterThreshold)) {
 				const container = item.containerId ? containersForVisibility.get(item.containerId) : undefined;
 				if (!container || container.kind === 'free') return false;
 			}

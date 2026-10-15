@@ -29,6 +29,7 @@ import {
 	type PPOcrTextGroup
 } from '$lib/detection/ppocr-grouping.js';
 import { analyzeFreeTextGroupFeatures, type FreeTextPixelBuffer } from '$lib/detection/free-text-features.js';
+import { pageGlyphSize, scoreSfxCandidates, sfxSideFeatures, type SfxCandidate } from '$lib/detection/sfx-filter.js';
 import type { BubbleRegion } from '$lib/detection/bubble-geometry.js';
 import type { RecognizedBlock } from './recognized-block.js';
 import { suppressRubyLines } from './furigana-filter.js';
@@ -72,6 +73,9 @@ export interface PPOCRExtractionMetrics {
 	recognitionMs: number;
 	mappingMs: number;
 	classificationMs: number;
+	/** Unenclosed groups the learned sound-effect filter scored (0 when unavailable). */
+	sfxScoredGroups: number;
+	sfxFilterMs: number;
 	totalMs: number;
 }
 
@@ -127,6 +131,7 @@ function sanitizeExtractionMetrics(metrics: PPOCRExtractionMetrics): PPOCRExtrac
 		recognitionMs: roundedMs(metrics.recognitionMs),
 		mappingMs: roundedMs(metrics.mappingMs),
 		classificationMs: roundedMs(metrics.classificationMs),
+		sfxFilterMs: roundedMs(metrics.sfxFilterMs),
 		totalMs: roundedMs(metrics.totalMs)
 	};
 }
@@ -397,6 +402,8 @@ export async function extractTextWithPPOCR(
 			recognitionMs: 0,
 			mappingMs: 0,
 			classificationMs: 0,
+			sfxScoredGroups: 0,
+			sfxFilterMs: 0,
 			totalMs: performance.now() - totalStarted
 		});
 		logExtractionMetrics(metrics);
@@ -564,6 +571,50 @@ export async function extractTextWithPPOCR(
 	}
 	if (groupingDiagnostics) groupingDiagnostics.classificationCounts = { ...classificationCounts };
 	const classificationMs = performance.now() - classificationStarted;
+
+	// Learned sound-effect filter: score every unenclosed group from the same
+	// downscaled page the free-text features used. Scoring is unconditional and
+	// cheap; the reader's filter strength is applied later, so it can change
+	// without re-reading the page. A missing model leaves groups unscored.
+	const sfxFilterStarted = performance.now();
+	let sfxScoredGroups = 0;
+	if (featurePixels) {
+		const pageGlyph = pageGlyphSize(blocks.map((block) => ({ text: block.text, width: block.width, height: block.height })));
+		const scored: PPOcrTextGroup[] = [];
+		const candidates: SfxCandidate[] = [];
+		for (const merged of mergedRegions) {
+			if (!isPPOcrTextGroup(merged) || merged.inBubble) continue;
+			if (merged.groupKind === 'speech' || merged.groupKind === 'thought') continue;
+			const text = blockTextByBoxId.get(merged.boxId);
+			if (text === undefined) continue;
+			scored.push(merged);
+			candidates.push({
+				box: merged,
+				features: sfxSideFeatures({
+					x: merged.x,
+					y: merged.y,
+					width: merged.width,
+					height: merged.height,
+					text,
+					kind: merged.groupKind,
+					recognitionConfidence: merged.recognitionConfidence,
+					classificationConfidence: merged.classificationConfidence
+				}, imageWidth, imageHeight, pageGlyph)
+			});
+		}
+		try {
+			const scores = await scoreSfxCandidates({ image: imageFile, pixels: featurePixels }, imageWidth, imageHeight, candidates);
+			throwIfCancelled();
+			if (scores) {
+				scored.forEach((group, index) => { group.sfxScore = scores[index]; });
+				sfxScoredGroups = scored.length;
+			}
+		} catch (error) {
+			throwIfCancelled();
+			console.warn('[ppocr-extract] Sound-effect filter failed; groups left unscored.', error);
+		}
+	}
+	const sfxFilterMs = performance.now() - sfxFilterStarted;
 	const metrics = sanitizeExtractionMetrics({
 		rawRegions: rawRegions.length,
 		mergedRegions: mergedRegions.length,
@@ -583,6 +634,8 @@ export async function extractTextWithPPOCR(
 		recognitionMs,
 		mappingMs,
 		classificationMs,
+		sfxScoredGroups,
+		sfxFilterMs,
 		totalMs: performance.now() - totalStarted
 	});
 	logExtractionMetrics(metrics);

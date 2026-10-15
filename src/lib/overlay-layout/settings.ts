@@ -1,6 +1,7 @@
 import type { FumetoSettings } from '$lib/settings/settings.js';
 import type { OverlayLayoutSettingsV2 } from './ports.js';
 import { DEFAULT_OVERLAY_LAYOUT_SETTINGS } from './layout-service.js';
+import { DEFAULT_SFX_FILTER_STRENGTH, sfxThresholdForStrength } from '$lib/detection/sfx-filter.js';
 
 export function overlayLayoutSettingsFromApp(
 	settings: Readonly<FumetoSettings>,
@@ -13,6 +14,11 @@ export function overlayLayoutSettingsFromApp(
 		fontScale,
 		orientationPolicy: settings.overlayVerticalText ? 'preserve-source' : 'force-horizontal',
 		variableFontSizing: settings.variableFontSizing ?? false,
-		sfxOverlays: settings.overlaySfx ?? false
+		sfxOverlays: settings.overlaySfx ?? false,
+		// Only meaningful while SFX are hidden; left undefined otherwise so
+		// toggling the strength cannot invalidate cached plans that ignore it.
+		sfxFilterThreshold: settings.overlaySfx
+			? undefined
+			: sfxThresholdForStrength(settings.sfxFilterStrength ?? DEFAULT_SFX_FILTER_STRENGTH)
 	};
 }

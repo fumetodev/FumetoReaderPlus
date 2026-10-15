@@ -5564,6 +5564,41 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:56:04.677Z"
 	},
+	"settings_overlay_sfx_filter_balanced": {
+		"sourceHash": "dd70c6e91b381996",
+		"model": "claude-opus-5.5 (hand-drafted)",
+		"draftedAt": "2026-10-15T09:58:12.910Z"
+	},
+	"settings_overlay_sfx_filter_gentle": {
+		"sourceHash": "4bcd78036f113e8e",
+		"model": "claude-opus-5.5 (hand-drafted)",
+		"draftedAt": "2026-10-15T09:58:12.910Z"
+	},
+	"settings_overlay_sfx_filter_help": {
+		"sourceHash": "53a336660bb47a2c",
+		"model": "claude-opus-5.5 (hand-drafted)",
+		"draftedAt": "2026-10-15T09:58:12.910Z"
+	},
+	"settings_overlay_sfx_filter_label": {
+		"sourceHash": "3a69009140f9c4bb",
+		"model": "claude-opus-5.5 (hand-drafted)",
+		"draftedAt": "2026-10-15T09:58:12.910Z"
+	},
+	"settings_overlay_sfx_filter_maximum": {
+		"sourceHash": "0344aa66bcb0575e",
+		"model": "claude-opus-5.5 (hand-drafted)",
+		"draftedAt": "2026-10-15T09:58:12.910Z"
+	},
+	"settings_overlay_sfx_filter_off": {
+		"sourceHash": "50accd740fa2e736",
+		"model": "claude-opus-5.5 (hand-drafted)",
+		"draftedAt": "2026-10-15T09:58:12.910Z"
+	},
+	"settings_overlay_sfx_filter_strong": {
+		"sourceHash": "f82927a01d4c5e45",
+		"model": "claude-opus-5.5 (hand-drafted)",
+		"draftedAt": "2026-10-15T09:58:12.910Z"
+	},
 	"settings_overlay_text_size_label": {
 		"sourceHash": "13d67929d40fde16",
 		"model": "anthropic/claude-sonnet-5",
@@ -5838,6 +5873,16 @@
 		"sourceHash": "4d44c1d21935af35",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:10:45.680Z"
+	},
+	"settings_search_sfx_filter_keywords": {
+		"sourceHash": "62f7b44b4deb9387",
+		"model": "claude-opus-5.5 (hand-drafted)",
+		"draftedAt": "2026-10-15T09:58:12.910Z"
+	},
+	"settings_search_sfx_filter_label": {
+		"sourceHash": "7ebe880fd3261726",
+		"model": "claude-opus-5.5 (hand-drafted)",
+		"draftedAt": "2026-10-15T09:58:12.910Z"
 	},
 	"settings_search_sfx_overlays_keywords": {
 		"sourceHash": "804b7cfa168bbbea",
