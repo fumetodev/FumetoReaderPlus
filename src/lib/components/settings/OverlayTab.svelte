@@ -4,6 +4,14 @@
 	import { settingsDraft as draft } from './settings-state.svelte.js';
 	import { overlayFontScale } from '$lib/stores/reader-state.js';
 	import Switch from '$lib/components/ui/Switch.svelte';
+
+	function sfxFilterLevel(strength: number): string {
+		if (strength <= 0) return m.settings_overlay_sfx_filter_off();
+		if (strength < 0.375) return m.settings_overlay_sfx_filter_gentle();
+		if (strength < 0.625) return m.settings_overlay_sfx_filter_balanced();
+		if (strength < 0.875) return m.settings_overlay_sfx_filter_strong();
+		return m.settings_overlay_sfx_filter_maximum();
+	}
 </script>
 
 <div class="space-y-5">
@@ -23,6 +31,27 @@
 				{m.settings_overlay_off_default_drawn_sound()}
 			</p>
 		</div>
+
+		{#if !draft.overlaySfx}
+			<!-- Learned sound-effect filter strength (0 = rules only) -->
+			<div class="border-t border-surface-700 pt-4" data-settings-anchor="sfx-filter-strength">
+				<label for="sfx-filter-strength" class="mb-1.5 block text-sm font-medium text-surface-300">
+					{m.settings_overlay_sfx_filter_label({ level: sfxFilterLevel(draft.sfxFilterStrength) })}
+				</label>
+				<input
+					id="sfx-filter-strength"
+					type="range"
+					min="0"
+					max="1"
+					step="0.05"
+					bind:value={draft.sfxFilterStrength}
+					class="w-full accent-primary-500"
+				/>
+				<p class="mt-1 text-[11px] text-surface-500">
+					{m.settings_overlay_sfx_filter_help()}
+				</p>
+			</div>
+		{/if}
 
 		<!-- Overlay text size (persisted twin of the reader's live slider) -->
 		<div class="border-t border-surface-700 pt-4" data-settings-anchor="overlay-text-size">
