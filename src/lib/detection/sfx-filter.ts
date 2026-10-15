@@ -43,12 +43,12 @@ export const SFX_FILTER_CALIBRATION: {
 	model: string;
 	anchors: ReadonlyArray<{ strength: number; threshold: number; textLossBudget: number }>;
 } = {
-	model: 'sfx-filter-v0.1',
+	model: 'sfx-filter-v0.2',
 	anchors: [
-		{ strength: 0.25, threshold: 0.976, textLossBudget: 0.005 },
-		{ strength: 0.5, threshold: 0.9267, textLossBudget: 0.02 },
-		{ strength: 0.75, threshold: 0.7445, textLossBudget: 0.05 },
-		{ strength: 1, threshold: 0.4589, textLossBudget: 0.1 }
+		{ strength: 0.25, threshold: 0.9658, textLossBudget: 0.005 },
+		{ strength: 0.5, threshold: 0.8658, textLossBudget: 0.02 },
+		{ strength: 0.75, threshold: 0.7217, textLossBudget: 0.05 },
+		{ strength: 1, threshold: 0.433, textLossBudget: 0.1 }
 	]
 };
 
