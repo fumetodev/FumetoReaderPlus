@@ -272,6 +272,16 @@ function classificationConfidenceFor(region?: DetectedTextRegion): number | unde
 	return Math.round(value * 100) / 100;
 }
 
+/**
+ * The learned sound-effect filter's score, quantized to 0.01 for the same
+ * reason as `classificationConfidenceFor`. Only unenclosed groups carry one.
+ */
+function sfxScoreFor(region?: DetectedTextRegion): number | undefined {
+	const value = region?.sfxScore;
+	if (region?.inBubble || !finite(value) || value < 0 || value > 1) return undefined;
+	return Math.round(value * 100) / 100;
+}
+
 function styleKeyFor(type: OverlayItemV2['type']): string {
 	switch (type) {
 		case 'speech': return 'dialogue';
@@ -530,6 +540,7 @@ export function createOverlayDocumentV2(input: OverlayDraftAdapterInput): {
 			order: translation.order,
 			styleKey: styleKeyFor(semanticType),
 			classificationConfidence: classificationConfidenceFor(adapted.region),
+			sfxScore: sfxScoreFor(adapted.region),
 			sourceWritingMode: adapted.region?.writingMode === 'horizontal-tb'
 				|| adapted.region?.writingMode === 'vertical-rl'
 				? adapted.region.writingMode
