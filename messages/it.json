@@ -702,6 +702,7 @@
 	"help_sharper_text_detection_on": "Rilevamento del testo più nitido su pagine di grandi dimensioni; correzioni all'affidabilità della traduzione in blocco.",
 	"help_sort_dropdown_showing_sort": "Menu a discesa di ordinamento che mostra le opzioni di ordinamento",
 	"help_sorting": "Ordinamento",
+	"help_sound_effect_detection_an": "Rilevamento effetti sonori: un modello facoltativo (17 MB, scaricato una sola volta in Impostazioni → Overlay) riconosce gli effetti sonori disegnati fuori dalle nuvolette che le regole di impaginazione non individuano, così restano anch'essi non tradotti. Un cursore regola quanti ne individua; funziona interamente sul tuo dispositivo e si applica alle pagine tradotte da quel momento in poi",
 	"help_sound_effects_now_stay": "Gli effetti sonori ora rimangono non tradotti per impostazione predefinita (stile delle edizioni ufficiali) — attiva «Overlay effetti sonori» in Impostazioni → Overlay per tradurli di nuovo sulla pagina.",
 	"help_storage_data": "Archiviazione e dati",
 	"help_switching_libraries": "Cambiare libreria",

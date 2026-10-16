@@ -2809,6 +2809,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T14:58:49.759Z"
 	},
+	"help_sound_effect_detection_an": {
+		"sourceHash": "a1fc46070624c30c",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-16T04:22:52.164Z"
+	},
 	"help_sound_effects_now_stay": {
 		"sourceHash": "66e78e188489d7f2",
 		"model": "anthropic/claude-sonnet-5",
