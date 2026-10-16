@@ -20,6 +20,9 @@ const PRUNE = [
 	// through the PP-OCR bridge instead (no 83 MB double-bundle).
 	'models/ppocr-det-v6-medium.onnx',
 	'models/ppocr-rec-v6-small.onnx',
+	// The sound-effect model is downloaded in-app; a developer's local copy
+	// for `npm run dev` must not ride into the APK.
+	'models/sfx-filter.onnx',
 	// onnxruntime-web variants never imported by the shipping reader path.
 	'wasm/ort-wasm-simd-threaded.jsep.wasm',
 	'wasm/ort-wasm-simd-threaded.jsep.mjs',

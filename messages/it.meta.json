@@ -5599,6 +5599,21 @@
 		"model": "claude-opus-5.5 (hand-drafted)",
 		"draftedAt": "2026-10-15T09:58:12.919Z"
 	},
+	"settings_overlay_sfx_model": {
+		"sourceHash": "e5cbf47a8a2d6822",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-15T18:31:11.164Z"
+	},
+	"settings_overlay_sfx_model_desc": {
+		"sourceHash": "a8bdcdd3a17c997b",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-15T18:31:11.164Z"
+	},
+	"settings_overlay_sfx_model_needed": {
+		"sourceHash": "1b37f744a0d4f90b",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-15T18:31:11.164Z"
+	},
 	"settings_overlay_text_size_label": {
 		"sourceHash": "13d67929d40fde16",
 		"model": "anthropic/claude-sonnet-5",
