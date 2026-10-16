@@ -27,8 +27,6 @@
             against LMKD eviction and CPU governor downclocking.
         -->
 
-        <!-- OpenCL for GPU-accelerated on-device translation (optional, not required) -->
-        <uses-native-library android:name="libOpenCL.so" android:required="false" />
         <!-- Portrait is the default for the catalog, tabs and settings, which
              are portrait layouts. The reader lifts it to fullUser while it is on
              screen (AndroidBridge.setOrientationPolicy, driven by the frontend's

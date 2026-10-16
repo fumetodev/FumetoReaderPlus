@@ -58,30 +58,28 @@ class LlamaBridge(
         // Mirrors jni_bridge.cpp's DEFAULT_TEMPERATURE. Only the compatibility
         // overload uses it; the native side clamps and re-validates regardless.
         private const val DEFAULT_TEMPERATURE = 0.15f
-        var openclAvailable = false
-            private set
+
+        /**
+         * Whether libfumeto_llama.so loaded. When it did not, every `native*`
+         * call throws UnsatisfiedLinkError — an Error, which none of the
+         * `catch (e: Exception)` blocks here take — and on a coroutine worker
+         * that ends the process. Each entry point that reaches native code
+         * checks this first and answers its callback instead.
+         */
         var nativeAvailable = false
             private set
+        private var nativeLoadFailure: String? = null
 
         // JNI model/context state is process-global, so lifecycle operations
         // and ownership must also be process-global rather than Activity-local.
         private val processLifecycle = LlamaModelLifecycleCoordinator()
 
         init {
-            // Load vendor's OpenCL driver via System.loadLibrary (respects public.libraries.txt).
-            // Must happen BEFORE loading fumeto_llama so its NEEDED libOpenCL.so resolves
-            // against the vendor's already-loaded library (matched by SONAME).
-            try {
-                System.loadLibrary("OpenCL")
-                openclAvailable = true
-                Log.i(TAG, "Vendor OpenCL driver loaded successfully")
-            } catch (e: UnsatisfiedLinkError) {
-                Log.w(TAG, "OpenCL not available: ${e.message}")
-            }
             try {
                 System.loadLibrary("fumeto_llama")
                 nativeAvailable = true
             } catch (e: UnsatisfiedLinkError) {
+                nativeLoadFailure = e.message
                 Log.e(TAG, "Failed to load fumeto_llama: ${e.message}")
             }
         }
@@ -332,6 +330,14 @@ class LlamaBridge(
         promptProfile: String = ""
     ) {
         if (destroyed.get()) return
+        if (!nativeAvailable) {
+            rejectCallback(
+                callbackId,
+                "model_load_failed",
+                "On-device translation library is unavailable [${nativeLoadFailure ?: "not loaded"}]"
+            )
+            return
+        }
         scope.launch {
             // Start the inference foreground service BEFORE the blocking
             // native load. nativeLoadModel() mmap's the ~462 MB Hy-MT2 GGUF
@@ -468,6 +474,10 @@ class LlamaBridge(
         callbackId: String
     ) {
         if (destroyed.get()) return
+        if (!nativeAvailable) {
+            rejectCallback(callbackId, "model_not_loaded", "[ERROR] Model not loaded")
+            return
+        }
         scope.launch {
             try {
                 processLifecycle.serialized translate@{
@@ -529,6 +539,11 @@ class LlamaBridge(
     @JavascriptInterface
     fun unloadModel(callbackId: String) {
         if (destroyed.get()) return
+        if (!nativeAvailable) {
+            // Without the library no model can be resident, so there is nothing to unload.
+            resolveCallback(callbackId, JSONObject().apply { put("success", true) }.toString())
+            return
+        }
         scope.launch {
             var unloaded = false
             var failureMessage: String? = null

@@ -17,8 +17,6 @@ licence files vendored into this repository are the authoritative texts.
 | — gguf-py | `…/llama.cpp/gguf-py/` | MIT |
 | foliate-js | `src/lib/vendor/foliate-js/` (John Factotum; pinned commit in its `PROVENANCE.md`) | MIT (`foliate-js/LICENSE`) |
 | — `vendor/fflate.js`, `vendor/zip.js` inside foliate-js | project-authored fail-loud stubs (see their headers and `PROVENANCE.md`) — **no upstream fflate/zip.js code is vendored there** | GPL-3.0 (this project) |
-| Khronos OpenCL headers | `src-tauri/llama-bridge/opencl-headers/` | Apache-2.0 |
-| Khronos OpenCL ICD Loader (link-time stub, not shipped in the APK) | `src-tauri/llama-bridge/opencl-lib/` — see its `README.md` for provenance and rebuild steps | Apache-2.0 |
 | TeX hyphenation patterns (hyph-en-us, Gerard D.C. Kuiken) | inlined in `src/lib/overlay-layout/hyphenation.ts` | TeX hyphenation patterns licence (free use and redistribution in any medium) |
 | ONNX Runtime WebAssembly binaries | `static/wasm/` (byte-copies of the `onnxruntime-web` npm package's dist artifacts, same version as `package.json`) | MIT (Microsoft) |
 

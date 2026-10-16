@@ -8,8 +8,8 @@
  *   request. Exact token-level common prefixes reuse their resident KV state.
  * - STQ1_0 executes on the ARM CPU/NEON path (n_gpu_layers=0) with one
  *   inference thread per fast core, clamped to 4..6 and derived from the core
- *   topology in JNI_OnLoad (cpu_topology.h). OpenCL offload is intentionally
- *   disabled.
+ *   topology in JNI_OnLoad (cpu_topology.h). The Android build links no GPU
+ *   backend (see CMakeLists.txt).
  * - Sampling follows the Hy-MT2 recommendation: temperature 0.7, top-k 20,
  *   top-p 0.6 (min_keep=1), repeat penalty 1.05, and seed 42.
  * - n_ctx=512 bounds memory for short comic text, and generation remains
@@ -817,8 +817,8 @@ static bool loadModelLocked(
     LOGI("Loading model from: %s", modelPath.c_str());
     const int64_t loadStartedUs = llama_time_us();
 
-    // STQ1_0 has an ARM NEON CPU kernel. OpenCL does not implement this
-    // quantization and must not receive any layers.
+    // STQ1_0 has an ARM NEON CPU kernel. No GPU backend is linked, and any
+    // that were could not run this quantization, so no layer is offloaded.
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = 0;
     g_model = llama_model_load_from_file(modelPath.c_str(), model_params);
