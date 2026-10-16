@@ -702,6 +702,7 @@
 	"help_sharper_text_detection_on": "Schärfere Texterkennung auf großen Seiten; Zuverlässigkeitsverbesserungen bei der Stapelübersetzung.",
 	"help_sort_dropdown_showing_sort": "Sortier-Dropdown mit Sortieroptionen",
 	"help_sorting": "Sortierung",
+	"help_sound_effect_detection_an": "Soundeffekt-Erkennung: Ein optionales Modell (17 MB, einmal unter Einstellungen → Overlay heruntergeladen) erkennt gezeichnete Soundeffekte außerhalb von Sprechblasen, die die Layout-Regeln übersehen, damit auch sie unübersetzt bleiben. Ein Schieberegler legt fest, wie viele es erfasst; es läuft vollständig auf deinem Gerät und gilt für Seiten, die ab dann übersetzt werden",
 	"help_sound_effects_now_stay": "Soundeffekte bleiben jetzt standardmäßig unübersetzt (Stil offizieller Veröffentlichungen) — aktiviere „Soundeffekte überlagern“ in Einstellungen → Overlay, um sie wieder auf der Seite zu übersetzen.",
 	"help_storage_data": "Speicher & Daten",
 	"help_switching_libraries": "Bibliotheken wechseln",
