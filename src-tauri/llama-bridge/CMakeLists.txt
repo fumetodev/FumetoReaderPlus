@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.22.1)
 project(fumeto_llama)
 
-# OpenCL acceleration is an arm64/Adreno feature in this app. Emulator builds
-# use llama.cpp's CPU backend; pointing an x86_64 linker at the arm64 OpenCL
-# stub would otherwise make the JNI library impossible to build or load.
+# The Android build is CPU-only on every ABI. llama.cpp's OpenCL backend used to
+# be linked into arm64 while n_gpu_layers stayed 0 (the GPU lost every
+# measurement), so it never ran a layer. What it did do was make
+# libfumeto_llama.so NEED libOpenCL.so: on a device that does not expose a vendor
+# OpenCL driver to apps, the library could not load at all and on-device
+# translation was gone with it.
+set(GGML_OPENCL OFF CACHE BOOL "" FORCE)
 if(ANDROID_ABI STREQUAL "arm64-v8a")
     # Hy-MT2's STQ1_0 fast path is an ARM NEON dot-product kernel. Android's
     # default arm64 target is only armv8-a, which leaves __ARM_FEATURE_DOTPROD
@@ -12,11 +16,6 @@ if(ANDROID_ABI STREQUAL "arm64-v8a")
     # runtime for that instruction level so the intended kernel is used.
     set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
     set(GGML_CPU_ARM_ARCH "armv8.2-a+dotprod" CACHE STRING "" FORCE)
-    set(OpenCL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/opencl-headers" CACHE PATH "" FORCE)
-    set(OpenCL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/opencl-lib/arm64-v8a/libOpenCL.so" CACHE FILEPATH "" FORCE)
-    set(GGML_OPENCL ON CACHE BOOL "" FORCE)
-    set(GGML_OPENCL_USE_ADRENO_KERNELS ON CACHE BOOL "" FORCE)
-    set(GGML_OPENCL_EMBED_KERNELS ON CACHE BOOL "" FORCE)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
     # llama.cpp's llamafile SGEMM specializes its NEON half loads with
@@ -25,15 +24,9 @@ elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     # portable ggml matmul path for this compatibility ABI; arm64 retains the
     # optimized llamafile and STQ kernels used by production devices.
     set(GGML_LLAMAFILE OFF CACHE BOOL "" FORCE)
-    set(GGML_OPENCL OFF CACHE BOOL "" FORCE)
-    set(GGML_OPENCL_USE_ADRENO_KERNELS OFF CACHE BOOL "" FORCE)
-    set(GGML_OPENCL_EMBED_KERNELS OFF CACHE BOOL "" FORCE)
 else()
     set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
     set(GGML_LLAMAFILE ON CACHE BOOL "" FORCE)
-    set(GGML_OPENCL OFF CACHE BOOL "" FORCE)
-    set(GGML_OPENCL_USE_ADRENO_KERNELS OFF CACHE BOOL "" FORCE)
-    set(GGML_OPENCL_EMBED_KERNELS OFF CACHE BOOL "" FORCE)
 endif()
 
 # llama.cpp build settings
@@ -54,7 +47,7 @@ set(LLAMA_CURL OFF CACHE BOOL "" FORCE)
 set(GGML_OPENMP OFF CACHE BOOL "" FORCE)
 add_subdirectory(llama.cpp)
 
-# JNI wrapper — links llama (carries ggml + ggml-opencl transitively)
+# JNI wrapper — links llama (carries ggml transitively)
 add_library(fumeto_llama SHARED jni_bridge.cpp)
 target_link_libraries(fumeto_llama PRIVATE llama log)
 target_include_directories(fumeto_llama PRIVATE llama.cpp/include llama.cpp/ggml/include)

@@ -146,8 +146,8 @@ android {
     sourceSets.getByName("main").assets.srcDir(ppocrNativeAssetsDir)
     packaging {
         jniLibs {
-            // Exclude the OpenCL ICD Loader stub that CMake copies into the build.
-            // The vendor's real OpenCL driver is loaded at runtime via System.loadLibrary.
+            // Nothing links OpenCL any more, but older checkouts can still hold
+            // the ICD loader stub the restore script used to copy into jniLibs.
             excludes += setOf("**/libOpenCL.so")
         }
     }
