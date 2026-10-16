@@ -892,7 +892,18 @@ class LlamaBridge(
         activeImports.clear()
         scope.cancel()
         mainHandler.removeCallbacksAndMessages(null)
-        httpClient.connectionPool.evictAll()
+        // Closing a pooled TLS connection writes close_notify to its socket.
+        // That is network I/O, and destroy() runs on the main thread, where
+        // StrictMode turns it into a NetworkOnMainThreadException that fails
+        // the Activity's onDestroy and ends the process. Any download in the
+        // connection pool's five-minute keep-alive window left one behind.
+        cleanupScope.launch {
+            try {
+                httpClient.connectionPool.evictAll()
+            } catch (e: Exception) {
+                Log.w(TAG, "Closing pooled download connections failed: ${e.message}")
+            }
+        }
 
         // Native state outlives an Activity and JNI_OnUnload normally runs
         // only when the process exits. Queue teardown behind any active load
