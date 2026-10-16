@@ -19,6 +19,7 @@ import type { DetectedTextGroupKind } from '$lib/types/index.js';
  * backbone was trained.
  */
 
+/** A developer's local copy, read only in a plain browser; the app downloads the model (sfx-model-manager.ts). */
 export const SFX_FILTER_MODEL_PATH = '/models/sfx-filter.onnx';
 export const SFX_FILTER_INPUT_SIZE = 224;
 export const SFX_FILTER_CROP_MARGIN = 0.12;
@@ -43,12 +44,12 @@ export const SFX_FILTER_CALIBRATION: {
 	model: string;
 	anchors: ReadonlyArray<{ strength: number; threshold: number; textLossBudget: number }>;
 } = {
-	model: 'sfx-filter-v0.2',
+	model: 'sfx-filter-v0.3',
 	anchors: [
-		{ strength: 0.25, threshold: 0.9658, textLossBudget: 0.005 },
-		{ strength: 0.5, threshold: 0.8658, textLossBudget: 0.02 },
-		{ strength: 0.75, threshold: 0.7217, textLossBudget: 0.05 },
-		{ strength: 1, threshold: 0.433, textLossBudget: 0.1 }
+		{ strength: 0.25, threshold: 0.9648, textLossBudget: 0.005 },
+		{ strength: 0.5, threshold: 0.8672, textLossBudget: 0.02 },
+		{ strength: 0.75, threshold: 0.5898, textLossBudget: 0.05 },
+		{ strength: 1, threshold: 0.3086, textLossBudget: 0.1 }
 	]
 };
 
@@ -265,40 +266,159 @@ export function sfxCropTensor(
 // ---------------------------------------------------------------------------
 
 type OrtModule = typeof import('onnxruntime-web');
-let ort: OrtModule | null = null;
-let session: import('onnxruntime-web').InferenceSession | null = null;
-let loading: Promise<boolean> | null = null;
-let unavailable = false;
+type OrtSession = import('onnxruntime-web').InferenceSession;
 
 /**
- * Load the model once. Resolves false — and stays false for the session —
- * when the model or runtime is missing, so extraction carries on unscored
- * instead of failing a page over an optional filter.
+ * Where the model runs. On Android the downloaded file is run by native ONNX
+ * Runtime (`__fumeto_sfx_native`) — about 17 ms a crop on a Snapdragon 8 Elite against
+ * about 100 ms in the WebView's single-threaded WASM, which stays the fallback
+ * and the only engine everywhere else. The crops are cut here either way.
+ */
+type SfxBackend =
+	| { kind: 'native'; fileName: string; sha256: string }
+	| { kind: 'wasm'; session: OrtSession; ort: OrtModule };
+
+interface SfxNativeBridge {
+	isAvailable(): boolean;
+	score(
+		modelFileName: string,
+		sha256: string,
+		encodedPixels: string,
+		encodedSide: string,
+		count: number,
+		threadCount: number,
+		callbackId: string
+	): void;
+	release(callbackId: string): void;
+}
+
+declare global {
+	interface Window {
+		__fumeto_sfx_native?: SfxNativeBridge;
+		__sfx_native_resolve?: (callbackId: string, resultJson: string) => void;
+		__sfx_native_reject?: (callbackId: string, message: string) => void;
+	}
+}
+
+const NATIVE_THREADS = 4;
+
+let backend: SfxBackend | null = null;
+let loading: Promise<boolean> | null = null;
+let unavailable = false;
+/** Set when native inference failed once; the session then runs on WASM. */
+let nativeBroken = false;
+/** Bumped by `resetSfxFilter`, so a load that was already running cannot install a stale backend. */
+let generation = 0;
+/** Batches in flight, and WASM sessions a reset retired while one was running. */
+let running = 0;
+const retired: OrtSession[] = [];
+
+function nativeSfxBridge(): SfxNativeBridge | null {
+	try {
+		const bridge = typeof window === 'undefined' ? undefined : window.__fumeto_sfx_native;
+		return bridge?.isAvailable() === true ? bridge : null;
+	} catch {
+		return null;
+	}
+}
+
+/** A developer's local copy, for a plain browser; the SPA fallback answers a missing file with index.html at HTTP 200. */
+async function fetchLocalCopy(): Promise<Uint8Array> {
+	const response = await fetch(SFX_FILTER_MODEL_PATH);
+	if (!response.ok) throw new Error(`model fetch ${response.status}`);
+	const buffer = await response.arrayBuffer();
+	if (/text\/html/i.test(response.headers.get('content-type') ?? '') || new Uint8Array(buffer, 0, 1)[0] === 0x3c) {
+		throw new Error('no local model copy in this browser build');
+	}
+	return new Uint8Array(buffer);
+}
+
+async function openWasm(bytes: Uint8Array): Promise<SfxBackend> {
+	const module = (await import('onnxruntime-web/wasm')) as unknown as OrtModule;
+	module.env.wasm.wasmPaths = `${window.location.origin}/wasm/`;
+	module.env.wasm.proxy = false;
+	module.env.wasm.numThreads = 1;
+	const session = await module.InferenceSession.create(bytes, { executionProviders: ['wasm'] });
+	return { kind: 'wasm', session, ort: module };
+}
+
+/**
+ * `null` means "not downloaded yet", which a later download can change; a
+ * local copy that is missing cannot appear at runtime and throws instead.
+ */
+async function openBackend(): Promise<SfxBackend | null> {
+	const manager = await import('./sfx-model-manager.js');
+	if (!manager.sfxModelIsManagedHere()) return await openWasm(await fetchLocalCopy());
+	if (!(await manager.isSfxModelReady())) return null;
+	// The native engine reads the file itself and checks its hash when it opens it.
+	if (!nativeBroken && nativeSfxBridge()) {
+		return { kind: 'native', fileName: manager.SFX_MODEL.filename, sha256: manager.SFX_MODEL.sha256 };
+	}
+	const bytes = await manager.readDownloadedSfxModel();
+	return bytes ? await openWasm(bytes) : null;
+}
+
+/**
+ * Load the model once. Resolves false when it is unavailable, so extraction
+ * carries on unscored instead of failing a page over an optional filter. A
+ * model that is merely not downloaded is asked about again on the next page;
+ * a missing local copy or a runtime that fails to start stays off for the session.
  */
 export function initSfxFilter(): Promise<boolean> {
-	if (session) return Promise.resolve(true);
+	if (backend) return Promise.resolve(true);
 	if (unavailable) return Promise.resolve(false);
 	loading ??= (async () => {
+		const started = generation;
 		try {
-			const module = (await import('onnxruntime-web/wasm')) as unknown as OrtModule;
-			module.env.wasm.wasmPaths = `${window.location.origin}/wasm/`;
-			module.env.wasm.proxy = false;
-			module.env.wasm.numThreads = 1;
-			const response = await fetch(SFX_FILTER_MODEL_PATH);
-			if (!response.ok) throw new Error(`model fetch ${response.status}`);
-			const buffer = new Uint8Array(await response.arrayBuffer());
-			session = await module.InferenceSession.create(buffer, { executionProviders: ['wasm'] });
-			ort = module;
+			const opened = await openBackend();
+			if (!opened) return false;
+			if (started !== generation) {
+				if (opened.kind === 'wasm') await opened.session.release().catch(() => undefined);
+				return false;
+			}
+			backend = opened;
 			return true;
 		} catch (error) {
-			unavailable = true;
+			if (started === generation) unavailable = true;
 			console.warn('[sfx-filter] Model unavailable; sound effects are typed by rules only.', error);
 			return false;
 		} finally {
-			loading = null;
+			if (started === generation) loading = null;
 		}
 	})();
 	return loading;
+}
+
+/**
+ * Forget the loaded model, after a download or a delete. The next page loads
+ * whatever is on disk then.
+ */
+export function resetSfxFilter(): void {
+	generation += 1;
+	loading = null;
+	unavailable = false;
+	const released = backend;
+	backend = null;
+	if (released?.kind === 'native') {
+		try {
+			window.__fumeto_sfx_native?.release(`sfx-release-${Date.now()}`);
+		} catch {
+			// The engine reopens on the next file anyway: its session is keyed by the file.
+		}
+	} else if (released?.kind === 'wasm') {
+		if (running > 0) retired.push(released.session);
+		else void released.session.release().catch(() => undefined);
+	}
+}
+
+/**
+ * Whether the learned filter takes part at all: SFX overlays hidden and a
+ * strength above off. While it does not, pages are not scored — the model is
+ * neither loaded nor run — and the layout rules decide alone.
+ */
+export function sfxFilterEnabled(settings: { overlaySfx?: boolean; sfxFilterStrength?: number }): boolean {
+	return !settings.overlaySfx
+		&& sfxThresholdForStrength(settings.sfxFilterStrength ?? DEFAULT_SFX_FILTER_STRENGTH) !== undefined;
 }
 
 export interface SfxCandidate {
@@ -397,7 +517,52 @@ export async function scoreSfxCandidates(
 	candidates: readonly SfxCandidate[]
 ): Promise<Float32Array | null> {
 	if (candidates.length === 0) return new Float32Array(0);
-	if (!(await initSfxFilter()) || !session || !ort) return null;
+	if (!(await initSfxFilter()) || !backend) return null;
+	// Held for the whole call: a reset while the page is being cropped must
+	// not swap or release the backend this batch runs on.
+	const active = backend;
+	running += 1;
+	try {
+		const tensors = await cropCandidates(sources, sourceWidth, sourceHeight, candidates);
+		if (!tensors) return null;
+		if (active.kind === 'wasm') return await runWasm(active, tensors, candidates.length);
+		try {
+			return await runNative(active, tensors, candidates.length);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			if (message.startsWith('integrity:')) {
+				// The engine deleted the file; Settings offers the download again.
+				console.warn('[sfx-filter] Downloaded model failed its integrity check; removed.');
+				resetSfxFilter();
+				const manager = await import('./sfx-model-manager.js');
+				manager.sfxModelDownloadState.set({ status: 'idle', error: undefined, progress: undefined });
+				return null;
+			}
+			console.warn('[sfx-filter] Native inference failed; using WASM for the rest of the session.', error);
+			nativeBroken = true;
+			resetSfxFilter();
+			if (!(await initSfxFilter()) || backend?.kind !== 'wasm') return null;
+			return await runWasm(backend, tensors, candidates.length);
+		}
+	} finally {
+		running -= 1;
+		if (running === 0) for (const stale of retired.splice(0)) void stale.release().catch(() => undefined);
+	}
+}
+
+interface SfxTensors {
+	/** count × 3 × S × S, CHW, 0..1. */
+	images: Float32Array;
+	/** count × 21. */
+	side: Float32Array;
+}
+
+async function cropCandidates(
+	sources: SfxCropSources,
+	sourceWidth: number,
+	sourceHeight: number,
+	candidates: readonly SfxCandidate[]
+): Promise<SfxTensors | null> {
 	const size = SFX_FILTER_INPUT_SIZE;
 	const images = new Float32Array(candidates.length * 3 * size * size);
 	const side = new Float32Array(candidates.length * SFX_FILTER_SIDE_FEATURES);
@@ -432,9 +597,75 @@ export async function scoreSfxCandidates(
 	} finally {
 		page?.close();
 	}
-	const output = await session.run({
-		image: new ort.Tensor('float32', images, [candidates.length, 3, size, size]),
-		side: new ort.Tensor('float32', side, [candidates.length, SFX_FILTER_SIDE_FEATURES])
+	return { images, side };
+}
+
+async function runWasm(active: Extract<SfxBackend, { kind: 'wasm' }>, tensors: SfxTensors, count: number): Promise<Float32Array> {
+	const size = SFX_FILTER_INPUT_SIZE;
+	const output = await active.session.run({
+		image: new active.ort.Tensor('float32', tensors.images, [count, 3, size, size]),
+		side: new active.ort.Tensor('float32', tensors.side, [count, SFX_FILTER_SIDE_FEATURES])
 	});
 	return output.p_sfx.data as Float32Array;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+	let binary = '';
+	for (let index = 0; index < bytes.length; index += 0x8000) {
+		binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+	}
+	return btoa(binary);
+}
+
+const nativePending = new Map<string, { resolve: (json: string) => void; reject: (error: Error) => void }>();
+let nativeCallbackCounter = 0;
+
+function installNativeHandlers(): void {
+	if (window.__sfx_native_resolve) return;
+	window.__sfx_native_resolve = (callbackId, resultJson) => {
+		nativePending.get(callbackId)?.resolve(resultJson);
+		nativePending.delete(callbackId);
+	};
+	window.__sfx_native_reject = (callbackId, message) => {
+		nativePending.get(callbackId)?.reject(new Error(message));
+		nativePending.delete(callbackId);
+	};
+}
+
+/**
+ * The crops cross as RGB bytes (HWC), not floats: every value the crop step
+ * writes is a byte over 255, so the engine's own division restores it, at a
+ * quarter of the payload.
+ */
+async function runNative(active: Extract<SfxBackend, { kind: 'native' }>, tensors: SfxTensors, count: number): Promise<Float32Array> {
+	const bridge = window.__fumeto_sfx_native;
+	if (!bridge) throw new Error('sfx native bridge unavailable');
+	const size = SFX_FILTER_INPUT_SIZE;
+	const plane = size * size;
+	const pixels = new Uint8Array(count * plane * 3);
+	for (let n = 0; n < count; n += 1) {
+		const base = n * 3 * plane;
+		for (let i = 0; i < plane; i += 1) {
+			const out = (n * plane + i) * 3;
+			pixels[out] = Math.round(tensors.images[base + i] * 255);
+			pixels[out + 1] = Math.round(tensors.images[base + plane + i] * 255);
+			pixels[out + 2] = Math.round(tensors.images[base + 2 * plane + i] * 255);
+		}
+	}
+	const side = new Uint8Array(tensors.side.buffer, tensors.side.byteOffset, tensors.side.byteLength);
+	installNativeHandlers();
+	const callbackId = `sfx-${++nativeCallbackCounter}-${Date.now()}`;
+	const json = await new Promise<string>((resolve, reject) => {
+		nativePending.set(callbackId, { resolve, reject });
+		try {
+			bridge.score(active.fileName, active.sha256, bytesToBase64(pixels), bytesToBase64(side), count, NATIVE_THREADS, callbackId);
+		} catch (error) {
+			nativePending.delete(callbackId);
+			reject(error instanceof Error ? error : new Error(String(error)));
+		}
+	});
+	const result = JSON.parse(json) as { scores: number[] };
+	const scores = result.scores;
+	if (scores.length !== count) throw new Error(`native filter returned ${scores.length} scores for ${count} crops`);
+	return Float32Array.from(scores);
 }

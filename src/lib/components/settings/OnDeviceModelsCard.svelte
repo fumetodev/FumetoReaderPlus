@@ -7,6 +7,7 @@
 	import { isAndroid } from '$lib/util/platform.js';
 	import { modelMemoryAdvice, readDeviceMemory, type MemoryAdvice } from '$lib/device/device-memory.js';
 	import { installedOcrModelBytes, ocrModelDownloadState } from '$lib/detection/ocr-model-manager.js';
+	import { installedSfxModelBytes, sfxModelDownloadState } from '$lib/detection/sfx-model-manager.js';
 	import { untrack } from 'svelte';
 
 	// Read once: total RAM doesn't change, and the advice must be identical
@@ -137,13 +138,19 @@
 		];
 	});
 
-	// The vision models live outside this card's rows but occupy the same
-	// storage the line below reports, so a user reading "downloaded now" gets
-	// the whole figure rather than only the translation half.
+	// The vision models and the sound-effect model live outside this card's
+	// rows but occupy the same storage the line below reports, so a user
+	// reading "downloaded now" gets the whole figure rather than only the
+	// translation half.
 	let ocrModelsMB = $state(0);
+	let sfxModelMB = $state(0);
 
 	async function refreshOcrModelBytes(): Promise<void> {
 		ocrModelsMB = Math.round((await installedOcrModelBytes().catch(() => 0)) / 1024 / 1024);
+	}
+
+	async function refreshSfxModelBytes(): Promise<void> {
+		sfxModelMB = Math.round((await installedSfxModelBytes().catch(() => 0)) / 1024 / 1024);
 	}
 
 	$effect(() => {
@@ -151,8 +158,13 @@
 		if (status === 'idle' || status === 'completed') untrack(() => { void refreshOcrModelBytes(); });
 	});
 
+	$effect(() => {
+		const status = $sfxModelDownloadState.status;
+		if (status === 'idle' || status === 'completed') untrack(() => { void refreshSfxModelBytes(); });
+	});
+
 	let totalDownloadedMB = $derived(
-		rows.filter((row) => row.ready).reduce((sum, row) => sum + row.sizeMB, 0) + ocrModelsMB
+		rows.filter((row) => row.ready).reduce((sum, row) => sum + row.sizeMB, 0) + ocrModelsMB + sfxModelMB
 	);
 
 	function formatMB(mb: number): string {
