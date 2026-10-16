@@ -29,7 +29,9 @@ import {
 	type PPOcrTextGroup
 } from '$lib/detection/ppocr-grouping.js';
 import { analyzeFreeTextGroupFeatures, type FreeTextPixelBuffer } from '$lib/detection/free-text-features.js';
-import { pageGlyphSize, scoreSfxCandidates, sfxSideFeatures, type SfxCandidate } from '$lib/detection/sfx-filter.js';
+import { pageGlyphSize, scoreSfxCandidates, sfxFilterEnabled, sfxSideFeatures, type SfxCandidate } from '$lib/detection/sfx-filter.js';
+import { settings } from '$lib/settings/settings.js';
+import { get } from 'svelte/store';
 import type { BubbleRegion } from '$lib/detection/bubble-geometry.js';
 import type { RecognizedBlock } from './recognized-block.js';
 import { suppressRubyLines } from './furigana-filter.js';
@@ -98,6 +100,12 @@ export interface PPOCRExtractionOptions {
 	 * IDs the prompts address. Defaults to manga order.
 	 */
 	readingDirection?: 'rtl' | 'ltr';
+	/**
+	 * Score unenclosed groups with the learned sound-effect filter. Defaults to
+	 * the reader's setting (`sfxFilterEnabled`): while the filter is off the
+	 * model is neither loaded nor run.
+	 */
+	sfxFilter?: boolean;
 }
 
 export interface PPOCRExtractionResult {
@@ -572,13 +580,14 @@ export async function extractTextWithPPOCR(
 	if (groupingDiagnostics) groupingDiagnostics.classificationCounts = { ...classificationCounts };
 	const classificationMs = performance.now() - classificationStarted;
 
-	// Learned sound-effect filter: score every unenclosed group from the same
-	// downscaled page the free-text features used. Scoring is unconditional and
-	// cheap; the reader's filter strength is applied later, so it can change
-	// without re-reading the page. A missing model leaves groups unscored.
+	// Learned sound-effect filter: score every unenclosed group while the
+	// filter is on. The strength is applied later, at layout time, so moving it
+	// between levels acts on pages already read; a page read while the filter
+	// was off, or before its model was downloaded, stays unscored and the
+	// layout rules decide for it.
 	const sfxFilterStarted = performance.now();
 	let sfxScoredGroups = 0;
-	if (featurePixels) {
+	if (featurePixels && (options.sfxFilter ?? sfxFilterEnabled(get(settings)))) {
 		const pageGlyph = pageGlyphSize(blocks.map((block) => ({ text: block.text, width: block.width, height: block.height })));
 		const scored: PPOcrTextGroup[] = [];
 		const candidates: SfxCandidate[] = [];
