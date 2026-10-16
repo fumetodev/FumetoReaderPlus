@@ -10,7 +10,9 @@
  * __llama_reject, and __llama_progress — the shared callback registry
  * in llamacpp-bridge.ts routes these to the correct handler by callbackId.
  *
- * Used by saliency-model-manager, lama-model-manager, and head-model-manager.
+ * Each download is cancelled on its own (an AbortSignal maps to the bridge's
+ * per-callback cancel), so stopping one transfer leaves any other running.
+ * Used by sfx-model-manager.
  */
 
 import { isAndroid } from '$lib/util/platform.js';
