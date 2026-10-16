@@ -75,12 +75,18 @@ class LlamaBridge(
         private val processLifecycle = LlamaModelLifecycleCoordinator()
 
         init {
-            try {
-                System.loadLibrary("fumeto_llama")
-                nativeAvailable = true
-            } catch (e: UnsatisfiedLinkError) {
-                nativeLoadFailure = e.message
-                Log.e(TAG, "Failed to load fumeto_llama: ${e.message}")
+            val unsupported = LlamaCpuSupport.unsupportedReason()
+            if (unsupported != null) {
+                nativeLoadFailure = unsupported
+                Log.w(TAG, "Not loading fumeto_llama: $unsupported")
+            } else {
+                try {
+                    System.loadLibrary("fumeto_llama")
+                    nativeAvailable = true
+                } catch (e: UnsatisfiedLinkError) {
+                    nativeLoadFailure = e.message
+                    Log.e(TAG, "Failed to load fumeto_llama: ${e.message}")
+                }
             }
         }
     }
