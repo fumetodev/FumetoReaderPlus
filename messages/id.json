@@ -697,6 +697,7 @@
 	"help_sharper_text_detection_on": "Deteksi teks yang lebih tajam pada halaman besar; perbaikan keandalan terjemahan massal.",
 	"help_sort_dropdown_showing_sort": "Dropdown pengurutan menampilkan opsi pengurutan",
 	"help_sorting": "Pengurutan",
+	"help_sound_effect_detection_an": "Deteksi efek suara: model opsional (17 MB, diunduh sekali di Pengaturan → Lapisan) mengenali efek suara yang digambar di luar balon yang terlewat oleh aturan tata letak, sehingga efek suara itu juga tetap tidak diterjemahkan. Sebuah penggeser mengatur seberapa banyak yang ditangkap; model ini berjalan sepenuhnya di perangkat Anda dan berlaku untuk halaman yang diterjemahkan sejak saat itu",
 	"help_sound_effects_now_stay": "SFX sekarang tetap tidak diterjemahkan secara bawaan (gaya rilis resmi) — aktifkan \"Lapisi efek suara\" di Pengaturan → Lapisan untuk menerjemahkannya di halaman lagi.",
 	"help_storage_data": "Penyimpanan & Data",
 	"help_switching_libraries": "Beralih pustaka",

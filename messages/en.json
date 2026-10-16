@@ -702,6 +702,7 @@
 	"help_sharper_text_detection_on": "Sharper text detection on large pages; batch translation reliability fixes.",
 	"help_sort_dropdown_showing_sort": "Sort dropdown showing sort options",
 	"help_sorting": "Sorting",
+	"help_sound_effect_detection_an": "Sound-effect detection: an optional model (17 MB, downloaded once under Settings → Overlay) recognizes drawn sound effects outside speech bubbles that the layout rules miss, so they stay untranslated too. A slider sets how many it catches; it runs entirely on your device and applies to pages translated from then on",
 	"help_sound_effects_now_stay": "Sound effects now stay untranslated by default (official-release style) — flip \"Overlay sound effects\" in Settings → Overlay to translate them on-page again.",
 	"help_storage_data": "Storage & Data",
 	"help_switching_libraries": "Switching libraries",

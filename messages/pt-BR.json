@@ -702,6 +702,7 @@
 	"help_sharper_text_detection_on": "Detecção de texto mais precisa em páginas grandes; correções de confiabilidade na tradução em lote.",
 	"help_sort_dropdown_showing_sort": "Menu de ordenação mostrando as opções de ordenação",
 	"help_sorting": "Ordenação",
+	"help_sound_effect_detection_an": "Detecção de efeitos sonoros: um modelo opcional (17 MB, baixado uma vez em Configurações → Sobreposição) reconhece efeitos sonoros desenhados fora dos balões de fala que as regras de layout deixam passar, para que eles também fiquem sem tradução. Um controle deslizante define quantos ele detecta; ele roda totalmente no seu dispositivo e vale para as páginas traduzidas a partir de então",
 	"help_sound_effects_now_stay": "Os efeitos sonoros agora permanecem não traduzidos por padrão (estilo de lançamento oficial) — alterne \"Sobrepor efeitos sonoros\" em Configurações → Sobreposição para traduzi-los na página novamente.",
 	"help_storage_data": "Armazenamento e dados",
 	"help_switching_libraries": "Alternando entre bibliotecas",

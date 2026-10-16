@@ -702,6 +702,7 @@
 	"help_sharper_text_detection_on": "Détection de texte plus précise sur les grandes pages ; corrections de fiabilité de la traduction par lot.",
 	"help_sort_dropdown_showing_sort": "Menu déroulant de tri affichant les options de tri",
 	"help_sorting": "Tri",
+	"help_sound_effect_detection_an": "Détection des effets sonores : un modèle facultatif (17 Mo, téléchargé une fois dans Réglages → Calque) reconnaît les effets sonores dessinés hors des bulles que les règles de mise en page ne repèrent pas, afin qu’ils restent eux aussi non traduits. Un curseur règle combien il en détecte ; il fonctionne entièrement sur votre appareil et s’applique aux pages traduites à partir de ce moment",
 	"help_sound_effects_now_stay": "Les effets sonores restent désormais non traduits par défaut (style édition officielle) — activez « Superposer les effets sonores » dans Réglages → Calque pour les traduire à nouveau sur la page.",
 	"help_storage_data": "Stockage et données",
 	"help_switching_libraries": "Changer de bibliothèque",
