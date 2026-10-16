@@ -25,6 +25,9 @@ target/
 # Downloaded Hy-MT2 inference weights. Keep llama.cpp vocabulary fixtures.
 **/Hy-MT2*.gguf
 
+# The sound-effect model is downloaded in-app (sfx-model-manager.ts); a local copy here serves `npm run dev` only.
+/static/models/sfx-filter.onnx
+
 # Local credentials and environment overrides
 .env
 .env.*
