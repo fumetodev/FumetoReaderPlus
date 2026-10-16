@@ -33,10 +33,18 @@
              appView), so a phone with auto-rotate on reads in landscape and one
              with rotation locked stays put. userPortrait still allows
              sensor-driven upside-down portrait. Android 16+ ignores this on
-             large screens, where every view rotates regardless. -->
+             large screens, where every view rotates regardless.
+
+             configChanges lists every change this Activity can absorb, because it
+             cannot survive being recreated: the Rust side treats onDestroy as the
+             last window closing and exits the process, so an undeclared change
+             (system font size, display size, bold text, a keyboard or SIM swap)
+             closed the app mid-read, calling exit() while the replacement
+             window was already coming up. The WebView re-lays itself out for
+             each of these in place, as it already does for a rotation. -->
         <activity
             android:screenOrientation="userPortrait"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|density|fontScale|fontWeightAdjustment|layoutDirection|navigation|touchscreen|colorMode|mcc|mnc|grammaticalGender"
             android:launchMode="singleTask"
 			android:windowSoftInputMode="adjustResize"
             android:label="@string/main_activity_title"
