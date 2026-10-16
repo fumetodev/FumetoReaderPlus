@@ -14,6 +14,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import org.json.JSONObject
+import kotlin.math.roundToInt
 import com.fumeto.reader.llama.LlamaBridge
 import com.fumeto.reader.ocr.NativePPOcrDetectorBridge
 import com.fumeto.reader.service.BackgroundServiceBridge
@@ -29,6 +30,8 @@ class MainActivity : TauriActivity() {
   private var bgBridge: BackgroundServiceBridge? = null
   private var rtmdetBridge: RtmdetLayoutBridge? = null
   private var sfxBridge: SfxFilterBridge? = null
+  private var baseTextZoom = 100
+  private var baseFontScale = 1f
 
   // Disable Tauri's default canGoBack()/goBack() handling
   override val handleBackNavigation: Boolean = false
@@ -141,6 +144,8 @@ class MainActivity : TauriActivity() {
   @SuppressLint("SetJavaScriptEnabled")
   override fun onWebViewCreate(webView: WebView) {
     wv = webView
+    baseTextZoom = webView.settings.textZoom
+    baseFontScale = resources.configuration.fontScale
     WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
     webView.addJavascriptInterface(AndroidBridge(), "__fumeto_android")
 
@@ -251,7 +256,21 @@ class MainActivity : TauriActivity() {
     // Re-trigger inset application after rotation
     if (::wv.isInitialized) {
       wv.requestApplyInsets()
+      followFontScale(newConfig.fontScale)
     }
+  }
+
+  /**
+   * The WebView takes the system font size once, when it is created. A font-size
+   * change no longer recreates the Activity (see configChanges in the manifest),
+   * so scale the text zoom from the size the WebView started at. Scaling, not
+   * assigning `fontScale * 100`, is right whether the platform applied the
+   * starting font size through textZoom or underneath it.
+   */
+  private fun followFontScale(fontScale: Float) {
+    if (baseFontScale <= 0f) return
+    val zoom = (baseTextZoom * fontScale / baseFontScale).roundToInt()
+    if (wv.settings.textZoom != zoom) wv.settings.textZoom = zoom
   }
 
   override fun onDestroy() {
