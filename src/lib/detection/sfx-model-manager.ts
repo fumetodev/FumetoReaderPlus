@@ -19,7 +19,7 @@
 
 import { writable } from 'svelte/store';
 import { appDataDir, join } from '@tauri-apps/api/path';
-import { exists as fsExists, mkdir as fsMkdir, readFile as fsReadFile, remove as fsRemove, stat as fsStat } from '@tauri-apps/plugin-fs';
+import { exists as fsExists, mkdir as fsMkdir, readDir as fsReadDir, readFile as fsReadFile, remove as fsRemove, stat as fsStat } from '@tauri-apps/plugin-fs';
 import { downloadFile } from '$lib/util/model-downloader.js';
 import * as m from '$lib/paraglide/messages.js';
 import { resetSfxFilter, SFX_FILTER_CALIBRATION } from './sfx-filter.js';
@@ -89,6 +89,22 @@ export async function installedSfxModelBytes(): Promise<number> {
 	}
 }
 
+/** Files an earlier model version downloaded: this build can never load them, so they only take space. */
+const SUPERSEDED_MODEL_FILE = /^sfx-filter-v[A-Za-z0-9._-]*\.onnx$/;
+
+async function removeSupersededSfxModels(): Promise<void> {
+	try {
+		const modelsDir = await join(await appDataDir(), 'models');
+		if (!(await fsExists(modelsDir))) return;
+		for (const entry of await fsReadDir(modelsDir)) {
+			if (!entry.isFile || entry.name === SFX_MODEL.filename || !SUPERSEDED_MODEL_FILE.test(entry.name)) continue;
+			await fsRemove(await join(modelsDir, entry.name)).catch(() => undefined);
+		}
+	} catch {
+		// Housekeeping only: a leftover file costs space, never correctness.
+	}
+}
+
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
 	const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes as Uint8Array<ArrayBuffer>));
 	return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -148,6 +164,7 @@ export async function downloadSfxModel(): Promise<void> {
 				`${SFX_MODEL.filename} downloaded with an unexpected size (${written.size} bytes; expected ${SFX_MODEL.sizeBytes})`
 			);
 		}
+		await removeSupersededSfxModels();
 		// A session that gave up while the model was missing loads it on the next page.
 		resetSfxFilter();
 		sfxModelDownloadState.set({ status: 'completed', error: undefined, progress: undefined });
@@ -176,6 +193,7 @@ export async function deleteSfxModel(): Promise<void> {
 	try {
 		const path = await sfxModelPath();
 		if (await fsExists(path)) await fsRemove(path);
+		await removeSupersededSfxModels();
 		resetSfxFilter();
 		sfxModelDownloadState.set({ status: 'idle', error: undefined, progress: undefined });
 	} catch (error) {

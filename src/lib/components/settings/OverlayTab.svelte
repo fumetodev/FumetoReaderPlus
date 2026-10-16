@@ -124,7 +124,7 @@
 								<div class="h-1.5 rounded-full bg-primary-500 transition-all" style="width: {pct}%"></div>
 							</div>
 							<p class="mt-1 text-[11px] text-surface-500">
-								{m.settings_translation_download_progress({ done: ($sfxModelDownloadState.progress.downloadedBytes / 1024 / 1024) | 0, total: ($sfxModelDownloadState.progress.totalBytes / 1024 / 1024) | 0, pct })}
+								{m.settings_translation_download_progress({ done: Math.round($sfxModelDownloadState.progress.downloadedBytes / 1024 / 1024), total: Math.round($sfxModelDownloadState.progress.totalBytes / 1024 / 1024), pct })}
 							</p>
 						{/if}
 						{#if $sfxModelDownloadState.status === 'error'}
