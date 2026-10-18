@@ -6,8 +6,9 @@
  * request the tap made so the sheet can resume it: download, then translate,
  * without a second tap.
  *
- * Non-interactive callers (batch translation, revision passes) keep the plain
- * guard inside the OCR pipeline — a background job has no one to ask.
+ * Starting or resuming a batch is a tap too, so the catalog asks here as well.
+ * A job already running (and a revision pass) keeps the plain guard inside the
+ * OCR pipeline — there is no one to ask by then.
  */
 import { writable } from 'svelte/store';
 

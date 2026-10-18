@@ -15,6 +15,7 @@
 		downloadOcrModels,
 		cancelOcrModelDownload,
 		areOcrModelsReady,
+		missingOcrModels,
 		OCR_MODELS_TOTAL_BYTES
 	} from '$lib/detection/ocr-model-manager.js';
 	import {
@@ -23,7 +24,16 @@
 		resumeAfterOcrModels
 	} from '$lib/detection/ocr-model-gate.js';
 
-	const totalMB = Math.round(OCR_MODELS_TOTAL_BYTES / 1024 / 1024);
+	// What this install still lacks: every model on a fresh one, only the
+	// replaced file after an update that changed one.
+	let totalMB = $state(Math.round(OCR_MODELS_TOTAL_BYTES / 1024 / 1024));
+	$effect(() => {
+		if (!$ocrModelPromptOpen) return;
+		void missingOcrModels().then((missing) => {
+			if (missing.length === 0) return;
+			totalMB = Math.round(missing.reduce((total, spec) => total + spec.sizeBytes, 0) / 1024 / 1024);
+		});
+	});
 
 	let downloading = $derived($ocrModelDownloadState.status === 'downloading');
 	let pct = $derived.by(() => {
