@@ -146,4 +146,17 @@ inline int inferenceThreadCount(const CoreCensus & census, int fallback,
     return assumedFast;
 }
 
+// The worker count for one request: the topology's count, but never more
+// workers than the CPUs the calling thread may run on right now. Android moves
+// a busy app it cannot see into a smaller cpuset — One UI's background groups
+// allow four of a Snapdragon 8 Elite's eight cores, and cap their clock — and
+// six workers on four cores spend every per-op barrier waiting for whichever
+// is descheduled: a bubble that takes 0.4 s in the foreground ran for minutes,
+// a page for 209 s instead of 8. The set is only read, never set (pinning is
+// ruled out above), and zero means it could not be read: the count stands.
+inline int workersForAllowedCpus(int topologyThreads, int allowedCpus) {
+    if (allowedCpus <= 0 || allowedCpus >= topologyThreads) return topologyThreads;
+    return allowedCpus;
+}
+
 } // namespace fumeto::cpu_topology

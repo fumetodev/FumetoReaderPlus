@@ -34,6 +34,7 @@
 #include <atomic>
 #include <mutex>
 #include <unordered_map>
+#include <sched.h>
 
 #include "llama.h"
 #include "ggml-cpu.h"
@@ -84,6 +85,9 @@ static constexpr float MAX_TEMPERATURE = 1.0f;
 // only pays for a rebuild when the user actually moved the setting.
 static float g_sampler_temperature = DEFAULT_TEMPERATURE;
 static int g_thread_count = FALLBACK_N_THREADS;
+// The workers the context is currently set to: g_thread_count, or fewer while
+// the app is held to fewer CPUs (workersForAllowedCpus, applied per request).
+static int g_ctx_threads = 0;
 // What JNI_OnLoad read from sysfs, reported through nativeGetRuntimeInfo so a
 // device's derived count can be checked without a debugger.
 static fumeto::cpu_topology::CoreCensus g_core_census;
@@ -888,6 +892,7 @@ static bool loadModelLocked(
     ctx_params.no_perf = false;
 
     g_ctx = llama_init_from_model(g_model, ctx_params);
+    g_ctx_threads = g_thread_count;
     if (!g_ctx) {
         LOGE("Failed to create context");
         freeModelStateLocked();
@@ -996,6 +1001,27 @@ static const std::vector<llama_token> & staticPromptPrefixLocked(
         g_static_prefix_tokens = std::move(first);
     }
     return g_static_prefix_tokens;
+}
+
+// CPUs the calling thread may run on right now; 0 when the set cannot be read.
+static int allowedCpuCount() {
+    cpu_set_t set;
+    CPU_ZERO(&set);
+    if (sched_getaffinity(0, sizeof(set), &set) != 0) return 0;
+    return CPU_COUNT(&set);
+}
+
+// Matches the context's worker count to the CPUs this thread may use right now
+// (cpu_topology.h). Called before every decode, not once per request: the set
+// shrinks when the app goes to the background, often mid-bubble, and one
+// bubble left on six workers over four cores generated 25 tokens in 148 s.
+static void fitWorkersToAllowedCpusLocked() {
+    const int allowedCpus = allowedCpuCount();
+    const int threads = fumeto::cpu_topology::workersForAllowedCpus(g_thread_count, allowedCpus);
+    if (threads == g_ctx_threads) return;
+    llama_set_n_threads(g_ctx, threads, threads);
+    LOGI("Inference threads %d -> %d (%d CPUs allowed)", g_ctx_threads, threads, allowedCpus);
+    g_ctx_threads = threads;
 }
 
 // The inference behind nativeTranslate, kept free of JNI types so the same
@@ -1127,6 +1153,7 @@ static std::string translateLocked(
             promptBatch.logits[promptBatch.n_tokens] = (i + 1 == promptTokens.size());
             ++promptBatch.n_tokens;
         }
+        fitWorkersToAllowedCpusLocked();
         const bool succeeded = llama_decode(g_ctx, promptBatch) == 0;
         llama_batch_free(promptBatch);
         return succeeded;
@@ -1242,6 +1269,7 @@ static std::string translateLocked(
         batch.seq_id[0][0] = 0;
         batch.logits[0] = true;
 
+        fitWorkersToAllowedCpusLocked();
         if (llama_decode(g_ctx, batch) != 0) {
             LOGE("Decode failed after generated token %d", generated);
             decodeFailed = true;
@@ -1274,7 +1302,7 @@ static std::string translateLocked(
         "\"generation_ms\":%.3f,"
         "\"generation_tps\":%.3f,\"total_ms\":%.3f,\"cancelled\":%s,\"eog\":%s,"
         "\"prefix_snapshot\":\"%s\"}",
-        g_thread_count, reusedPromptTokens > 0 ? "true" : "false",
+        g_ctx_threads, reusedPromptTokens > 0 ? "true" : "false",
         static_cast<int>(promptDecodedTokens), promptTokens.size(), reusedPromptTokens,
         promptDecodedTokens,
         promptMs, promptTps,
@@ -1340,6 +1368,7 @@ Java_com_fumeto_reader_llama_LlamaBridge_nativeSetThreadCount(
     g_thread_count = static_cast<int>(threadCount);
     if (g_ctx) {
         llama_set_n_threads(g_ctx, g_thread_count, g_thread_count);
+        g_ctx_threads = g_thread_count;
         // A benchmark thread sweep must begin from a clean prefill generated
         // with the selected worker count; production never changes this value.
         llama_memory_clear(llama_get_memory(g_ctx), /*data=*/true);
