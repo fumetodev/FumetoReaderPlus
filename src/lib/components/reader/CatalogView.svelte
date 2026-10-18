@@ -30,6 +30,8 @@
 		volumeBelongsToCatalogCollection,
 	} from '$lib/stores/catalog-state.js';
 	import { startVolumeTranslation, isJobActive, registerVolumeCancelHandle } from '$lib/translation/volume-translation-service.js';
+	import { areOcrModelsReady } from '$lib/detection/ocr-model-manager.js';
+	import { openOcrModelPrompt } from '$lib/detection/ocr-model-gate.js';
 	import { reviseVolume, isRevisionActive } from '$lib/translation/revision-service.js';
 	import { deleteVolume, deleteVolumeTranslations, volumeHasTranslationData } from '$lib/import/import-service.js';
 	import { validateLibraryPath } from '$lib/library/library-scanner.js';
@@ -2248,6 +2250,12 @@
 		if (isRevisionActive(vol.volume_uuid)) {
 			return;
 		}
+		// Every page goes through the vision models. Offer the download at the
+		// tap instead of letting the job fail page after page without them.
+		if (!(await areOcrModelsReady())) {
+			openOcrModelPrompt(() => void handleGetFullTranslation(vol));
+			return;
+		}
 
 		translationNotification = null;
 
@@ -2308,6 +2316,10 @@
 		// on top of a running revision with both writing page records for the
 		// same volume.
 		if (isRevisionActive(vol.volume_uuid)) {
+			return;
+		}
+		if (!(await areOcrModelsReady())) {
+			openOcrModelPrompt(() => void handleCustomTranslation(vol, options));
 			return;
 		}
 
