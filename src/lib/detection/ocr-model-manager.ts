@@ -57,8 +57,12 @@ export const OCR_MODELS: readonly OcrModelSpec[] = [
 	{
 		id: 'rtmdet-layout',
 		filename: 'rtmdet-manga-layout-1024.onnx',
-		url: `${HF}/fumetodev/rtmdet-manga-layout-onnx/resolve/10b9004ebfc773896dec5ceab9df6a8d259caad9/rtmdet-manga-layout-1024.onnx`,
-		sizeBytes: 43_227_772
+		// The same model with its mask output cut to the balloons the native
+		// engine traces (RtmdetLayoutEngine.kt). The size differs from the
+		// earlier full-mask file, so an install holding that one is told to
+		// download this.
+		url: `${HF}/fumetodev/rtmdet-manga-layout-onnx/resolve/84e75940ffaf5ec27c6780b7abd0a4b28f01b43a/rtmdet-manga-layout-1024-balloon-masks.onnx`,
+		sizeBytes: 43_229_581
 	}
 ] as const;
 
