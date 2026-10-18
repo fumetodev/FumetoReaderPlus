@@ -84,6 +84,8 @@ import { KomgaPageSource } from '$lib/reader/komga-page-source.js';
 import { KavitaPageSource } from '$lib/reader/kavita-page-source.js';
 import { PrefetchedPageSource } from '$lib/reader/prefetched-page-source.js';
 import { isAndroid } from '$lib/util/platform.js';
+import { areOcrModelsReady } from '$lib/detection/ocr-model-manager.js';
+import { resumePosition, selectInterruptedJobs } from './interrupted-translations.js';
 import { applyReviewRevisions } from './review-sync.js';
 import {
 	createOverlayDocumentV2,
@@ -868,6 +870,29 @@ export async function cancelVolumeTranslation(volumeUuid: string, reason?: UserM
 /** Check whether a translation job is actively running (has an AbortController). */
 export function isJobActive(volumeUuid: string): boolean {
 	return abortControllers.has(volumeUuid);
+}
+
+/**
+ * Pick up the batches the app process died under (interrupted-translations.ts),
+ * once per launch. Android only: that is where the system ends the app beneath
+ * a running batch. A job that needs vision models this install no longer has
+ * stays paused; resuming it from the catalog offers the download.
+ */
+export async function resumeInterruptedTranslations(): Promise<void> {
+	if (!isAndroid) return;
+	const jobs = await db.volume_translation_jobs
+		.where('status')
+		.anyOf('translating', 'reviewing')
+		.toArray();
+	const due = selectInterruptedJobs(jobs, { now: Date.now(), isActive: isJobActive });
+	if (due.length === 0 || !(await areOcrModelsReady())) return;
+	for (const job of due) {
+		await db.volume_translation_jobs.update(job.id, { auto_resumed_at: resumePosition(job) });
+		console.warn(`[volume-translation] Resuming ${job.volume_uuid} at ${resumePosition(job)} after the app was closed under it`);
+		startVolumeTranslation(job.volume_uuid).catch((error: unknown) => {
+			console.warn('[volume-translation] Automatic resume ended with an error:', error);
+		});
+	}
 }
 
 /**

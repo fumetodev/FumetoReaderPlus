@@ -64,6 +64,7 @@
 	import { installWindowInsetAdapter } from '$lib/insets/window-insets.js';
 	import { installReaderOrientationPolicy } from '$lib/reader/reader-orientation.js';
 	import { installNativeResultWake } from '$lib/device/native-result-wake.js';
+	import { resumeInterruptedTranslations } from '$lib/translation/volume-translation-service.js';
 	import { installTranslationConfigGuard } from '$lib/translation/translation-config-guard.js';
 	import type { MobileDestination } from '$lib/navigation/mobile-navigation.js';
 	import { catalogController } from '$lib/controllers/catalog-controller.js';
@@ -133,7 +134,7 @@
 	catalogController.start();
 	tabsController.start();
 
-	function startCatalogMigrationAfterFirstUsablePaint(): void {
+	function startWorkAfterFirstUsablePaint(): void {
 		let waiting = true;
 		const unsubscribe = catalogController.subscribe((snapshot) => {
 			if (!waiting || (snapshot.phase !== 'ready' && snapshot.phase !== 'error')) return;
@@ -144,6 +145,10 @@
 				stopCatalogMigration = scheduleCatalogV16Migration();
 				// v17 page split runs on the same maintenance lane, after v16.
 				stopVolumePagesMigration = scheduleVolumePagesMigration();
+				// A batch the app was closed under carries on.
+				resumeInterruptedTranslations().catch((error: unknown) => {
+					console.warn('Resuming interrupted translations failed:', error);
+				});
 			});
 		});
 		stopWaitingForCatalogMigration = () => {
@@ -274,7 +279,7 @@
 	});
 
 	onMount(async () => {
-		startCatalogMigrationAfterFirstUsablePaint();
+		startWorkAfterFirstUsablePaint();
 		// Volume translations hold a provider snapshot; if the user changes that
 		// choice mid-run the affected jobs stop instead of quietly carrying on.
 		uninstallTranslationConfigGuard = installTranslationConfigGuard();
