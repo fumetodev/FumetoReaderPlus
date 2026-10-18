@@ -1051,6 +1051,11 @@ export interface VolumeTranslationJob {
 	skip_review?: boolean;
 	/** User-provided revision instructions (for revision jobs) */
 	revision_instructions?: string;
+	/**
+	 * The position a launch last resumed this job from after the process died
+	 * under it; resumed again only once it has moved (interrupted-translations.ts).
+	 */
+	auto_resumed_at?: string;
 }
 
 /** Options for custom volume translation runs */
