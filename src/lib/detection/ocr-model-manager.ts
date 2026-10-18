@@ -115,8 +115,19 @@ export async function missingOcrModels(): Promise<OcrModelSpec[]> {
 	return missing;
 }
 
+/**
+ * A yes, kept for the rest of the session; the files change only through
+ * downloadOcrModels and deleteOcrModels, which drop it. The OCR pipeline asks
+ * on every page, and each probe is a round of runtime calls whose answer the
+ * runtime can hold while the app is out of view (native-result-wake.ts): a
+ * background batch sat on one for seven minutes, until the app came back.
+ */
+let confirmedReady = false;
+
 export async function areOcrModelsReady(): Promise<boolean> {
-	return (await missingOcrModels()).length === 0;
+	if (confirmedReady) return true;
+	confirmedReady = (await missingOcrModels()).length === 0;
+	return confirmedReady;
 }
 
 /** Bytes already on disk, for the storage line in Settings. */
@@ -145,6 +156,7 @@ export async function downloadOcrModels(): Promise<void> {
 	if (downloadInProgress) return;
 	downloadInProgress = true;
 	cancelRequested = false;
+	confirmedReady = false;
 
 	try {
 		const missing = await missingOcrModels();
@@ -216,6 +228,7 @@ export function cancelOcrModelDownload(): void {
 
 /** Remove every downloaded vision model. */
 export async function deleteOcrModels(): Promise<void> {
+	confirmedReady = false;
 	ocrModelDownloadState.set({ status: 'deleting', error: undefined, progress: undefined });
 	try {
 		for (const spec of OCR_MODELS) {
