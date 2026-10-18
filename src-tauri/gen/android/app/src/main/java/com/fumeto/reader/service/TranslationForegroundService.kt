@@ -35,6 +35,18 @@ import androidx.core.app.NotificationCompat
 class TranslationForegroundService : Service() {
 
     companion object {
+        /**
+         * True from a successful start until the service stops. MainActivity
+         * reads it when the app leaves the screen, to keep the WebView running
+         * the batch (see MainActivity.onStop).
+         */
+        @Volatile
+        var running = false
+            private set
+
+        /** Called on the main thread once the service has stopped. */
+        var onStopped: (() -> Unit)? = null
+
         private const val TAG = "TranslationFgService"
         const val CHANNEL_ID = "fumeto_translation"
         const val NOTIFICATION_ID = 1001
@@ -125,6 +137,7 @@ class TranslationForegroundService : Service() {
 
                 acquireWakeLock()
                 armWatchdog()
+                running = true
                 Log.i(TAG, "Service started for: $currentVolumeName ($totalPages pages)")
             }
 
@@ -165,6 +178,8 @@ class TranslationForegroundService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        running = false
+        onStopped?.invoke()
         mainHandler.removeCallbacks(watchdogRunnable)
         releaseWakeLock()
         Log.i(TAG, "Service destroyed")

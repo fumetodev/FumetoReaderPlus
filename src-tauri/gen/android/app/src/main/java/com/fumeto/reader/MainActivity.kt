@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.webkit.JavascriptInterface
+import android.view.View
 import android.webkit.WebView
 import android.annotation.SuppressLint
 import android.content.res.Configuration
@@ -18,6 +19,7 @@ import kotlin.math.roundToInt
 import com.fumeto.reader.llama.LlamaBridge
 import com.fumeto.reader.ocr.NativePPOcrDetectorBridge
 import com.fumeto.reader.service.BackgroundServiceBridge
+import com.fumeto.reader.service.TranslationForegroundService
 import com.fumeto.reader.layout.RtmdetLayoutBridge
 import com.fumeto.reader.sfx.SfxFilterBridge
 
@@ -32,6 +34,7 @@ class MainActivity : TauriActivity() {
   private var sfxBridge: SfxFilterBridge? = null
   private var baseTextZoom = 100
   private var baseFontScale = 1f
+  private var stopped = false
 
   // Disable Tauri's default canGoBack()/goBack() handling
   override val handleBackNavigation: Boolean = false
@@ -240,6 +243,32 @@ class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    TranslationForegroundService.onStopped = ::onTranslationServiceStopped
+  }
+
+  /**
+   * A batch with "translate in background" on keeps its process through the
+   * foreground service, but Chromium stops a hidden WebView's timers, IndexedDB
+   * and fetch callbacks within about a minute, and every page of a batch waits
+   * on those: it parked until the app came back. While the service runs, the
+   * WebView is told its window is still visible; it hears the truth again when
+   * the batch ends out of view (onTranslationServiceStopped) or the app returns.
+   */
+  override fun onStop() {
+    super.onStop()
+    stopped = true
+    if (TranslationForegroundService.running && ::wv.isInitialized) {
+      wv.dispatchWindowVisibilityChanged(View.VISIBLE)
+    }
+  }
+
+  override fun onStart() {
+    super.onStart()
+    stopped = false
+  }
+
+  private fun onTranslationServiceStopped() {
+    if (stopped && ::wv.isInitialized) wv.dispatchWindowVisibilityChanged(View.GONE)
   }
 
   override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -274,6 +303,7 @@ class MainActivity : TauriActivity() {
   }
 
   override fun onDestroy() {
+    TranslationForegroundService.onStopped = null
     // Invalidate every Activity-owned bridge before Tauri tears down the
     // WebView. Each bridge suppresses already-queued callbacks after destroy.
     bgBridge?.destroy()
