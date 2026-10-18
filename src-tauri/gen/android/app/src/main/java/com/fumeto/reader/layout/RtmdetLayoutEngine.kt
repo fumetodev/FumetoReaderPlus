@@ -23,19 +23,28 @@ import kotlin.math.min
  *
  * Mirrors the NativePPOcrDetectorEngine conventions: XNNPACK owns the worker
  * pool (ORT intra-op stays at 1), one long-lived session guarded by a lock.
- * The model is NOT a packaged asset — the eval suite pushes it into the
- * app-data `models/` directory, matching the WASM candidate loader.
+ * The model is downloaded into the app-data `models/` directory
+ * (ocr-model-manager.ts), which is also where the eval suite pushes one.
  *
- * mmdeploy end2end contract (input space = top-left letterboxed 1024, BGR,
- * mean/std): dets [1,N,5] (x1,y1,x2,y2,score), labels [1,N] int64,
- * masks [1,N,1024,1024] sigmoid. Mask tensors are consumed through direct
- * FloatBuffer views — materializing them as JVM arrays would be ~400 MB.
+ * Contract (input space = top-left letterboxed 1024, BGR, mean/std): dets
+ * [1,N,5] (x1,y1,x2,y2,score), labels [1,N] int64, balloon_masks [1,K,1024,1024]
+ * uint8 for the balloons scoring >= 0.35, and balloon_mask_indices [K], the
+ * detection each mask belongs to. The mmdeploy export instead ends in masks
+ * [1,100,1024,1024] fp32 for every detection, and ONNX Runtime's Java API hands
+ * an output back as a copy: 400 MB a page in the Java heap, past the 3/4 mark
+ * at which Android destroys an Activity it cannot see — and with it the app,
+ * since the Rust side exits when its Activity goes. The published model selects
+ * the balloon masks in-graph; the full output is read only from an older file.
  */
 internal class RtmdetLayoutEngine(private val context: Context) {
     companion object {
         const val MODEL_FILE_NAME = "rtmdet-manga-layout-1024.onnx"
         const val MODEL_ASSET_PATH = "models/rtmdet-manga-layout-1024.onnx"
         const val INPUT_SIZE = 1024
+        /**
+         * The model selects balloon masks at this same score in-graph: lowered
+         * here, the newly admitted balloons get no mask and keep their box.
+         */
         const val SCORE_THRESHOLD = 0.35f
         private const val MASK_THRESHOLD = 0.5f
         private const val CLASS_BALLOON = 0
@@ -73,8 +82,13 @@ internal class RtmdetLayoutEngine(private val context: Context) {
     private var session: OrtSession? = null
     private var sessionThreads = 0
     private var sessionProvider = "none"
+    /** The model file the session was built from; a download replaces it in place. */
+    private var sessionModelStamp: String? = null
 
     fun modelFile(): File = File(context.dataDir, "models/$MODEL_FILE_NAME")
+
+    private fun modelStamp(): String? =
+        modelFile().takeIf { it.isFile }?.let { "${it.length()}:${it.lastModified()}" }
 
     /**
      * Resolve the model, preferring an adb-pushed file in the app-data models
@@ -109,7 +123,7 @@ internal class RtmdetLayoutEngine(private val context: Context) {
         val decodeMs = elapsedMs(t)
 
         t = System.nanoTime()
-        val reused = session != null && sessionThreads == threads
+        val reused = session != null && sessionThreads == threads && sessionModelStamp == modelStamp()
         val active = if (reused) session!! else replaceSession(threads)
         val scale = min(
             INPUT_SIZE.toFloat() / bitmap.width,
@@ -128,13 +142,12 @@ internal class RtmdetLayoutEngine(private val context: Context) {
             active.run(mapOf(inputName to tensor)).use { outputs ->
                 val inferenceMs = elapsedMs(t)
                 t = System.nanoTime()
-                val dets = outputs.get(0) as OnnxTensor
-                val labels = outputs.get(1) as OnnxTensor
-                val masks = outputs.get(2) as OnnxTensor
+                val dets = outputs.get("dets").get() as OnnxTensor
+                val labels = outputs.get("labels").get() as OnnxTensor
                 val instances = postprocess(
                     dets.floatBuffer,
                     labels.longBuffer,
-                    masks.floatBuffer,
+                    balloonMasks(outputs),
                     count = dets.info.shape[1].toInt(),
                     scale = scale,
                     pageWidth = bitmap.width,
@@ -185,7 +198,22 @@ internal class RtmdetLayoutEngine(private val context: Context) {
         session = created
         sessionThreads = threads
         sessionProvider = "xnnpack"
+        sessionModelStamp = modelStamp()
         return created
+    }
+
+    private fun balloonMasks(outputs: OrtSession.Result): BalloonMasks {
+        val selected = outputs.get("balloon_masks")
+        if (selected.isPresent) {
+            val indices = (outputs.get("balloon_mask_indices").get() as OnnxTensor).longBuffer
+            return SelectedBalloonMasks(
+                (selected.get() as OnnxTensor).byteBuffer,
+                LongArray(indices.remaining()).also { indices.get(it) },
+                INPUT_SIZE,
+            )
+        }
+        val full = outputs.get("masks").get() as OnnxTensor
+        return FullBalloonMasks(full.floatBuffer, INPUT_SIZE, MASK_THRESHOLD)
     }
 
     private fun preprocess(bitmap: Bitmap, scale: Float): FloatArray {
@@ -214,13 +242,12 @@ internal class RtmdetLayoutEngine(private val context: Context) {
     private fun postprocess(
         dets: FloatBuffer,
         labels: java.nio.LongBuffer,
-        masks: FloatBuffer,
+        masks: BalloonMasks,
         count: Int,
         scale: Float,
         pageWidth: Int,
         pageHeight: Int,
     ): List<Instance> {
-        val plane = INPUT_SIZE * INPUT_SIZE
         val instances = ArrayList<Instance>()
         for (i in 0 until count) {
             val score = dets.get(i * 5 + 4)
@@ -233,13 +260,15 @@ internal class RtmdetLayoutEngine(private val context: Context) {
             if (x2 - x1 < 4f || y2 - y1 < 4f) continue
             var contour: FloatArray? = null
             if (classId == CLASS_BALLOON) {
-                contour = traceContour(
-                    masks, i * plane,
-                    bx = max(0, floor(dets.get(i * 5)).toInt()),
-                    by = max(0, floor(dets.get(i * 5 + 1)).toInt()),
-                    bx2 = min(INPUT_SIZE - 1, ceil(dets.get(i * 5 + 2)).toInt()),
-                    by2 = min(INPUT_SIZE - 1, ceil(dets.get(i * 5 + 3)).toInt()),
-                )?.let { pts ->
+                contour = masks.plane(i)?.let { plane ->
+                    MaskContours.trace(
+                        plane,
+                        bx = max(0, floor(dets.get(i * 5)).toInt()),
+                        by = max(0, floor(dets.get(i * 5 + 1)).toInt()),
+                        bx2 = min(INPUT_SIZE - 1, ceil(dets.get(i * 5 + 2)).toInt()),
+                        by2 = min(INPUT_SIZE - 1, ceil(dets.get(i * 5 + 3)).toInt()),
+                    )
+                }?.let { pts ->
                     FloatArray(pts.size) { idx ->
                         val v = pts[idx] / scale
                         val limit = if (idx % 2 == 0) pageWidth else pageHeight
@@ -253,102 +282,6 @@ internal class RtmdetLayoutEngine(private val context: Context) {
             instances.add(Instance(classId, score, x1, y1, x2 - x1, y2 - y1, contour))
         }
         return instances
-    }
-
-    /** Moore-neighbor boundary trace + Douglas-Peucker, over the mask plane. */
-    private fun traceContour(
-        masks: FloatBuffer,
-        offset: Int,
-        bx: Int,
-        by: Int,
-        bx2: Int,
-        by2: Int,
-    ): FloatArray? {
-        fun on(x: Int, y: Int): Boolean =
-            x in bx..bx2 && y in by..by2 &&
-                masks.get(offset + y * INPUT_SIZE + x) >= MASK_THRESHOLD
-
-        var start: Pair<Int, Int>? = null
-        outer@ for (y in by..by2) {
-            for (x in bx..bx2) {
-                if (on(x, y)) {
-                    start = x to y
-                    break@outer
-                }
-            }
-        }
-        val (sx, sy) = start ?: return null
-        // 8-neighborhood in clockwise order starting west.
-        val dx = intArrayOf(-1, -1, 0, 1, 1, 1, 0, -1)
-        val dy = intArrayOf(0, -1, -1, -1, 0, 1, 1, 1)
-        val points = ArrayList<IntArray>()
-        var cx = sx
-        var cy = sy
-        // The raster scan guarantees everything left/above the start is off;
-        // treat the start as if entered moving east.
-        var dir = 4
-        val maxSteps = 6 * (bx2 - bx + by2 - by + 2)
-        for (step in 0 until maxSteps) {
-            points.add(intArrayOf(cx, cy))
-            var found = false
-            // Scan clockwise starting just past the backtrack pixel; starting
-            // two steps early walks straight into the region interior.
-            var probe = (dir + 5) % 8
-            for (k in 0 until 8) {
-                val nx = cx + dx[probe]
-                val ny = cy + dy[probe]
-                if (on(nx, ny)) {
-                    cx = nx
-                    cy = ny
-                    dir = probe
-                    found = true
-                    break
-                }
-                probe = (probe + 1) % 8
-            }
-            if (!found) break // isolated pixel
-            if (cx == sx && cy == sy && points.size > 2) break
-        }
-        if (points.size < 3) return null
-        val simplified = douglasPeucker(points, 2.0)
-        if (simplified.size < 3) return null
-        val out = FloatArray(simplified.size * 2)
-        simplified.forEachIndexed { idx, p ->
-            out[idx * 2] = p[0].toFloat()
-            out[idx * 2 + 1] = p[1].toFloat()
-        }
-        return out
-    }
-
-    private fun douglasPeucker(points: List<IntArray>, epsilon: Double): List<IntArray> {
-        if (points.size < 3) return points
-        var maxDist = 0.0
-        var index = 0
-        val end = points.size - 1
-        for (i in 1 until end) {
-            val d = perpendicularDistance(points[i], points[0], points[end])
-            if (d > maxDist) {
-                maxDist = d
-                index = i
-            }
-        }
-        return if (maxDist > epsilon) {
-            val left = douglasPeucker(points.subList(0, index + 1), epsilon)
-            val right = douglasPeucker(points.subList(index, points.size), epsilon)
-            left.dropLast(1) + right
-        } else {
-            listOf(points[0], points[end])
-        }
-    }
-
-    private fun perpendicularDistance(p: IntArray, a: IntArray, b: IntArray): Double {
-        val dx = (b[0] - a[0]).toDouble()
-        val dy = (b[1] - a[1]).toDouble()
-        val norm = kotlin.math.hypot(dx, dy)
-        if (norm == 0.0) {
-            return kotlin.math.hypot((p[0] - a[0]).toDouble(), (p[1] - a[1]).toDouble())
-        }
-        return kotlin.math.abs(dx * (a[1] - p[1]) - (a[0] - p[0]) * dy) / norm
     }
 
     private fun elapsedMs(startNanos: Long): Double =

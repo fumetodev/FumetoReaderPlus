@@ -54,7 +54,7 @@ export const CANDIDATE_SOURCES: Record<string, string> = {
 	'rtmdet-manga-layout.onnx':
 		'https://huggingface.co/fumetodev/rtmdet-manga-layout-onnx/resolve/main/rtmdet-manga-layout-960.onnx',
 	'rtmdet-manga-layout-1024.onnx':
-		'https://huggingface.co/fumetodev/rtmdet-manga-layout-onnx/resolve/main/rtmdet-manga-layout-1024.onnx'
+		'https://huggingface.co/fumetodev/rtmdet-manga-layout-onnx/resolve/main/rtmdet-manga-layout-1024-balloon-masks.onnx'
 };
 
 export async function candidateModelPath(fileName: string): Promise<string> {
