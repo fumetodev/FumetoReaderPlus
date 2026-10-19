@@ -38,6 +38,8 @@ import {
 	type PromptProfile
 } from './llamacpp-bridge.js';
 import { exists as fsExists, remove as fsRemove, stat as fsStat } from '@tauri-apps/plugin-fs';
+import { deleteEncDecModel, isEncDecModelReady } from './encdec-model-manager.js';
+import { recommendedHyMT2Variant } from './recommended-model.js';
 import { appDataDir, join } from '@tauri-apps/api/path';
 
 export interface GgufDownloadState {
@@ -60,7 +62,13 @@ export type BundledHyMT2Variant =
 	| 'manga-v3'
 	| 'manga-v5'
 	| 'index-manga-v1';
-export type HyMT2Variant = BundledHyMT2Variant | 'custom';
+/**
+ * The on-device encoder-decoder translator: not a GGUF and not run by llama.cpp. Its files, download and native
+ * engine live in encdec-model-manager.ts / encdec-translator.ts; it is an entry here so Settings, the stored model
+ * label and the language-pair warning treat it like every other choice.
+ */
+export type EncDecVariant = 'manga-ja-en-v1';
+export type HyMT2Variant = BundledHyMT2Variant | EncDecVariant | 'custom';
 
 export interface HyMT2VariantSpec {
 	/**
@@ -68,8 +76,10 @@ export interface HyMT2VariantSpec {
 	 * an exact byte count. `custom` is a user-supplied file: it has no URL and
 	 * no expected size, so `url`/`sizeBytes` are absent and the display fields
 	 * are placeholders the settings UI overlays from the stored record.
+	 * `encdec` is the native encoder-decoder translator: several files pinned in
+	 * encdec-model-manager.ts, so `url`/`sizeBytes` are absent here too.
 	 */
-	kind: 'bundled' | 'custom';
+	kind: 'bundled' | 'custom' | 'encdec';
 	filename: string;
 	url?: string;
 	sizeBytes?: number;
@@ -105,6 +115,12 @@ export interface HyMT2VariantSpec {
 	 * warns when the chosen pair is not the one the model does.
 	 */
 	japaneseToEnglishOnly?: boolean;
+	/**
+	 * No longer offered for download. A deprecated model stays usable for anyone
+	 * who already has it — its card shows while it is downloaded or selected, with
+	 * Delete but no Download — and the records it wrote keep their label.
+	 */
+	deprecated?: boolean;
 }
 
 export const HYMT2_VARIANTS: Record<HyMT2Variant, HyMT2VariantSpec> = {
@@ -118,7 +134,8 @@ export const HYMT2_VARIANTS: Record<HyMT2Variant, HyMT2VariantSpec> = {
 		modelName: 'Hy-MT2-1.8B',
 		sizeLabel: '462MB',
 		quantLabel: '1.25-Bit',
-		description: () => m.model_variant_stock_description()
+		description: () => m.model_variant_stock_description(),
+		deprecated: true
 	},
 	'manga-v2': {
 		kind: 'bundled',
@@ -130,7 +147,8 @@ export const HYMT2_VARIANTS: Record<HyMT2Variant, HyMT2VariantSpec> = {
 		modelName: 'Hy-MT2-1.8B-finetuned-v2',
 		sizeLabel: '~1.13GB',
 		quantLabel: 'Q4_K_M',
-		description: () => m.model_variant_manga_v2_description()
+		description: () => m.model_variant_manga_v2_description(),
+		deprecated: true
 	},
 	'manga-v3': {
 		kind: 'bundled',
@@ -185,6 +203,18 @@ export const HYMT2_VARIANTS: Record<HyMT2Variant, HyMT2VariantSpec> = {
 		fixedSampling: true,
 		japaneseToEnglishOnly: true
 	},
+	'manga-ja-en-v1': {
+		kind: 'encdec',
+		// The model's folder under appDataDir()/models/ (ENCDEC_MODEL.dir).
+		filename: 'manga-ja-en-v1',
+		label: 'Manga JA-EN translator v1 (ONNX int8)',
+		title: () => m.model_variant_manga_ja_en_v1_title(),
+		modelName: 'manga-ja-en-translator-v1',
+		sizeLabel: '~443MB',
+		quantLabel: 'INT8',
+		description: () => m.model_variant_manga_ja_en_v1_description(),
+		japaneseToEnglishOnly: true
+	},
 	custom: {
 		kind: 'custom',
 		// Fixed on purpose. The picked file's display name is untrusted text and
@@ -208,6 +238,10 @@ export const BUNDLED_HYMT2_VARIANTS = [
 	'manga-v5',
 	'index-manga-v1'
 ] as const;
+
+export function isEncDecVariant(variant: HyMT2Variant): variant is EncDecVariant {
+	return HYMT2_VARIANTS[variant].kind === 'encdec';
+}
 
 export function isBundledVariant(variant: HyMT2Variant): variant is BundledHyMT2Variant {
 	return HYMT2_VARIANTS[variant].kind === 'bundled';
@@ -242,12 +276,30 @@ export function bundledSpec(
 export function activeHyMT2Variant(): HyMT2Variant {
 	const stored = get(settings) as { hyMT2Variant?: string; customModel?: unknown };
 	const value = stored.hyMT2Variant;
+	if (value === 'manga-ja-en-v1') return 'manga-ja-en-v1';
 	if (value === 'index-manga-v1') return 'index-manga-v1';
 	if (value === 'manga-v5' || value === 'manga-v4') return 'manga-v5';
 	if (value === 'manga-v3') return 'manga-v3';
 	if (value === 'manga-v2' || value === 'manga-v1') return 'manga-v2';
 	if (value === 'custom' && stored.customModel) return 'custom';
 	return 'stock';
+}
+
+export { recommendedHyMT2Variant } from './recommended-model.js';
+
+/**
+ * Moves a selection off a deprecated model that is not on the device. Such a model can no longer be downloaded, so
+ * the selection could only ever fail; there is no file to lose and no work to keep. This is how the recommended model
+ * reaches the many profiles that never changed the old default. A deprecated model that IS on the device stays
+ * selected: it keeps working until its owner deletes it.
+ */
+export async function moveOffUnavailableDeprecatedModel(): Promise<boolean> {
+	const variant = activeHyMT2Variant();
+	if (!HYMT2_VARIANTS[variant].deprecated) return false;
+	if (await isModelDownloaded(variant).catch(() => true)) return false;
+	const current = get(settings);
+	settings.patch({ hyMT2Variant: recommendedHyMT2Variant(current.onDeviceSourceLang ?? 'auto', current.onDeviceTargetLang ?? 'en') });
+	return true;
 }
 
 export const HYMT2_MODEL_FILENAME = HYMT2_VARIANTS.stock.filename;
@@ -357,6 +409,8 @@ async function cleanupLegacyModelsAfterSuccessfulDownload(): Promise<void> {
  */
 export async function getModelPath(variant: HyMT2Variant = activeHyMT2Variant()): Promise<string> {
 	const filename = HYMT2_VARIANTS[variant].filename;
+	// The encoder-decoder translator is a folder in the app's data directory, where its native engine reads it.
+	if (isEncDecVariant(variant)) return await join(await appDataDir(), 'models', filename);
 	if (isLlamaBridgeAvailable()) {
 		const externalDir = await getExternalModelDir();
 		if (externalDir) {
@@ -373,6 +427,7 @@ export async function getModelPath(variant: HyMT2Variant = activeHyMT2Variant())
  * Check if the Hy-MT2 1.8B 1.25-bit GGUF has been downloaded.
  */
 export async function isModelDownloaded(variant: HyMT2Variant = activeHyMT2Variant()): Promise<boolean> {
+	if (isEncDecVariant(variant)) return isEncDecModelReady();
 	try {
 		const path = await getModelPath(variant);
 		return await fsExists(path);
@@ -455,6 +510,7 @@ export function cancelModelDownload(): void {
  * Delete the downloaded local-translation GGUF model.
  */
 export async function deleteHyMT2Model(variant: HyMT2Variant = activeHyMT2Variant()): Promise<void> {
+	if (isEncDecVariant(variant)) return deleteEncDecModel();
 	ggufDownloadState.set({
 		status: 'deleting',
 		variant,
@@ -505,6 +561,8 @@ export function customPromptFormat(): ManualPromptFormat | undefined {
  */
 export async function loadActiveHyMT2Model(signal?: AbortSignal): Promise<void> {
 	const variant = activeHyMT2Variant();
+	// Its native engine opens its own files on the first translation; llama.cpp never loads it.
+	if (isEncDecVariant(variant)) throw new Error('The encoder-decoder translator is not a llama.cpp model');
 	const path = await getModelPath(variant);
 	return loadHyMT2Model(path, signal, loadOptionsFor(variant));
 }
@@ -731,7 +789,7 @@ export async function deleteCustomModel(): Promise<void> {
 			// storage card left 'custom' stored: the picker rendered a disabled
 			// radio as checked with no other row selected, and a later import
 			// silently re-activated custom without the user choosing it.
-			hyMT2Variant: s.hyMT2Variant === 'custom' ? 'stock' : s.hyMT2Variant
+			hyMT2Variant: s.hyMT2Variant === 'custom' ? recommendedHyMT2Variant(s.onDeviceSourceLang ?? 'auto', s.onDeviceTargetLang ?? 'en') : s.hyMT2Variant
 		}));
 		ggufDownloadState.set({ status: 'idle', error: undefined, progress: undefined });
 	} catch (err) {

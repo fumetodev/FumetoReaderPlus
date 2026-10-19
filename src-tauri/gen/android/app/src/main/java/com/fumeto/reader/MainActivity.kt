@@ -21,6 +21,7 @@ import com.fumeto.reader.ocr.NativePPOcrDetectorBridge
 import com.fumeto.reader.service.BackgroundServiceBridge
 import com.fumeto.reader.service.TranslationForegroundService
 import com.fumeto.reader.layout.RtmdetLayoutBridge
+import com.fumeto.reader.encdec.EncDecBridge
 import com.fumeto.reader.sfx.SfxFilterBridge
 
 class MainActivity : TauriActivity() {
@@ -32,6 +33,7 @@ class MainActivity : TauriActivity() {
   private var bgBridge: BackgroundServiceBridge? = null
   private var rtmdetBridge: RtmdetLayoutBridge? = null
   private var sfxBridge: SfxFilterBridge? = null
+  private var encdecBridge: EncDecBridge? = null
   private var baseTextZoom = 100
   private var baseFontScale = 1f
   private var stopped = false
@@ -176,6 +178,11 @@ class MainActivity : TauriActivity() {
     sfxBridge = SfxFilterBridge(this, webView)
     webView.addJavascriptInterface(sfxBridge!!, "__fumeto_sfx_native")
 
+    // The on-device Japanese-to-English encoder-decoder translator: tokenizers, both
+    // ONNX graphs and beam search run here; the WebView sends text and pins the files.
+    encdecBridge = EncDecBridge(this, webView)
+    webView.addJavascriptInterface(encdecBridge!!, "__fumeto_encdec_native")
+
     // Store and push a single authoritative system-bar/display-cutout snapshot.
     // CSS-pixel conversion stays fractional so narrow landscape cutout edges are
     // not rounded away on high-density devices.
@@ -313,6 +320,8 @@ class MainActivity : TauriActivity() {
     rtmdetBridge = null
     sfxBridge?.destroy()
     sfxBridge = null
+    encdecBridge?.destroy()
+    encdecBridge = null
     bgBridge = null
     llamaBridge = null
     ppocrDetectorBridge = null

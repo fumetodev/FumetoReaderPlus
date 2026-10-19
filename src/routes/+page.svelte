@@ -413,6 +413,8 @@
 
 		// Load API key from encrypted storage (+ migrate from plaintext if needed)
 		await initSecureSettings();
+		// A profile still on a deprecated model it never downloaded moves to the recommended one.
+		void import('$lib/translation/gguf-model-manager.js').then((mod) => mod.moveOffUnavailableDeprecatedModel()).catch(() => undefined);
 		// Do not delay the first frame while the one-time provider download cache
 		// cleanup runs; the helper first waits for the v12 DB migration to commit.
 		void cleanupRetiredProviderStorage();
