@@ -45,7 +45,8 @@
 		"STQ",
 		"GPU",
 		"NPU",
-		"ChatML"
+		"ChatML",
+		"ONNX Runtime"
 	],
 	"verbatimPatterns": [
 		"\\{[A-Za-z_][A-Za-z0-9_]*\\}",

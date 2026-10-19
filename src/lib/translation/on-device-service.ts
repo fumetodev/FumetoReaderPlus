@@ -21,10 +21,13 @@ import { translateWithHyMT2 } from './llamacpp-bridge.js';
 import {
 	activeHyMT2Variant,
 	isActiveHyMT2ModelLoaded,
+	isEncDecVariant,
 	loadActiveHyMT2Model,
 	HYMT2_VARIANTS,
-	isModelDownloaded
+	isModelDownloaded,
+	type HyMT2Variant
 } from './gguf-model-manager.js';
+import { encdecAvailable, translateWithEncDec } from './encdec-translator.js';
 import { onDeviceModelLabel } from './on-device-model-label.js';
 import {
 	extractTextWithPPOCR,
@@ -563,9 +566,14 @@ function overlayTypeFromRegion(region: DetectedTextRegion): OverlayEntry['type']
  * "Failed to load model from: /data/…/model.gguf" — once per region — in the
  * translate status dialog.
  */
-async function requireDownloadedModel(): Promise<void> {
-	const variant = activeHyMT2Variant();
+async function requireDownloadedModel(variant: HyMT2Variant = activeHyMT2Variant()): Promise<void> {
+	if (isEncDecVariant(variant) && !encdecAvailable()) {
+		throw new Error('The fast translation model runs on Android only. Choose another model in Settings → Translation → On-Device.');
+	}
 	if (await isModelDownloaded(variant)) return;
+	if (HYMT2_VARIANTS[variant].deprecated) {
+		throw new Error(`${HYMT2_VARIANTS[variant].label} is no longer offered for download. Choose another model in Settings → Translation → On-Device.`);
+	}
 	// A custom model cannot be "downloaded" — if its file is gone the user
 	// deleted it or storage was cleared, and pointing them at a Download button
 	// that does not exist for this row would be nonsense.
@@ -673,7 +681,10 @@ export async function translatePageOnDevice(
 		id: randomUUID(),
 		createdAt: new Date().toISOString()
 	};
-	const pageModel = onDeviceModelLabel(activeHyMT2Variant(), ocrProvider);
+	// Read once: the label stored with this page and the engine that translates it must be the same model.
+	const pageVariant = activeHyMT2Variant();
+	const pageUsesEncDec = isEncDecVariant(pageVariant);
+	const pageModel = onDeviceModelLabel(pageVariant, ocrProvider);
 	const pageTranslationSnapshot = (
 		entries: PageTranslationEntry[],
 		overlayData: PageOverlayData,
@@ -846,7 +857,10 @@ export async function translatePageOnDevice(
 	// the resident one is not it (a download or an import leaves the model it
 	// validated loaded). The settings literal is still 'translategemma' for
 	// migration stability even though the GGUF is whichever variant is selected.
-	if (translationBackend === 'translategemma' && !(await isActiveHyMT2ModelLoaded())) {
+	if (translationBackend === 'translategemma' && pageUsesEncDec) {
+		// The native engine opens (and on first use verifies) its own files on the first block.
+		await requireDownloadedModel(pageVariant);
+	} else if (translationBackend === 'translategemma' && !(await isActiveHyMT2ModelLoaded())) {
 		throwIfTranslationCancelled(signal);
 		const variantLabel = HYMT2_VARIANTS[activeHyMT2Variant()].label;
 		console.warn(`[on-device] Loading ${variantLabel} model...`);
@@ -935,13 +949,15 @@ export async function translatePageOnDevice(
 				const inferenceStarted = performance.now();
 				try {
 					modelCalls += 1;
-					translatedText = await translateWithHyMT2(
-						block.text,
-						effectiveSourceLang,
-						targetLang,
-						signal,
-						options?.runtimeOverrides?.temperature
-					);
+					translatedText = pageUsesEncDec
+						? await translateWithEncDec(block.text, signal)
+						: await translateWithHyMT2(
+							block.text,
+							effectiveSourceLang,
+							targetLang,
+							signal,
+							options?.runtimeOverrides?.temperature
+						);
 					if (translatedText.trim().length > 0) hyModelSuccesses += 1;
 					else hyModelErrors += 1;
 				} finally {
@@ -1169,7 +1185,8 @@ export async function translateRegionOnDevice(
 	const ocrProvider = currentSettings.onDeviceOCRProvider ?? 'ppocr';
 	// Named before any work starts, like the page pipeline's: the record should
 	// say what was selected when the translation was asked for.
-	const model = onDeviceModelLabel(activeHyMT2Variant(), ocrProvider);
+	const variant = activeHyMT2Variant();
+	const model = onDeviceModelLabel(variant, ocrProvider);
 
 	let blocks: RecognizedBlock[];
 	blocks = (await recognizeWithPPOCR(imageFile, {
@@ -1217,6 +1234,9 @@ export async function translateRegionOnDevice(
 	const sfxResult = lookupSfx(recognizedText);
 	if (sfxResult) {
 		translatedText = sfxResult;
+	} else if (isEncDecVariant(variant)) {
+		await requireDownloadedModel(variant);
+		translatedText = await translateWithEncDec(recognizedText, signal);
 	} else {
 		if (!(await isActiveHyMT2ModelLoaded())) {
 			throwIfTranslationCancelled(signal);

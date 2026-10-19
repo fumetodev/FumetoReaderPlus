@@ -23,6 +23,7 @@ const RECORD_NAMES: Record<HyMT2Variant, string> = {
 	'manga-v3': 'hymt2-manga-v3',
 	'manga-v5': 'hymt2-manga-v5',
 	'index-manga-v1': 'index-translate-manga-v1',
+	'manga-ja-en-v1': 'manga-ja-en-v1',
 	custom: 'custom-gguf'
 };
 

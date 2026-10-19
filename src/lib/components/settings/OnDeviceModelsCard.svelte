@@ -8,6 +8,9 @@
 	import { modelMemoryAdvice, readDeviceMemory, type MemoryAdvice } from '$lib/device/device-memory.js';
 	import { installedOcrModelBytes, ocrModelDownloadState } from '$lib/detection/ocr-model-manager.js';
 	import { installedSfxModelBytes, sfxModelDownloadState } from '$lib/detection/sfx-model-manager.js';
+	import { cancelEncDecModelDownload, deleteEncDecModel, downloadEncDecModel, encdecModelDownloadState, ENCDEC_MODEL_TOTAL_BYTES, isEncDecModelReady } from '$lib/translation/encdec-model-manager.js';
+	import { encdecAvailable } from '$lib/translation/encdec-translator.js';
+	import { HYMT2_VARIANTS } from '$lib/translation/gguf-model-manager.js';
 	import { untrack } from 'svelte';
 
 	// Read once: total RAM doesn't change, and the advice must be identical
@@ -38,6 +41,19 @@
 		'manga-v3': false,
 		'manga-v5': false,
 		'index-manga-v1': false
+	});
+
+	// The encoder-decoder translator runs only where its native bridge is (Android); elsewhere it has no row.
+	const encdecRuns = encdecAvailable();
+	let encdecReady = $state(false);
+
+	async function refreshEncDecReady(): Promise<void> {
+		encdecReady = encdecRuns && (await isEncDecModelReady().catch(() => false));
+	}
+
+	$effect(() => {
+		const status = $encdecModelDownloadState.status;
+		if (status === 'idle' || status === 'completed') untrack(() => { void refreshEncDecReady(); });
 	});
 
 	async function refreshDownloaded(): Promise<void> {
@@ -76,19 +92,35 @@
 
 	interface ModelRow {
 		key: string;
-		variant: BundledHyMT2Variant | 'custom';
+		variant: BundledHyMT2Variant | 'manga-ja-en-v1' | 'custom';
 		name: string;
 		sizeMB: number;
 		usedFor: string;
 		state: { status: string; progress?: { downloadedBytes: number; totalBytes: number } | null };
 		ready: boolean;
+		/** Not offered for download any more: the row shows only while the file is on the device. */
+		deprecated?: boolean;
 		download: () => void;
 		cancel: () => void;
 		remove: () => void;
 	}
 
 	let rows = $derived.by((): ModelRow[] => {
-		const bundled: ModelRow[] = BUNDLED_HYMT2_VARIANTS.map((variant) => {
+		const encdec: ModelRow[] = encdecRuns
+			? [{
+				key: 'manga-ja-en-v1',
+				variant: 'manga-ja-en-v1',
+				name: HYMT2_VARIANTS['manga-ja-en-v1'].label,
+				sizeMB: Math.round(ENCDEC_MODEL_TOTAL_BYTES / (1024 * 1024)),
+				usedFor: m.settings_models_on_device_translation_fast(),
+				state: $encdecModelDownloadState,
+				ready: encdecReady,
+				download: () => void downloadEncDecModel().catch(() => {}),
+				cancel: () => cancelEncDecModelDownload(),
+				remove: () => void deleteEncDecModel().catch(() => {})
+			}]
+			: [];
+		const bundled: ModelRow[] = BUNDLED_HYMT2_VARIANTS.filter((variant) => !bundledSpec(variant).deprecated || downloaded[variant]).map((variant) => {
 			const spec = bundledSpec(variant);
 			return {
 				key: variant,
@@ -98,6 +130,7 @@
 				usedFor: USED_FOR[variant],
 				state: $ggufDownloadState.variant === variant ? $ggufDownloadState : { status: 'idle' },
 				ready: downloaded[variant],
+				deprecated: spec.deprecated,
 				download: () =>
 					void downloadHyMT2Model(variant)
 						.then(() => refreshDownloaded())
@@ -116,8 +149,9 @@
 		// storage total a lie. It has no Download action: it is chosen from
 		// Settings → Translation, not fetched.
 		const custom = $settings.customModel;
-		if (!custom) return bundled;
+		if (!custom) return [...encdec, ...bundled];
 		return [
+			...encdec,
 			...bundled,
 			{
 				key: 'custom',
@@ -214,7 +248,7 @@
 						<span class="rounded-full bg-green-600/20 px-3 py-1 text-center text-[11px] font-medium text-green-400">{m.settings_models_ready()}</span>
 						<button onclick={row.remove} class="rounded-full bg-red-600/20 px-3 py-1 text-[11px] font-medium text-red-400 transition-colors hover:bg-red-600/30">{m.settings_models_delete()}</button>
 					</div>
-				{:else}
+				{:else if !row.deprecated}
 					<button onclick={row.download} class="shrink-0 rounded-full bg-primary-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-primary-700">{m.settings_models_download()}</button>
 				{/if}
 			</div>

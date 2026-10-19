@@ -20,6 +20,7 @@ export const DEFAULT_OPENROUTER_MODEL = 'google/gemini-3.1-flash-lite';
 
 export { SUPPORTED_LANGUAGES, ON_DEVICE_SOURCE_LANGUAGES, ON_DEVICE_TARGET_LANGUAGES, getLanguagePromptName } from './language-prompt-names.js';
 import { ON_DEVICE_TARGET_LANGUAGES, SUPPORTED_LANGUAGES } from './language-prompt-names.js';
+import { recommendedHyMT2Variant } from '$lib/translation/recommended-model.js';
 import { setProgressToastsEnabled } from '$lib/stores/toasts.js';
 
 /**
@@ -308,9 +309,14 @@ export interface FumetoSettings {
 	 *
 	 * 'index-manga-v1' is not a Hy-MT2 file at all but a fine-tune of
 	 * Index-Translate 2B; the setting keeps its name because stored profiles
-	 * are keyed on it.
+	 * are keyed on it. 'manga-ja-en-v1' is not even a GGUF: it is the native
+	 * encoder-decoder translator (encdec-translator.ts).
+	 *
+	 * The default stays 'stock' for a stored profile that never had the key; a
+	 * fresh install is seeded with the recommended model instead
+	 * (`seedRecommendedOnDeviceModel`).
 	 */
-	hyMT2Variant: 'stock' | 'manga-v2' | 'manga-v3' | 'manga-v5' | 'index-manga-v1' | 'custom';
+	hyMT2Variant: 'stock' | 'manga-v2' | 'manga-v3' | 'manga-v5' | 'index-manga-v1' | 'manga-ja-en-v1' | 'custom';
 	/**
 	 * The user's imported on-device model, if any. Absent until an import
 	 * succeeds; cleared when it is deleted.
@@ -786,6 +792,15 @@ settings.subscribe((current) => setProgressToastsEnabled(current.showLibraryScan
  * Also handles migration from plaintext localStorage on first run after upgrade.
  * Must be called once during app startup (e.g., in onMount of +page.svelte).
  */
+/**
+ * First-run only (see `initSecureSettings`), after the targets are seeded: select the model recommended for the
+ * on-device pair, so a fresh install starts on it rather than on the deprecated stock model.
+ */
+export function seedRecommendedOnDeviceModel(): void {
+	const current = get(settings);
+	settings.patch({ hyMT2Variant: recommendedHyMT2Variant(current.onDeviceSourceLang ?? 'auto', current.onDeviceTargetLang ?? 'en') });
+}
+
 /** First-run only (see `initSecureSettings`): pick the translation targets the UI locale implies. */
 export function seedTranslationTargetsFromUiLocale(locale: string = getUiLocale()): boolean {
 	const target = defaultTargetForUiLocale(locale);
@@ -835,7 +850,10 @@ export async function initSecureSettings(): Promise<void> {
 	// A fresh install — nothing in localStorage and no file to restore — starts
 	// translating into the language the device speaks, when the app can. This
 	// runs exactly once; a later change of `uiLocale` never touches the targets.
-	if (!hadStoredLocalSettings() && fileSettings === null) seedTranslationTargetsFromUiLocale();
+	if (!hadStoredLocalSettings() && fileSettings === null) {
+		seedTranslationTargetsFromUiLocale();
+		seedRecommendedOnDeviceModel();
+	}
 
 	const { initSecureStorage, loadAndDecrypt, encryptAndStore, reconcileSecureStorageMirror } =
 		await import('./secure-storage.js');

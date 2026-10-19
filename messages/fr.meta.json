@@ -2780,9 +2780,9 @@
 		"draftedAt": "2026-08-28T00:21:35.870Z"
 	},
 	"help_settings_translation_on_device": {
-		"sourceHash": "aaabbb84830f7e43",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-28T00:21:35.870Z"
+		"sourceHash": "800a68a2e5fec1e7",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-19T23:03:16.833Z"
 	},
 	"help_settings_translation_tab_showing": {
 		"sourceHash": "abd0c1e8b830a70e",
@@ -3813,6 +3813,16 @@
 		"sourceHash": "ea68f368bfe4f682",
 		"model": "claude-opus-5-5",
 		"draftedAt": "2026-10-12T00:51:54.125Z"
+	},
+	"model_variant_manga_ja_en_v1_description": {
+		"sourceHash": "2166a6898d463a3f",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-19T23:02:07.017Z"
+	},
+	"model_variant_manga_ja_en_v1_title": {
+		"sourceHash": "dd0232f4d6bac07b",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-19T23:02:07.017Z"
 	},
 	"model_variant_manga_v2_description": {
 		"sourceHash": "2b43f22ffb0f233e",
@@ -5539,6 +5549,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:17:27.919Z"
 	},
+	"settings_models_on_device_translation_fast": {
+		"sourceHash": "a9937a12a0c42c97",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-19T23:02:07.017Z"
+	},
 	"settings_models_on_device_translation_index_manga": {
 		"sourceHash": "3cb095da91e04bf1",
 		"model": "claude-opus-5-5",
@@ -5715,9 +5730,9 @@
 		"draftedAt": "2026-08-28T00:17:27.919Z"
 	},
 	"settings_search_hymt2_model_keywords": {
-		"sourceHash": "4b538eafad7ed3db",
-		"model": "claude-opus-5-5",
-		"draftedAt": "2026-10-12T00:51:54.125Z"
+		"sourceHash": "d66c89c29017eefc",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-19T23:03:16.833Z"
 	},
 	"settings_search_hymt2_model_label": {
 		"sourceHash": "e8238bc35e30f47c",
@@ -6494,6 +6509,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:17:27.919Z"
 	},
+	"settings_translation_encdec_intro": {
+		"sourceHash": "dfeb698f293839ee",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-19T23:02:07.017Z"
+	},
 	"settings_translation_failed_to_connect": {
 		"sourceHash": "2668ea9f2355c5e8",
 		"model": "anthropic/claude-sonnet-5",
@@ -6659,10 +6679,30 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:17:27.919Z"
 	},
+	"settings_translation_model_deprecated": {
+		"sourceHash": "80f6e3262ddc9dba",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-19T23:02:07.017Z"
+	},
+	"settings_translation_model_deprecated_note": {
+		"sourceHash": "55a0c457acba387e",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-19T23:02:07.017Z"
+	},
+	"settings_translation_model_deprecated_unavailable": {
+		"sourceHash": "78cf6873c1a4d0ab",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-19T23:20:04.642Z"
+	},
+	"settings_translation_model_recommended": {
+		"sourceHash": "c15bc779fb222cbb",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-19T23:02:07.017Z"
+	},
 	"settings_translation_model_used_by_the": {
-		"sourceHash": "8cd4779c36726788",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-28T00:17:27.919Z"
+		"sourceHash": "4e8a087d12de728b",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-19T23:02:07.017Z"
 	},
 	"settings_translation_more_memory_headroom_is": {
 		"sourceHash": "f48ce6e085413cc0",
@@ -6835,9 +6875,9 @@
 		"draftedAt": "2026-08-28T00:17:27.919Z"
 	},
 	"settings_translation_selected_model_ja_en_only": {
-		"sourceHash": "46d5f1fc67b3abba",
-		"model": "claude-opus-5-5",
-		"draftedAt": "2026-10-12T00:51:54.125Z"
+		"sourceHash": "baa15c0b4b4fe86d",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-19T23:02:07.017Z"
 	},
 	"settings_translation_sends_page_images_to": {
 		"sourceHash": "4bdacbacb27b53a2",
