@@ -759,6 +759,8 @@
 		<div class="px-4 pb-4 pt-2 text-xs leading-relaxed text-surface-300" transition:slide={{ duration: motionDuration(200) }}>
 			<p class="font-medium text-surface-200">{m.help_version_line({ version: APP_VERSION })}</p>
 			<ul class="mt-1 list-disc space-y-1 pl-4">
+				<li>{m.help_new_fast_translation_model_for()}</li>
+				<li>{m.help_the_standard_translation_model_and()}</li>
 				<li>{m.help_keep_translating_in_background()}</li>
 				<li>{m.help_the_page_layout_model_has()}</li>
 				<li>{m.help_fixed_crashes_and_freezes_on()}</li>

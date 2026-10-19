@@ -2389,6 +2389,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:16:19.438Z"
 	},
+	"help_new_fast_translation_model_for": {
+		"sourceHash": "638991742df5791a",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-19T23:26:24.836Z"
+	},
 	"help_new_remote_server_form": {
 		"sourceHash": "2c934f3beb546872",
 		"model": "anthropic/claude-sonnet-5",
@@ -2948,6 +2953,11 @@
 		"sourceHash": "7a487f443a7643b8",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:16:19.438Z"
+	},
+	"help_the_standard_translation_model_and": {
+		"sourceHash": "9174d9039aa50253",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-19T23:26:24.836Z"
 	},
 	"help_the_storage_card_and": {
 		"sourceHash": "3415ec91b0f1428f",
