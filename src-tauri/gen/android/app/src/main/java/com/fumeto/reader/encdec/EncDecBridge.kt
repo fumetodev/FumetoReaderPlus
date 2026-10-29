@@ -8,6 +8,8 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.concurrent.CancellationException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -23,6 +25,7 @@ class EncDecBridge(context: Context, private val webView: WebView) {
     private val destroyed = AtomicBoolean(false)
     private val executor = Executors.newSingleThreadExecutor { r -> Thread(r, "fumeto-encdec-native") }
     private val engine = EncDecEngine(context)
+    private val inFlight = ConcurrentHashMap<String, AtomicBoolean>()
 
     @JavascriptInterface
     fun isAvailable(): Boolean = !destroyed.get()
@@ -36,11 +39,7 @@ class EncDecBridge(context: Context, private val webView: WebView) {
         if (destroyed.get()) { reject(callbackId, "encdec bridge destroyed"); return }
         executor.execute {
             try {
-                val manifest = JSONObject(manifestJson).let { m ->
-                    m.keys().asSequence().associateWith { name ->
-                        m.getJSONObject(name).let { EncDecEngine.Expected(it.getLong("size"), it.getString("sha256")) }
-                    }
-                }
+                val manifest = parseManifest(manifestJson)
                 val arr = JSONArray(textsJson)
                 val texts = List(arr.length()) { arr.getString(it) }
                 val t0 = System.nanoTime()
@@ -58,12 +57,60 @@ class EncDecBridge(context: Context, private val webView: WebView) {
         }
     }
 
+    /**
+     * One page in reading order. `requestJson`: `{"lines": [...], "decode": [indices] | null}`; lines outside `decode`
+     * are context only. Resolves `{"texts": [one per line, "" if blank or not decoded], "ms": n, "windows": n}`.
+     * [cancel] with the same `callbackId` stops it between decoder steps and rejects it as `cancelled`.
+     */
+    @JavascriptInterface
+    fun translatePage(modelDir: String, manifestJson: String, requestJson: String, beam: Int, maxLen: Int, threads: Int, callbackId: String) {
+        if (destroyed.get()) { reject(callbackId, "encdec bridge destroyed"); return }
+        val cancelled = AtomicBoolean(false)
+        inFlight[callbackId] = cancelled
+        executor.execute {
+            try {
+                val manifest = parseManifest(manifestJson)
+                val request = JSONObject(requestJson)
+                val arr = request.getJSONArray("lines")
+                val lines = List(arr.length()) { arr.getString(it) }
+                val decode = request.optJSONArray("decode")?.let { d -> (0 until d.length()).map { d.getInt(it) }.toSet() }
+                val t0 = System.nanoTime()
+                val out = engine.translatePage(modelDir, manifest, lines, decode, beam, maxLen.coerceIn(8, 256), threads.coerceIn(1, 8), cancelled)
+                resolve(callbackId, JSONObject().apply {
+                    put("texts", JSONArray(out.texts)); put("ms", (System.nanoTime() - t0) / 1e6); put("windows", out.windows)
+                }.toString())
+            } catch (_: CancellationException) {
+                reject(callbackId, "cancelled")
+            } catch (error: EncDecEngine.IntegrityException) {
+                Log.w(TAG, "translation model failed its integrity check; file deleted")
+                reject(callbackId, "integrity: ${error.message}")
+            } catch (error: Throwable) {
+                Log.e(TAG, "encdec translatePage failed", error)
+                reject(callbackId, error.message ?: "encdec translate failed")
+            } finally {
+                inFlight.remove(callbackId)
+            }
+        }
+    }
+
+    /** Stops a [translatePage] call, queued or running; a call that already finished is unaffected. */
+    @JavascriptInterface
+    fun cancel(callbackId: String) {
+        inFlight[callbackId]?.set(true)
+    }
+
     /** Frees the model's sessions (deleting or switching away from it); resolves `{"released": bool}`. */
     @JavascriptInterface
     fun release(callbackId: String) {
         executor.execute {
             val released = try { engine.close() } catch (_: Throwable) { false }
             resolve(callbackId, JSONObject().put("released", released).toString())
+        }
+    }
+
+    private fun parseManifest(manifestJson: String): Map<String, EncDecEngine.Expected> = JSONObject(manifestJson).let { m ->
+        m.keys().asSequence().associateWith { name ->
+            m.getJSONObject(name).let { EncDecEngine.Expected(it.getLong("size"), it.getString("sha256")) }
         }
     }
 

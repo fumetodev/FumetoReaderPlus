@@ -75,6 +75,9 @@ internal class EncDecTokenizer(encVocabJson: String, decVocabJson: String) {
         return out.toIntArray()
     }
 
+    /** The ids without `<s>` and `</s>`, as HF `tokenizers` gives them with `add_special_tokens=False`. */
+    fun encodeBody(text: String): IntArray = encode(text).let { it.copyOfRange(1, it.size - 1) }
+
     private fun viterbi(segment: String, out: MutableList<Int>) {
         val s = segment.replace(' ', '▁')
         val ch = ArrayList<String>()
