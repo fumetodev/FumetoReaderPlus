@@ -647,6 +647,7 @@
 	"help_overlay_badges_states": "Selos e estados de sobreposição:",
 	"help_overlay_box_selected_for": "Caixa de sobreposição selecionada para edição com controles",
 	"help_overlay_settings": "Configurações de sobreposição:",
+	"help_overlay_text_now_fills": "O texto sobreposto agora preenche a própria caixa: uma linha curta em um balão grande não é mais reduzida para combinar com o resto da página, e o controle de tamanho da fonte do editor volta a funcionar e vai até o maior tamanho que cabe na caixa",
 	"help_overlay_text_size_has": "O tamanho do texto de sobreposição tem um padrão global memorizado, além do ajuste por volume.",
 	"help_overview": "Visão geral",
 	"help_page_navigation": "Navegação de páginas",

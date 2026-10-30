@@ -2534,6 +2534,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:02:23.527Z"
 	},
+	"help_overlay_text_now_fills": {
+		"sourceHash": "3cffe11fa8553a56",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-30T05:51:28.816Z"
+	},
 	"help_overlay_text_size_has": {
 		"sourceHash": "2d088f2a4cc516e7",
 		"model": "anthropic/claude-sonnet-5",

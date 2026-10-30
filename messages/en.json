@@ -648,6 +648,7 @@
 	"help_overlay_box_selected_for": "Overlay box selected for editing with controls",
 	"help_overlay_settings": "Overlay settings:",
 	"help_overlay_text_size_has": "Overlay text size has a remembered global default alongside per-volume adjustment.",
+	"help_overlay_text_now_fills": "Overlay text now fills its own box: a short line in a big balloon is no longer shrunk to match the rest of the page, and the editor's font-size slider works again and reaches the largest size the box holds",
 	"help_overview": "Overview",
 	"help_page_navigation": "Page navigation",
 	"help_pay_per_use_via": "Pay-per-use via OpenRouter. Vision models cost more per request but produce significantly better translations.",

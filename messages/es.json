@@ -647,6 +647,7 @@
 	"help_overlay_badges_states": "Insignias y estados de la superposición:",
 	"help_overlay_box_selected_for": "Cuadro de superposición seleccionado para edición con controles",
 	"help_overlay_settings": "Ajustes de la superposición:",
+	"help_overlay_text_now_fills": "El texto superpuesto ahora llena su propio cuadro: una línea corta en un bocadillo grande ya no se reduce para igualar al resto de la página, y el control de tamaño de fuente del editor vuelve a funcionar y llega hasta el tamaño más grande que cabe en el cuadro",
 	"help_overlay_text_size_has": "El tamaño de texto de la superposición tiene un valor predeterminado global recordado, además de un ajuste por volumen.",
 	"help_overview": "Descripción general",
 	"help_page_navigation": "Navegación de páginas",

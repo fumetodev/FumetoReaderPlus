@@ -647,6 +647,7 @@
 	"help_overlay_badges_states": "Badges et états du calque :",
 	"help_overlay_box_selected_for": "Calque sélectionné pour modification avec ses commandes",
 	"help_overlay_settings": "Réglages du calque :",
+	"help_overlay_text_now_fills": "Le texte des calques remplit désormais son propre calque : une ligne courte dans une grande bulle n’est plus réduite pour s’aligner sur le reste de la page, et le curseur de taille de police de l’éditeur fonctionne à nouveau et va jusqu’à la plus grande taille que le calque peut contenir",
 	"help_overlay_text_size_has": "La taille du texte du calque possède une valeur par défaut globale mémorisée, ainsi qu’un ajustement par volume.",
 	"help_overview": "Présentation",
 	"help_page_navigation": "Navigation des pages",

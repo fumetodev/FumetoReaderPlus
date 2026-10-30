@@ -642,6 +642,7 @@
 	"help_overlay_badges_states": "Lencana & status lapisan:",
 	"help_overlay_box_selected_for": "Kotak lapisan yang dipilih untuk diedit beserta kontrolnya",
 	"help_overlay_settings": "Pengaturan lapisan:",
+	"help_overlay_text_now_fills": "Teks lapisan kini memenuhi kotaknya sendiri: baris pendek di balon besar tidak lagi dikecilkan agar sama dengan bagian lain halaman, dan penggeser ukuran huruf di editor berfungsi lagi dan mencapai ukuran terbesar yang muat di kotak",
 	"help_overlay_text_size_has": "Ukuran teks lapisan memiliki nilai bawaan global yang diingat beserta penyesuaian per volume.",
 	"help_overview": "Ikhtisar",
 	"help_page_navigation": "Navigasi halaman",
