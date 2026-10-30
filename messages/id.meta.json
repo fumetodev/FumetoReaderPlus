@@ -2189,6 +2189,11 @@
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-10-18T20:56:36.095Z"
 	},
+	"help_fixed_nothing_in_the": {
+		"sourceHash": "5430f4f0d5f2c3f0",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-30T00:28:21.902Z"
+	},
 	"help_folder_context_menu_and": {
 		"sourceHash": "ddb848828fb23b9a",
 		"model": "anthropic/claude-sonnet-5",
@@ -2213,6 +2218,11 @@
 		"sourceHash": "3ed8386fe6d07cf8",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:04:10.624Z"
+	},
+	"help_fumetotranslate_replaces_the_fast": {
+		"sourceHash": "b48c7110aa086671",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-30T00:28:21.902Z"
 	},
 	"help_getting_an_api_key": {
 		"sourceHash": "3a1f5ed4d0a9ceae",
@@ -2253,6 +2263,11 @@
 		"sourceHash": "579f0ac331d899ea",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-09-04T16:28:17.980Z"
+	},
+	"help_if_you_have_the": {
+		"sourceHash": "74c83e9d27297c86",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-30T00:28:21.902Z"
 	},
 	"help_in_paged_mode_pinch": {
 		"sourceHash": "c7cf3b46b496cd4d",
