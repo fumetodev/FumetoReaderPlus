@@ -1819,7 +1819,7 @@
 		if (!(target instanceof Element)) return false;
 		return Boolean(target.closest(
 			'button, input, select, textarea, a, [contenteditable="true"], '
-				+ '[data-floating-box-editor], [data-dialog]'
+				+ '[data-floating-box-editor], [data-overlay-box-sheet], [data-dialog]'
 		));
 	}
 
@@ -1836,7 +1836,7 @@
 		return Boolean(target.closest(
 			'[data-overlay-fit-mode="reveal"], [data-overlay-reveal-backdrop], '
 				+ '[data-overlay-reveal-popover], [data-region-review-backdrop], '
-				+ '[data-region-review-popover]'
+				+ '[data-region-review-popover], [data-overlay-box-sheet-backdrop]'
 		));
 	}
 

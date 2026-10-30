@@ -97,7 +97,8 @@ export function initPanzoom(node: HTMLElement) {
 					'[data-overlay-manipulation], [data-overlay-fit-mode="reveal"], '
 						+ '[data-overlay-reveal-backdrop], [data-overlay-reveal-popover], '
 						+ '[data-overlay-review-badge], [data-floating-box-editor], '
-						+ '[data-region-review-popover], [data-region-review-backdrop]'
+						+ '[data-region-review-popover], [data-region-review-backdrop], '
+					+ '[data-overlay-box-sheet], [data-overlay-box-sheet-backdrop]'
 				)) {
 					return false;
 				}
