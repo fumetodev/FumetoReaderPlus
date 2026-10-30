@@ -43,6 +43,7 @@ export interface PPOcrSeparationReason {
 		| 'free-satellite-span'
 		| 'span-cap'
 		| 'page-area'
+		| 'skips-line'
 		| 'geometry';
 }
 
@@ -1162,8 +1163,16 @@ const TEXT_BLOCK_PAGE_AREA = 0.35;
  * opening bracket or a one-glyph indent moves a column's start by about one.
  */
 const TEXT_BLOCK_LEADING_EDGE_GLYPHS = 1.5;
-/** How far two lines of a block may overlap across the line axis, as a share of the narrower. */
-const TEXT_BLOCK_LINE_OVERLAP = 0.15;
+/**
+ * How far two lines of a block may overlap across the line axis, as a share of
+ * the narrower. Detector boxes are padded past the glyphs, so the boxes of two
+ * tightly set columns overlap: on the reviewed pages, neighbouring columns of
+ * one group overlap up to 0.35 in 379 of 402 pairs, and columns of different
+ * groups never do between 0.05 and 0.43. At 0.15 a narration block whose middle
+ * columns overlapped 0.19 lost its exemption, and the columns either side of
+ * them were grouped with each other instead.
+ */
+const TEXT_BLOCK_LINE_OVERLAP = 0.35;
 /** Largest glyph-size ratio between a block's lines (free pairs allow 1.75). */
 const TEXT_BLOCK_GLYPH_RATIO = 1.35;
 
@@ -1189,9 +1198,9 @@ function isTextBlock(
 	const scales = cores.map((component) => component.glyphScale);
 	if (Math.max(...scales) / Math.max(1, Math.min(...scales)) > TEXT_BLOCK_GLYPH_RATIO) return false;
 	// Lines: cores that overlap across the line axis by half the narrower. Two
-	// lines of one block do not overlap at all; a partial overlap is two texts
-	// drawn close together (measured: a lone speech column laid 0.43 of a column
-	// over the edge of a narration block beside it).
+	// lines of one block overlap only by their boxes' padding; a deeper partial
+	// overlap is two texts drawn close together (measured: a lone speech column
+	// laid 0.43 of a column over the edge of a narration block beside it).
 	const lines: Array<{ start: number; end: number; lead: number }> = [];
 	for (const component of [...cores].sort((left, rightValue) =>
 		(vertical ? left.x - rightValue.x : left.y - rightValue.y) || left.componentId - rightValue.componentId)) {
@@ -1213,6 +1222,43 @@ function isTextBlock(
 	if (lines.length < 2) return false;
 	const leads = lines.map((line) => line.lead);
 	return Math.max(...leads) - Math.min(...leads) <= TEXT_BLOCK_LEADING_EDGE_GLYPHS * Math.max(1, glyph);
+}
+
+/**
+ * Whether a cluster would wrap around a line it does not contain: a peer line
+ * (same direction, the size of its neighbours, set alongside them) with one of
+ * the cluster's lines on either side. The pitch gate measures only the two ends
+ * of an edge, and the outer columns of a four-column block sit within it of
+ * each other: when the block's middle pair could not grow (it was refused the
+ * page-area exemption), the outer pair merged around it, the block became two
+ * groups wrapped around each other, and the translation read them out of order.
+ * Asked at merge time, not of the edge: an edge that skips a line its own
+ * cluster already holds is harmless, and blocks of horizontal lines rely on
+ * such edges to settle which block a line joins.
+ */
+function wrapsForeignLine(
+	cluster: readonly PreparedComponent[],
+	components: readonly PreparedComponent[]
+): boolean {
+	const direction = dominantComponentDirection(cluster);
+	if (direction !== 'vertical' && direction !== 'horizontal') return false;
+	const vertical = direction === 'vertical';
+	const across = (component: PreparedComponent) => vertical ? component.centerX : component.centerY;
+	const start = (component: PreparedComponent) => vertical ? component.y : component.x;
+	const end = (component: PreparedComponent) => vertical ? bottom(component) : right(component);
+	const members = new Set(cluster);
+	const lines = cluster.filter((component) => component.direction === direction);
+	return components.some((outsider) => {
+		if (members.has(outsider) || outsider.direction !== direction) return false;
+		// Lines of the cluster beside the outsider: peers of its size (not ruby
+		// or a mark) that run alongside it for half the shorter length.
+		const beside = lines.filter((line) =>
+			Math.max(outsider.glyphScale, line.glyphScale) / Math.max(1, Math.min(outsider.glyphScale, line.glyphScale)) <= TEXT_BLOCK_GLYPH_RATIO
+			&& overlapLength(start(outsider), end(outsider), start(line), end(line))
+				>= 0.5 * Math.min(end(outsider) - start(outsider), end(line) - start(line)));
+		return beside.some((line) => across(line) < across(outsider))
+			&& beside.some((line) => across(line) > across(outsider));
+	});
 }
 
 function clusterValid(
@@ -1950,7 +1996,10 @@ export function groupRawTextComponents(
 		if (leftRoot === rightRoot) continue;
 		const combinedIndexes = [...(members.get(leftRoot) ?? []), ...(members.get(rightRoot) ?? [])];
 		const combined = combinedIndexes.map((index) => prepared[index]);
-		const clusterCompatibility = clusterValid(combined, imageWidth, imageHeight);
+		const validity = clusterValid(combined, imageWidth, imageHeight);
+		const clusterCompatibility = validity.valid && wrapsForeignLine(combined, prepared)
+			? { valid: false, reason: 'skips-line' as const }
+			: validity;
 		if (!clusterCompatibility.valid) {
 			if (clusterCompatibility.reason === 'span-cap') spanCapPairs.push([edge.left, edge.right]);
 			if (clusterCompatibility.reason) {

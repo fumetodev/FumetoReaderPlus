@@ -55,7 +55,7 @@ import { recordGate, recordGateResult } from './gate-telemetry.js';
 import { bidiVisualOrder, paragraphDirection, requiresExplicitBidiRuns, resolveBidiRuns } from './bidi.js';
 import { createCooperativeYieldBudget, type CooperativeYieldBudget } from './cooperative-yield.js';
 
-export const OVERLAY_ALGORITHM_VERSION = 'overlay-layout-v2-policy-35';
+export const OVERLAY_ALGORITHM_VERSION = 'overlay-layout-v2-policy-36';
 
 /**
  * Bench-only switches.
@@ -1752,15 +1752,16 @@ function stackedColumnBands(
 			const top = Math.min(...run.map((entry) => entry.source.y));
 			const right = Math.max(...run.map((entry) => entry.source.x + entry.source.width));
 			const bottom = Math.max(...run.map((entry) => entry.source.y + entry.source.height));
-			// Vertical columns read right to left, so the run's bands go top to
-			// bottom in that order. The stored order is the grouper's page sort,
-			// which banded groups by their centre: the longest column of a block,
-			// often its first, sorted after the columns to its left, and pages
-			// translated before that was fixed still carry it.
-			const readingOrder = (a: typeof run[number], b: typeof run[number]) =>
-				(b.source.x + b.source.width) - (a.source.x + a.source.width) || rank(a, b);
+			// The bands go top to bottom in the order the page was translated in,
+			// never re-sorted by where the sources sit. A page model writes each
+			// line to follow the one it read before — content moves between lines
+			// so the English runs on — so the stored order is the only one the
+			// text reads correctly in. Sorting the run right to left by source
+			// (policy-35) set a continuation above the sentence it continues on a
+			// block the grouper had wrapped around itself. Getting the order right
+			// is the grouper's job, before anything is translated.
 			emitBands(
-				[...run].sort(readingOrder),
+				[...run].sort(rank),
 				{ x: left, y: top, width: right - left, height: bottom - top },
 				false,
 				// No contour: a free run's region is the joint footprint of the
