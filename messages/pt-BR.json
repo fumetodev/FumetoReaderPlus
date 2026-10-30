@@ -576,6 +576,7 @@
 	"help_fig_zoom_presets": "Predefinições de zoom",
 	"help_filter_volumes_by_tags": "Filtre volumes por tags, se os volumes tiverem tags atribuídas.",
 	"help_fix_single_box_li": "<em>Corrigir uma única caixa:</em> toque e segure a caixa e toque em Editar para alterar o texto você mesmo. A nova revisão por LLM é executada no escopo da página no celular (a revisão por entrada está disponível no painel lateral do desktop).",
+	"help_fixed_a_narration_block_could": "Corrigido: um bloco de narração de várias colunas podia se dividir em duas partes encaixadas uma na outra, com as sobreposições empilhadas fora de ordem. Sobreposições que dividem um espaço agora são empilhadas na ordem em que foram traduzidas",
 	"help_fixed_an_api_key_typed": "Corrigido: uma chave de API digitada em uma linha de provedor e deixada aberta não era salva ao sair de Configurações, e um marcador de falha obsoleto podia permanecer em uma página que já tinha sido traduzida",
 	"help_fixed_crashes_and_freezes_on": "Corrigidos fechamentos e travamentos: a tradução no dispositivo não fecha mais o aplicativo em alguns celulares e tablets, a tradução em lote usa muito menos memória e mudar o tamanho da fonte ou da tela do sistema não reinicia mais o aplicativo",
 	"help_fixed_nothing_in_the": "Corrigido: nada na lista \"Caixas nesta página\" do leitor respondia ao toque, e Configurações → Tradução abria em Fora do dispositivo mesmo com a tradução no dispositivo ativa",

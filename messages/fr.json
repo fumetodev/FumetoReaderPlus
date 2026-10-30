@@ -576,6 +576,7 @@
 	"help_fig_zoom_presets": "Préréglages de zoom",
 	"help_filter_volumes_by_tags": "Filtrer les volumes par étiquettes si des étiquettes leur sont attribuées.",
 	"help_fix_single_box_li": "<em>Corriger un seul calque :</em> appuyez longuement sur le calque et appuyez sur Modifier pour changer son texte vous-même. La révision par LLM s’effectue à l’échelle de la page sur mobile (la révision par entrée est disponible dans le panneau latéral de bureau).",
+	"help_fixed_a_narration_block_could": "Corrigé : un bloc de narration de plusieurs colonnes pouvait être coupé en deux morceaux imbriqués l’un dans l’autre, avec ses calques empilés dans le désordre. Les calques qui partagent un espace s’empilent désormais dans l’ordre où ils ont été traduits",
 	"help_fixed_an_api_key_typed": "Corrigé : une clé API saisie dans une ligne de fournisseur et laissée ouverte n’était pas enregistrée en quittant les Réglages, et un ancien indicateur d’échec pouvait rester sur une page qui avait depuis été traduite",
 	"help_fixed_crashes_and_freezes_on": "Plantages et blocages corrigés : la traduction sur l’appareil ne ferme plus l’application sur certains téléphones et tablettes, la traduction par lot utilise beaucoup moins de mémoire, et changer la taille de police ou d’affichage du système ne redémarre plus l’application",
 	"help_fixed_nothing_in_the": "Corrigé : rien dans la liste « Calques sur cette page » du lecteur ne réagissait au toucher, et Réglages → Traduction s’ouvrait sur Hors appareil même quand la traduction sur l’appareil était active",

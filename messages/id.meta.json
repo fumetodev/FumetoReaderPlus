@@ -2179,6 +2179,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:04:10.624Z"
 	},
+	"help_fixed_a_narration_block_could": {
+		"sourceHash": "f50ad02b09ef1560",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-30T17:46:51.167Z"
+	},
 	"help_fixed_an_api_key_typed": {
 		"sourceHash": "d67dbe4647135aea",
 		"model": "anthropic/claude-sonnet-5",

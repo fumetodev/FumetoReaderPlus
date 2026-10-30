@@ -571,6 +571,7 @@
 	"help_fig_zoom_presets": "Preset zoom",
 	"help_filter_volumes_by_tags": "Filter volume berdasarkan tag jika volume memiliki tag yang ditetapkan.",
 	"help_fix_single_box_li": "<em>Perbaiki satu kotak:</em> tekan lama kotak tersebut dan ketuk Edit untuk mengubah teksnya sendiri. Revisi ulang LLM berjalan pada lingkup halaman di perangkat seluler (revisi per entri tersedia di panel samping desktop).",
+	"help_fixed_a_narration_block_could": "Diperbaiki: blok narasi beberapa kolom bisa terpecah menjadi dua bagian yang saling mengapit, dengan lapisannya tersusun tidak berurutan. Lapisan yang berbagi tempat kini disusun sesuai urutan penerjemahannya",
 	"help_fixed_an_api_key_typed": "Diperbaiki: kunci API yang diketik pada baris penyedia dan dibiarkan terbuka tidak tersimpan saat meninggalkan Pengaturan, dan tanda gagal usang dapat tertinggal pada halaman yang sudah diterjemahkan",
 	"help_fixed_crashes_and_freezes_on": "Perbaikan crash dan macet: terjemahan di perangkat tidak lagi menutup aplikasi di beberapa ponsel dan tablet, terjemahan batch memakai jauh lebih sedikit memori, dan mengubah ukuran font atau tampilan sistem tidak lagi memulai ulang aplikasi",
 	"help_fixed_nothing_in_the": "Diperbaiki: tidak ada isi daftar \"Kotak pada halaman ini\" di pembaca yang merespons ketukan, dan Pengaturan → Terjemahan terbuka di Luar Perangkat meskipun terjemahan di perangkat sedang berjalan",
