@@ -43,7 +43,7 @@ import { detectLayout } from '$lib/detection/layout-detector.js';
 import { overrideBubblesForEval } from '$lib/detection/model-candidate-overrides.js';
 import { resolveTextDetectionFusion } from '$lib/detection/fusion-guard.js';
 import { settings, type FumetoSettings } from '$lib/settings/settings.js';
-import { isMeaningfulOcrText } from './ocr-text-filter.js';
+import { isAlreadyInTargetLanguage, isMeaningfulOcrText } from './ocr-text-filter.js';
 import { blobToBase64 } from '$lib/util/base64.js';
 import type {
 	PageTranslation,
@@ -151,6 +151,7 @@ export interface OnDeviceBlockResult {
 		| 'sfx-dictionary'
 		| 'skipped-meta-or-low-confidence'
 		| 'skipped-sfx'
+		| 'skipped-already-target'
 		| 'invariant-hidden'
 		| 'invalid'
 		| 'error';
@@ -892,8 +893,11 @@ export async function translatePageOnDevice(
 	// cost ~10 s each and garbage input only yields fabricated output (report
 	// T5). So does a group the learned filter calls a sound effect while SFX
 	// overlays are hidden.
-	const modelSkip = (index: number): 'skipped-meta-or-low-confidence' | 'skipped-sfx' | null => {
+	const modelSkip = (index: number): 'skipped-meta-or-low-confidence' | 'skipped-sfx' | 'skipped-already-target' | null => {
 		const region = translatedRegions[index];
+		// Lettering already in the target language stays as drawn: no model call,
+		// no overlay over it (see `isAlreadyInTargetLanguage`).
+		if (isAlreadyInTargetLanguage(validBlocks[index].text, targetLang)) return 'skipped-already-target';
 		if (
 			!isRequiredTranslationRegion(region)
 			&& (region.classificationReasons?.includes('non-dialogue-meta')
@@ -997,6 +1001,11 @@ export async function translatePageOnDevice(
 		}
 		if (skip === 'skipped-sfx') {
 			console.warn(`[on-device] Phase 2: block=${block.blockIndex} skipped (learned sound-effect filter)`);
+			emitBlockResult(blockResult(skip));
+			continue;
+		}
+		if (skip === 'skipped-already-target') {
+			console.warn(`[on-device] Phase 2: block=${block.blockIndex} skipped (already in the target language)`);
 			emitBlockResult(blockResult(skip));
 			continue;
 		}
