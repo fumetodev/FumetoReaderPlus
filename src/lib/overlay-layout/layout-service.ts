@@ -18,6 +18,7 @@ import { isLearnedSfx } from '$lib/detection/sfx-filter.js';
 import type {
 	FontRegistryPort,
 	FontRunSpec,
+	LineWidthConstraint,
 	OverlayLayoutDiagnostics,
 	OverlayLayoutInput,
 	OverlayLayoutService,
@@ -54,7 +55,7 @@ import { recordGate, recordGateResult } from './gate-telemetry.js';
 import { bidiVisualOrder, paragraphDirection, requiresExplicitBidiRuns, resolveBidiRuns } from './bidi.js';
 import { createCooperativeYieldBudget, type CooperativeYieldBudget } from './cooperative-yield.js';
 
-export const OVERLAY_ALGORITHM_VERSION = 'overlay-layout-v2-policy-34';
+export const OVERLAY_ALGORITHM_VERSION = 'overlay-layout-v2-policy-35';
 
 /**
  * Bench-only switches.
@@ -159,6 +160,12 @@ type CandidateGeometry = {
 	stackedBand?: boolean;
 	cell?: boolean;
 	sourceRegion?: boolean;
+	/** The balloon's lobes the text runs through (`threadedLobes`), horizontal text only. */
+	threadLobes?: ThreadLobe[];
+	/** Split at a sentence, one part per lobe, or flowed through them (`threadedHorizontalLines`). */
+	threadMode?: ThreadMode;
+	/** Score cost of this window's thread mode (`THREAD_FLOW_PENALTY`). */
+	threadPenalty?: number;
 };
 
 type TypographyProfile = {
@@ -344,6 +351,9 @@ const SOFT_HYPHEN = '­';
  */
 type RelayoutContext = {
 	rect: Rect;
+	/** The lobes this candidate's text runs through, laid out by `threadedHorizontalLines`. */
+	threadLobes?: ThreadLobe[];
+	threadMode?: ThreadMode;
 	/** The size this candidate was accepted at: a known fit in this rect with this profile. */
 	fontSize: number;
 	profile: TypographyProfile;
@@ -631,7 +641,9 @@ async function maximizeSelectedFonts(
 					scopeId,
 					textLayout,
 					lineCountScale: profile.lineCountScale,
-					verticalBias: profile.verticalBias
+					verticalBias: profile.verticalBias,
+					threadLobes: region.threadLobes,
+					threadMode: region.threadMode
 				});
 			const outcome = (reason: OverlayFillTrace['outcome']): null => {
 				recordFill?.({ itemId: planned.itemId, candidateId: region === context ? planned.winningCandidateId! : '', regionRect: rect, profile: profile.id, size: target, outcome: reason, lines: laidOut.lines.length });
@@ -659,79 +671,81 @@ async function maximizeSelectedFonts(
 		// size, and `FILL_INK_SLACK` covers what it misses.
 		const advancePerPx = planned.lines.reduce((sum, line) => sum + line.advance, 0) / startSize;
 		const unbreakable = writingMode === 'horizontal-tb' && !/[\s­‐-—-]/u.test(context.layoutText.trim());
-		// Binary search for the largest size in [lo, hi] that fits, `found` being
-		// what already fits at `lo` (if anything was tried there).
-		const climb = async (lo: number, hi: number, found: Fit | null): Promise<Fit | null> => {
-			for (let probe = 0; probe < FILL_REFINEMENT_MAX_PROBES && hi - lo > 0.25; probe += 1) {
-				await yieldBudget.checkpoint();
-				const mid = quantize((lo + hi) / 2, 0.25);
-				if (mid <= lo || mid > hi) break;
-				const fit = attempt(mid, context);
-				if (fit) {
-					lo = mid;
-					found = { ...fit, size: mid };
-				} else {
-					hi = quantize(mid - 0.25, 0.25);
+		// The largest size a region holds for this item, above `floor`, or null.
+		const growIn = async (region: RelayoutContext, floor: number): Promise<Fit | null> => {
+			// Binary search for the largest size in [lo, hi] that fits, `found` being
+			// what already fits at `lo` (if anything was tried there).
+			const climb = async (lo: number, hi: number, found: Fit | null): Promise<Fit | null> => {
+				for (let probe = 0; probe < FILL_REFINEMENT_MAX_PROBES && hi - lo > 0.25; probe += 1) {
+					await yieldBudget.checkpoint();
+					const mid = quantize((lo + hi) / 2, 0.25);
+					if (mid <= lo || mid > hi) break;
+					const fit = attempt(mid, region);
+					if (fit) {
+						lo = mid;
+						found = { ...fit, size: mid };
+					} else {
+						hi = quantize(mid - 0.25, 0.25);
+					}
 				}
+				return found;
+			};
+			// The region is the geometric bound: the layout, contour, footprint and
+			// collision checks decide what fits. (A 0.75-height / 0.6-width rule of
+			// thumb here under-reported the largest size a short line really fits.)
+			const bounds = freeFootprint ?? region.rect;
+			const ceiling = quantize(Math.min(
+				bounds.height,
+				bounds.width,
+				// Sound effects keep their prominence cap through refinement: a short
+				// word growing into a generous window must not read louder than the
+				// lettering it covers. Dialogue and free text have no such cap.
+				region.glyphFontCap ?? Infinity
+			), 0.25);
+			// No layout can need more ink than the region holds. Line boxes are
+			// stacked inside the region (inside the contour, inside the free-text
+			// footprint), so their area, `advance × lineHeight` summed, is at most the
+			// usable area; and a text with no break opportunity sits on one row, so
+			// its advance is at most the region's width less the padding. Both bound
+			// the size from above and make the top-down scan below start near where
+			// the answer is instead of at the region's edge.
+			const usableArea = Math.min(
+				rectArea(region.rect),
+				region.contour ? polygonArea(region.contour) : Infinity,
+				freeFootprint ? rectArea(freeFootprint) : Infinity
+			);
+			let top = ceiling;
+			if (advancePerPx > 0 && writingMode === 'horizontal-tb') {
+				let bound = Math.sqrt(usableArea / (FILL_INK_SLACK * advancePerPx * region.profile.lineHeightRatio));
+				if (unbreakable) bound = Math.min(bound, (Math.min(region.rect.width, bounds.width) - 2 * region.profile.minimumPadding) / (FILL_INK_SLACK * advancePerPx));
+				top = Math.min(top, quantize(bound, 0.25));
 			}
-			return found;
-		};
-		// The region is the geometric bound: the layout, contour, footprint and
-		// collision checks decide what fits. (A 0.75-height / 0.6-width rule of
-		// thumb here under-reported the largest size a short line really fits.)
-		const bounds = freeFootprint ?? context.rect;
-		const ceiling = quantize(Math.min(
-			bounds.height,
-			bounds.width,
-			// Sound effects keep their prominence cap through refinement: a short
-			// word growing into a generous window must not read louder than the
-			// lettering it covers. Dialogue and free text have no such cap.
-			context.glyphFontCap ?? Infinity
-		), 0.25);
-		// No layout can need more ink than the region holds. Line boxes are
-		// stacked inside the region (inside the contour, inside the free-text
-		// footprint), so their area, `advance × lineHeight` summed, is at most the
-		// usable area; and a text with no break opportunity sits on one row, so
-		// its advance is at most the region's width less the padding. Both bound
-		// the size from above and make the top-down scan below start near where
-		// the answer is instead of at the region's edge.
-		const usableArea = Math.min(
-			rectArea(context.rect),
-			context.contour ? polygonArea(context.contour) : Infinity,
-			freeFootprint ? rectArea(freeFootprint) : Infinity
-		);
-		let top = ceiling;
-		if (advancePerPx > 0 && writingMode === 'horizontal-tb') {
-			let bound = Math.sqrt(usableArea / (FILL_INK_SLACK * advancePerPx * context.profile.lineHeightRatio));
-			if (unbreakable) bound = Math.min(bound, (Math.min(context.rect.width, bounds.width) - 2 * context.profile.minimumPadding) / (FILL_INK_SLACK * advancePerPx));
-			top = Math.min(top, quantize(bound, 0.25));
-		}
-		if (experiments.fillDenseScan && recordFill) {
-			for (let size = Math.floor(ceiling); size > startSize; size -= 1) attempt(size, context);
-		}
-		// What fits is not monotone in the size: a line wraps differently at
-		// every size, and in a round balloon a smaller size can fail where a
-		// larger one fits. Climbing up from the placed size stops at the first
-		// such gap (measured: the pinned probe's top-down scan found larger
-		// sizes than the climb for 11 of 46 boxes), so every item is measured
-		// from the top down: the first fitting size on a 1px scan, then a
-		// bisection on the 0.25 grid between it and the last failure above it.
-		// A scan that finds nothing ends with a bisection up from the placed
-		// size, inside the last pixel it stepped over.
-		let best: Fit | null = null;
-		if (top - startSize > 0.25) {
+			if (experiments.fillDenseScan && recordFill) {
+				for (let size = Math.floor(ceiling); size > floor; size -= 1) attempt(size, region);
+			}
+			// What fits is not monotone in the size: a line wraps differently at
+			// every size, and in a round balloon a smaller size can fail where a
+			// larger one fits. Climbing up from the placed size stops at the first
+			// such gap (measured: the pinned probe's top-down scan found larger
+			// sizes than the climb for 11 of 46 boxes), so every item is measured
+			// from the top down: the first fitting size on a 1px scan, then a
+			// bisection on the 0.25 grid between it and the last failure above it.
+			// A scan that finds nothing ends with a bisection up from the floor,
+			// inside the last pixel it stepped over.
+			let found: Fit | null = null;
+			if (top - floor <= 0.25) return null;
 			let failedAbove = top + 0.25;
-			for (let size = top; size > startSize; ) {
+			for (let size = top; size > floor; ) {
 				await yieldBudget.checkpoint();
-				const fit = attempt(size, context);
+				const fit = attempt(size, region);
 				if (fit) {
-					best = await climb(size, quantize(failedAbove - 0.25, 0.25), { ...fit, size });
+					found = await climb(size, quantize(failedAbove - 0.25, 0.25), { ...fit, size });
 					break;
 				}
 				failedAbove = size;
 				size = quantize(size - FILL_SCAN_STEP_PX, 0.25);
 			}
-			if (!best && failedAbove - 0.25 > startSize) best = await climb(startSize, quantize(failedAbove - 0.25, 0.25), null);
+			if (!found && failedAbove - 0.25 > floor) found = await climb(floor, quantize(failedAbove - 0.25, 0.25), null);
 			// The candidate search already laid this text out at other sizes in the
 			// same rect with the same profile, and every one it accepted fitted
 			// (unless a neighbour has grown into it since). The scan can step over
@@ -739,19 +753,66 @@ async function maximizeSelectedFonts(
 			// accepted 34.75 and 36.5 both lay between two failed scan probes, so it
 			// stayed at 32.25 — so the larger ones are tried last, largest first.
 			const known = [...contexts]
-				.filter(([candidateId, region]) => candidateId.startsWith(`${planned.itemId}:`)
-					&& region.profile.id === context.profile.id
-					&& region.writingMode === context.writingMode
-					&& sameRect(region.rect, context.rect)
-					&& region.fontSize > (best?.size ?? startSize))
-				.map(([, region]) => region.fontSize)
+				.filter(([candidateId, candidate]) => candidateId.startsWith(`${planned.itemId}:`)
+					&& candidate.profile.id === region.profile.id
+					&& candidate.writingMode === region.writingMode
+					&& sameRect(candidate.rect, region.rect)
+					&& candidate.fontSize > (found?.size ?? floor))
+				.map(([, candidate]) => candidate.fontSize)
 				.sort((a, b) => b - a);
 			for (const size of new Set(known)) {
-				if (size <= (best?.size ?? startSize)) break;
+				if (size <= (found?.size ?? floor)) break;
 				await yieldBudget.checkpoint();
-				const fit = attempt(size, context);
+				const fit = attempt(size, region);
 				if (fit) {
-					best = await climb(size, Math.max(size, top), { ...fit, size });
+					found = await climb(size, Math.max(size, top), { ...fit, size });
+					break;
+				}
+			}
+			return found && found.size > floor ? found : null;
+		};
+		// Balloon text may grow in any window of its own balloon that the candidate
+		// search accepted with the winner's spacing profile. Every such window keeps
+		// the text inside the same outline with the same margins, so no shape is
+		// traded for size; but which window won the beam depends on the coarse
+		// ladder and on score terms, and confining growth to the winner's let a
+		// short line stay at 26px in a balloon that holds 36 (measured once the
+		// line-width fix let more windows through).
+		const sameBalloonWindows = (): Array<[string, RelayoutContext]> => {
+			if (!context.contour || context.boundedRegion || item.manual.rect || context.tightInk) return [];
+			const windows: Array<[string, RelayoutContext]> = [];
+			const seen = new Set<string>([`${context.rect.x},${context.rect.y},${context.rect.width},${context.rect.height}`]);
+			for (const [candidateId, candidate] of [...contexts].sort((a, b) => compareCanonicalText(a[0], b[0]))) {
+				if (!candidateId.startsWith(`${planned.itemId}:`) || candidate.contour !== context.contour) continue;
+				if (candidate.boundedRegion || candidate.tightInk || candidate.writingMode !== context.writingMode) continue;
+				if (candidate.profile.id !== context.profile.id) continue;
+				const key = `${candidate.rect.x},${candidate.rect.y},${candidate.rect.width},${candidate.rect.height}`;
+				if (seen.has(key)) continue;
+				seen.add(key);
+				windows.push([candidateId, candidate]);
+			}
+			return windows;
+		};
+		let best: Grown | null = null;
+		{
+			const own = await growIn(context, startSize);
+			if (own) best = { ...own, region: context, candidateId: planned.winningCandidateId! };
+			for (const [candidateId, region] of sameBalloonWindows()) {
+				const other = await growIn(region, best?.size ?? startSize);
+				if (other && other.size > (best?.size ?? startSize)) best = { ...other, region, candidateId };
+			}
+			// A text flowed through a balloon's lobes always fits a slightly larger
+			// size than one split where a sentence ends, because it may break
+			// anywhere, the score's size reward then picks it, and the lobes break
+			// mid-sentence ("I write / down every"). The sentence split is taken
+			// whenever it holds most of that size (measured: 27px against 29.25).
+			if (!pinned && context.threadMode === 'flow') {
+				const flowed = best?.size ?? startSize;
+				for (const [candidateId, region] of [...contexts].sort((a, b) => compareCanonicalText(a[0], b[0]))) {
+					if (!candidateId.startsWith(`${planned.itemId}:`) || region.threadMode !== 'sentences') continue;
+					if (region.profile.id !== context.profile.id || !sameRect(region.rect, context.rect)) continue;
+					const split = await growIn(region, quantize(flowed * THREAD_SENTENCE_SIZE_RATIO, 0.25) - 0.25);
+					if (split) best = { ...split, region, candidateId };
 					break;
 				}
 			}
@@ -762,6 +823,8 @@ async function maximizeSelectedFonts(
 			planned.winningCandidateId = grown.candidateId;
 			// A card tightened onto the ink was measured at the OLD size. Growing
 			// the font without re-tightening ships lines outside their own rect.
+			// Balloon text grown in another window of its balloon takes that window.
+			if (!grown.region.tightInk && grown.region !== context) planned.rect = grown.region.rect;
 			if (grown.region.tightInk) {
 				planned.rect = tightInkRect(
 					grown.lines,
@@ -782,7 +845,8 @@ async function maximizeSelectedFonts(
 			}
 			inkByItem.set(planned.itemId, grown.lines.map((line) => line.bounds));
 		};
-		planned.maxFontSize = Math.max(startSize, best?.size ?? startSize);
+		// A switch of thread mode can settle below the placed size; it then owns the range.
+		planned.maxFontSize = best && best.region.threadMode !== context.threadMode ? best.size : Math.max(startSize, best?.size ?? startSize);
 		if (pinned) {
 			// A size the user pinned is measured above and never grown. The one
 			// change made here is to reach the pin itself when the candidate search
@@ -801,7 +865,7 @@ async function maximizeSelectedFonts(
 			}
 			continue;
 		}
-		if (best && best.size > startSize) apply({ ...best, region: context, candidateId: planned.winningCandidateId! });
+		if (best && (best.size > startSize || best.region.threadMode !== context.threadMode)) apply(best);
 	}
 }
 
@@ -990,6 +1054,55 @@ function sourceRect(item: OverlayItemV2, input: OverlayLayoutInput): Rect | null
 	return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
+/**
+ * The lobes of a conjoined balloon one utterance runs through, in reading order,
+ * or undefined. Only for the balloon's only item, and only when its own source
+ * lettering sits in two or more of the lobes: the artist split the sentence
+ * across them, so the translation runs through them too (`threadedHorizontalLines`).
+ * Stacked lobes read top to bottom; lobes side by side in the order the source
+ * reaches them.
+ */
+/** One lobe of a conjoined balloon and the share of the item's source lettering drawn in it. */
+type ThreadLobe = { rect: Rect; share: number };
+/**
+ * How a threaded text is divided between lobes: at the sentence boundary that
+ * best matches how the source is divided (`sentences`), or flowed from one lobe
+ * into the next wherever its lines happen to end (`flow`). Both are offered as
+ * candidates when the text has a sentence boundary; flowing costs
+ * `THREAD_FLOW_PENALTY`, because it fits a larger size by splitting mid-sentence
+ * and would otherwise always win.
+ */
+type ThreadMode = 'sentences' | 'flow';
+/** Score cost of flowing a threaded text when a sentence split is on offer (a compact profile's cost). */
+const THREAD_FLOW_PENALTY = 8;
+/** A sentence split is kept over a flow that won the beam when it holds this share of the flow's size. */
+const THREAD_SENTENCE_SIZE_RATIO = 0.85;
+
+function threadedLobes(item: OverlayItemV2, input: OverlayLayoutInput): ThreadLobe[] | undefined {
+	if (item.manual.rect || input.settings.mode !== 'bubble-segmentation') return undefined;
+	const container = input.document.containers.find((candidate) => candidate.id === item.containerId);
+	if (!container || container.kind === 'free' || !isSimplePolygon(container.polygon)) return undefined;
+	if (input.document.items.some((other) => other.id !== item.id && other.containerId === container.id)) return undefined;
+	const split = polygonLobeSplit(container.polygon, { maxLobes: 4 });
+	if (!split || split.lobes.length < 2) return undefined;
+	const reached: number[] = [];
+	const lettering = new Map<number, number>();
+	for (const sourceId of item.sourceIds) {
+		const source = input.document.sources.find((candidate) => candidate.id === sourceId);
+		if (!source) continue;
+		const cx = source.bounds.x + source.bounds.width / 2;
+		const cy = source.bounds.y + source.bounds.height / 2;
+		const lobe = split.lobes.findIndex((rect) => cx >= rect.x && cx <= rect.x + rect.width && cy >= rect.y && cy <= rect.y + rect.height);
+		if (lobe < 0) continue;
+		if (!reached.includes(lobe)) reached.push(lobe);
+		lettering.set(lobe, (lettering.get(lobe) ?? 0) + source.bounds.width * source.bounds.height);
+	}
+	if (reached.length < 2) return undefined;
+	const ordered = split.axis === 'y' ? [...reached].sort((a, b) => split.lobes[a].y - split.lobes[b].y) : reached;
+	const total = ordered.reduce((sum, index) => sum + (lettering.get(index) ?? 0), 0);
+	return ordered.map((index) => ({ rect: split.lobes[index], share: total > 0 ? (lettering.get(index) ?? 0) / total : 1 / ordered.length }));
+}
+
 function candidateRects(item: OverlayItemV2, input: OverlayLayoutInput, writingMode: OverlayWritingMode): Rect[] {
 	const page = input.document.sourceImage;
 	if (item.manual.rect) return [{ ...item.manual.rect }];
@@ -1025,7 +1138,10 @@ function candidateRects(item: OverlayItemV2, input: OverlayLayoutInput, writingM
 		// members keep the bbox and the band stack, nothing that carves.
 		const continuation = input.document.items.some((candidate) =>
 			candidate.containerId === container.id && candidate.continuesPrevious === true);
-		if (!continuation && input.settings.mode === 'bubble-segmentation' && isSimplePolygon(container.polygon)) {
+		// An utterance threaded through the lobes is not confined to one of them
+		// either: a lobe rect is exactly the placement threading replaces.
+		const threaded = writingMode === 'horizontal-tb' && threadedLobes(item, input) !== undefined;
+		if (!continuation && !threaded && input.settings.mode === 'bubble-segmentation' && isSimplePolygon(container.polygon)) {
 			const split = polygonWaistSplit(container.polygon);
 			if (split) {
 				for (const lobe of split.lobes) {
@@ -1636,8 +1752,15 @@ function stackedColumnBands(
 			const top = Math.min(...run.map((entry) => entry.source.y));
 			const right = Math.max(...run.map((entry) => entry.source.x + entry.source.width));
 			const bottom = Math.max(...run.map((entry) => entry.source.y + entry.source.height));
+			// Vertical columns read right to left, so the run's bands go top to
+			// bottom in that order. The stored order is the grouper's page sort,
+			// which banded groups by their centre: the longest column of a block,
+			// often its first, sorted after the columns to its left, and pages
+			// translated before that was fixed still carry it.
+			const readingOrder = (a: typeof run[number], b: typeof run[number]) =>
+				(b.source.x + b.source.width) - (a.source.x + a.source.width) || rank(a, b);
 			emitBands(
-				[...run].sort(rank),
+				[...run].sort(readingOrder),
 				{ x: left, y: top, width: right - left, height: bottom - top },
 				false,
 				// No contour: a free run's region is the joint footprint of the
@@ -1991,9 +2114,13 @@ function runPlans(
 			const end = Math.min(directionalEnd, font.endUtf16);
 			if (end <= start) continue;
 			const text = line.text.slice(start - line.startUtf16, end - line.startUtf16);
-			const width = input.textLayout.measure({
+			// The whitespace a line ends with hangs past its edge and is not ink
+			// (see `hangingWhitespaceWidth` in the Pretext adapter); the fragment
+			// that ends the line is measured without it.
+			const measured = end === line.endUtf16 ? text.replace(/\s+$/u, '') : text;
+			const width = measured.length === 0 ? 0 : input.textLayout.measure({
 				scopeId: input.scopeId,
-				text,
+				text: measured,
 				locale: input.locale,
 				fontKey: font.fontKey,
 				family: font.family,
@@ -2038,6 +2165,237 @@ function runPlans(
 	};
 }
 
+type LineLayout = ReturnType<TextLayoutPort['layout']>;
+
+/** A threaded lobe's end rows narrower than this share of its widest row stay empty. */
+const THREAD_ROW_MIN_SHARE = 0.5;
+/** Where a sentence ends: its closing punctuation, any closing quote, the space after. */
+const SENTENCE_END = /[.!?…。！？]+["'”’」』)\]]*\s+/gu;
+
+/**
+ * One text set through the lobes of a conjoined balloon: each lobe gets its own
+ * stack of rows, and the rows across the waist between them are not used.
+ *
+ * Laid out as one stack, a balloon drawn as two lobes with one sentence in each
+ * had either the whole translation squeezed into one lobe — the other whitewashed
+ * and empty — or centred across the waist, where the narrowest rows held a word
+ * each ("came" alone on a line) and the lines brushed the outline. Measured on
+ * the stress pages: 3 such balloons in 31 pages, all with one utterance whose
+ * source sits in both lobes.
+ *
+ * The artist put a sentence in each lobe, so the translation is split where a
+ * sentence ends: of the splits whose halves each fit their lobe, the one whose
+ * first half carries the share of the text closest to the share of the source
+ * lettering drawn in the first lobe. Each half is centred in its lobe. Where no
+ * sentence boundary fits (one long sentence, three lobes), the text runs from
+ * one lobe into the next like text between linked frames, every lobe full but
+ * the last, whose lines are centred.
+ */
+function threadedHorizontalLines(input: Parameters<typeof horizontalLines>[0]): { lines: OverlayRenderLineV2[]; complete: boolean } {
+	const lobes = input.threadLobes!.map((lobe) => lobe.rect);
+	const polygon = input.polygon!;
+	const lineHeight = input.lineHeight;
+	type Stack = { tops: number[]; constraints: LineWidthConstraint[] };
+	// Rows of one lobe: `count` of them centred in it (all it holds when
+	// `count` is undefined), clipped to the lobe's width and kept to one
+	// coherent stack, or the best run of them where an end row is empty.
+	const lobeStack = (lobe: Rect, count?: number): Stack | null => {
+		const capacity = Math.floor((lobe.height - input.padding * 2) / lineHeight);
+		const lineCount = Math.min(capacity, count ?? capacity);
+		if (lineCount < 1) return null;
+		const spare = Math.max(0, lobe.height - lineCount * lineHeight);
+		const inset = Math.min(input.padding, spare / 2);
+		const minimum = lobe.y + inset;
+		const maximum = lobe.y + lobe.height - inset - lineCount * lineHeight;
+		const top = minimum + Math.max(0, maximum - minimum) / 2;
+		const left = Math.max(lobe.x, input.rect.x) + input.padding;
+		const right = Math.min(lobe.x + lobe.width, input.rect.x + input.rect.width) - input.padding;
+		const rows = Array.from({ length: lineCount }, (_, index) => safeBandIntervals(
+			polygon,
+			top + index * lineHeight,
+			top + (index + 1) * lineHeight,
+			input.padding,
+			input.tailPolygon,
+			input.exclusionPolygons
+		).map((interval) => ({ start: Math.max(interval.start, left), end: Math.min(interval.end, right) }))
+			.filter((interval) => interval.end > interval.start));
+		let start = 0;
+		let path = rows.every((row) => row.length > 0) ? coherentIntervalStack(rows) : null;
+		if (!path) {
+			const window = coherentSubWindowStack(rows);
+			if (!window) return null;
+			start = window.start;
+			path = window.path;
+		}
+		// A lobe's cap tapers: a lobe filled to its first row put one short word
+		// alone up there ("A" over the rest of the sentence). Its end rows narrower
+		// than half its widest are left empty.
+		const widest = Math.max(...path.map((interval) => interval.end - interval.start));
+		const usable = (interval: { start: number; end: number }) => interval.end - interval.start >= THREAD_ROW_MIN_SHARE * widest;
+		let first = 0;
+		let last = path.length - 1;
+		while (first < last && !usable(path[first])) first += 1;
+		while (last > first && !usable(path[last])) last -= 1;
+		start += first;
+		path = path.slice(first, last + 1);
+		return {
+			tops: path.map((_, index) => top + (start + index) * lineHeight),
+			constraints: path.map((interval) => ({ width: interval.end - interval.start, intervalStart: interval.start, intervalEnd: interval.end }))
+		};
+	};
+	const primary = input.fontRuns.find((run) => run.text.trim().length > 0) ?? input.fontRuns[0];
+	const prepare = (text: string) => input.textLayout.prepare({
+		scopeId: input.scopeId,
+		text,
+		locale: input.locale,
+		fontKey: primary.fontKey,
+		family: primary.family,
+		families: [...new Set(input.fontRuns.map((run) => run.family))],
+		weight: primary.weight,
+		fontSize: input.fontSize,
+		lineHeight,
+		direction: input.direction,
+		styleKey: input.styleKey
+	});
+	// Lay `stacks` out in sequence and centre the lines each lobe received in it;
+	// a lobe the text never reached is left out.
+	const flow = (text: string, regions: Rect[]): { layout: LineLayout; tops: number[] } | null => {
+		const handle = prepare(text);
+		const full = regions.map((lobe) => lobeStack(lobe));
+		if (full.some((stack) => stack === null)) return null;
+		const stacks = full as Stack[];
+		const run = (chosen: Stack[]) => ({
+			layout: input.textLayout.layout(handle, chosen.flatMap((stack) => stack.constraints)),
+			tops: chosen.flatMap((stack) => stack.tops)
+		});
+		let result = run(stacks);
+		if (result.layout.lines.length === 0) return null;
+		if (result.layout.complete) {
+			const counts: number[] = [];
+			let remaining = result.layout.lines.length;
+			for (const stack of stacks) {
+				const taken = Math.min(remaining, stack.constraints.length);
+				counts.push(taken);
+				remaining -= taken;
+			}
+			const centred = regions.flatMap((lobe, index) => {
+				if (counts[index] === 0) return [];
+				const stack = lobeStack(lobe, counts[index]);
+				return stack && stack.constraints.length === counts[index] ? [stack] : [null];
+			});
+			if (centred.every((stack) => stack !== null)) {
+				const again = run(centred as Stack[]);
+				if (again.layout.complete && again.layout.lines.length === result.layout.lines.length) result = again;
+			}
+		}
+		return result;
+	};
+
+	if (input.threadMode !== 'flow' && lobes.length === 2) {
+		const shares = input.threadLobes!.map((lobe) => lobe.share);
+		const visibleLength = (text: string) => text.replace(/\u00ad/gu, '').trim().length;
+		const total = Math.max(1, visibleLength(input.text));
+		let best: { split: number; first: { layout: LineLayout; tops: number[] }; second: { layout: LineLayout; tops: number[] }; distance: number } | null = null;
+		for (const match of input.text.matchAll(SENTENCE_END)) {
+			const split = (match.index ?? 0) + match[0].length;
+			if (split >= input.text.length) continue;
+			const distance = Math.abs(visibleLength(input.text.slice(0, split)) / total - shares[0]);
+			if (best && distance >= best.distance) continue;
+			const first = flow(input.text.slice(0, split), [lobes[0]]);
+			if (!first?.layout.complete) continue;
+			const second = flow(input.text.slice(split), [lobes[1]]);
+			if (!second?.layout.complete) continue;
+			best = { split, first, second, distance };
+		}
+		if (best) {
+			// The second half's lines index into the whole text again.
+			const graphemes = [...new Intl.Segmenter(input.locale, { granularity: 'grapheme' }).segment(input.text.slice(0, best.split))].length;
+			const lines = [
+				...best.first.layout.lines.map((line, index, all) =>
+					index === all.length - 1 && line.breakAfter === 'end' ? { ...line, breakAfter: 'legal' as const } : line),
+				...best.second.layout.lines.map((line) => ({
+					...line,
+					startUtf16: line.startUtf16 + best!.split,
+					endUtf16: line.endUtf16 + best!.split,
+					startGrapheme: line.startGrapheme + graphemes,
+					endGrapheme: line.endGrapheme + graphemes
+				}))
+			];
+			const tops = [...best.first.tops, ...best.second.tops];
+			const composed = composeHorizontalLines(input, { lines, complete: true }, (index) => tops[index]);
+			return { lines: composed.lines, complete: composed.measuredFits };
+		}
+		if (input.threadMode === 'sentences') return { lines: [], complete: false };
+	}
+
+	const flowed = flow(input.text, lobes);
+	if (!flowed) return { lines: [], complete: false };
+	const composed = composeHorizontalLines(input, flowed.layout, (index) => flowed.tops[index]);
+	return { lines: composed.lines, complete: flowed.layout.complete && composed.measuredFits };
+}
+
+/**
+ * Paints laid-out lines: the runs of each, measured exactly where fonts or
+ * directions mix, centred in the interval its constraint gave it, with its top
+ * where `rowTop` puts that line.
+ */
+function composeHorizontalLines(
+	input: Parameters<typeof horizontalLines>[0],
+	layoutResult: LineLayout,
+	rowTop: (index: number) => number
+): { lines: OverlayRenderLineV2[]; measuredFits: boolean } {
+	let measuredFits = true;
+	const lines = layoutResult.lines.map((line, index): OverlayRenderLineV2 => {
+		const direction = input.direction;
+		const baseline = quantize(rowTop(index) + input.fontSize);
+		const plannedRuns = runPlans(line, input.fontRuns, {
+			direction,
+			locale: input.locale,
+			fontSize: input.fontSize,
+			lineHeight: input.lineHeight,
+			styleKey: input.styleKey,
+			scopeId: input.scopeId,
+			textLayout: input.textLayout,
+			intervalStart: line.constraint.intervalStart,
+			intervalWidth: line.constraint.width,
+			baseline,
+			// Emergency grapheme breaks change shaping context. The suffix after an
+			// emergency break can change as well, so both sides must be re-prepared
+			// and measured as the exact painted fragment.
+			forceExactMeasurement: line.breakAfter === 'emergency'
+				|| (index > 0 && layoutResult.lines[index - 1].breakAfter === 'emergency')
+		});
+		if (!plannedRuns.fits) measuredFits = false;
+		const origin = {
+			x: quantize(direction === 'rtl' ? plannedRuns.left + plannedRuns.advance : plannedRuns.left),
+			y: baseline
+		};
+		return {
+			text: line.text,
+			sourceRange: {
+				startUtf16: line.startUtf16,
+				endUtf16: line.endUtf16,
+				startGrapheme: line.startGrapheme,
+				endGrapheme: line.endGrapheme
+			},
+			breakAfter: line.breakAfter,
+			origin,
+			baseline: origin.y,
+			advance: quantize(plannedRuns.advance),
+			bounds: {
+				x: quantize(plannedRuns.left),
+				y: quantize(rowTop(index)),
+				width: quantize(plannedRuns.advance),
+				height: quantize(input.lineHeight)
+			},
+			availableInterval: { start: line.constraint.intervalStart, end: line.constraint.intervalEnd },
+			direction,
+			runs: plannedRuns.runs
+		};
+	});
+	return { lines, measuredFits };
+}
+
 function horizontalLines(input: {
 	text: string;
 	locale: string;
@@ -2055,7 +2413,11 @@ function horizontalLines(input: {
 	textLayout: TextLayoutPort;
 	lineCountScale?: number;
 	verticalBias?: -1 | 0 | 1;
+	/** The lobes of a conjoined balloon the text runs through, in reading order (`threadedLobes`). */
+	threadLobes?: ThreadLobe[];
+	threadMode?: ThreadMode;
 }): { lines: OverlayRenderLineV2[]; complete: boolean } {
+	if (input.polygon && input.threadLobes && input.threadLobes.length >= 2) return threadedHorizontalLines(input);
 	const availableLines = Math.max(1, Math.floor((input.rect.height - input.padding * 2) / input.lineHeight));
 	const maxLines = Math.max(1, Math.min(availableLines, Math.floor(availableLines * (input.lineCountScale ?? 1))));
 	const stackTop = (lineCount: number) => {
@@ -2121,59 +2483,8 @@ function horizontalLines(input: {
 		direction: input.direction,
 		styleKey: input.styleKey
 	});
-	type LineLayout = ReturnType<TextLayoutPort['layout']>;
-	const composeLines = (layoutResult: LineLayout, top: number): { lines: OverlayRenderLineV2[]; measuredFits: boolean } => {
-		let measuredFits = true;
-		const lines = layoutResult.lines.map((line, index): OverlayRenderLineV2 => {
-			const direction = input.direction;
-			const baseline = quantize(top + index * input.lineHeight + input.fontSize);
-			const plannedRuns = runPlans(line, input.fontRuns, {
-				direction,
-				locale: input.locale,
-				fontSize: input.fontSize,
-				lineHeight: input.lineHeight,
-				styleKey: input.styleKey,
-				scopeId: input.scopeId,
-				textLayout: input.textLayout,
-				intervalStart: line.constraint.intervalStart,
-				intervalWidth: line.constraint.width,
-				baseline,
-				// Emergency grapheme breaks change shaping context. The suffix after an
-				// emergency break can change as well, so both sides must be re-prepared
-				// and measured as the exact painted fragment.
-				forceExactMeasurement: line.breakAfter === 'emergency'
-					|| (index > 0 && layoutResult.lines[index - 1].breakAfter === 'emergency')
-			});
-			if (!plannedRuns.fits) measuredFits = false;
-			const origin = {
-				x: quantize(direction === 'rtl' ? plannedRuns.left + plannedRuns.advance : plannedRuns.left),
-				y: baseline
-			};
-			return {
-				text: line.text,
-				sourceRange: {
-					startUtf16: line.startUtf16,
-					endUtf16: line.endUtf16,
-					startGrapheme: line.startGrapheme,
-					endGrapheme: line.endGrapheme
-				},
-				breakAfter: line.breakAfter,
-				origin,
-				baseline: origin.y,
-				advance: quantize(plannedRuns.advance),
-				bounds: {
-					x: quantize(plannedRuns.left),
-					y: quantize(top + index * input.lineHeight),
-					width: quantize(plannedRuns.advance),
-					height: quantize(input.lineHeight)
-				},
-				availableInterval: { start: line.constraint.intervalStart, end: line.constraint.intervalEnd },
-				direction,
-				runs: plannedRuns.runs
-			};
-		});
-		return { lines, measuredFits };
-	};
+	const composeLines = (layoutResult: LineLayout, top: number) =>
+		composeHorizontalLines(input, layoutResult, (index) => top + index * input.lineHeight);
 
 	/**
 	 * Multi-lobe fallback: anchor the band grid at the full-height stack top
@@ -2962,11 +3273,17 @@ export class JointOverlayLayoutService implements OverlayLayoutService {
 				// that cannot see the sibling it was carved for, and the extra
 				// window costs it the fine font ladder as well.
 				const exclusiveCell = Boolean(stackedCell) && writingMode === 'horizontal-tb';
-				const geometries: CandidateGeometry[] = (exclusiveCell ? [] : primary).map((rect) => ({
-					rect,
-					contourBound: Boolean(contourPolygon),
-					typographySamples: samples
-				}));
+				// The balloon's own window runs the text through its lobes when one
+				// utterance spans them (`threadedLobes`).
+				const threadLobes = contourPolygon && writingMode === 'horizontal-tb' ? threadedLobes(item, input) : undefined;
+				const threadSentences = threadLobes?.length === 2 && new RegExp(SENTENCE_END.source, 'u').test((entry?.translated_text ?? '').trim() + ' ');
+				const geometries: CandidateGeometry[] = (exclusiveCell ? [] : primary).flatMap((rect, index): CandidateGeometry[] => {
+					const base = { rect, contourBound: Boolean(contourPolygon), typographySamples: samples };
+					if (!threadLobes || index !== 0) return [base];
+					return threadSentences
+						? [{ ...base, threadLobes, threadMode: 'sentences' }, { ...base, threadLobes, threadMode: 'flow', threadPenalty: THREAD_FLOW_PENALTY }]
+						: [{ ...base, threadLobes, threadMode: 'flow' }];
+				});
 				// Ordered stacked-column band, then the height-locked source-region
 				// family. Both are spliced in near the front — never index 0 (the
 				// reveal fallback and primary geometry take the first rect), but
@@ -3045,7 +3362,8 @@ export class JointOverlayLayoutService implements OverlayLayoutService {
 					const minimumFloor = regularReadableRescueFloor(
 						item, input, text, sourceText, preferredFloor, geometry.contourBound
 					);
-					const candidateHashPrefix = `[${canonicalStringify(rect)},${canonicalStringify(writingMode)},`;
+					// A threaded window is offered twice, once per thread mode.
+					const candidateHashPrefix = `[${canonicalStringify(rect)},${canonicalStringify(writingMode)},${geometry.threadMode ? `${canonicalStringify(geometry.threadMode)},` : ''}`;
 					// Contour-bound items have one geometry and can spend the budget on a
 					// fine typography search. Free items search up to 15 distinct shapes;
 					// eight sizes cover every shape without starving the reciprocal aspect
@@ -3125,7 +3443,9 @@ export class JointOverlayLayoutService implements OverlayLayoutService {
 								scopeId: input.scopeId,
 								textLayout: this.textLayout,
 								lineCountScale: profile.lineCountScale,
-								verticalBias: profile.verticalBias
+								verticalBias: profile.verticalBias,
+								threadLobes: candidateContour ? geometry.threadLobes : undefined,
+								threadMode: geometry.threadMode
 							});
 						if (!laidOut.complete || laidOut.lines.length === 0) {
 							trace.reason = candidateContour ? 'text-does-not-fit' : 'no-safe-intervals';
@@ -3178,7 +3498,7 @@ export class JointOverlayLayoutService implements OverlayLayoutService {
 							pageWidth: page.width,
 							pageHeight: page.height,
 							settings: input.settings,
-							typographyCompression: profile.penalty
+							typographyCompression: profile.penalty + (geometry.threadPenalty ?? 0)
 						});
 						trace.accepted = true;
 						trace.score = score;
@@ -3186,6 +3506,8 @@ export class JointOverlayLayoutService implements OverlayLayoutService {
 							relayoutContexts.set(candidateId, {
 								rect,
 								fontSize,
+								threadLobes: candidateContour ? geometry.threadLobes : undefined,
+								threadMode: geometry.threadMode,
 								profile,
 								writingMode,
 								contour: candidateContour,
