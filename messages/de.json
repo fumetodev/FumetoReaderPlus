@@ -647,6 +647,7 @@
 	"help_overlay_badges_states": "Overlay-Abzeichen & Zustände:",
 	"help_overlay_box_selected_for": "Overlay-Feld zur Bearbeitung ausgewählt mit Steuerelementen",
 	"help_overlay_settings": "Overlay-Einstellungen:",
+	"help_overlay_text_now_fills": "Overlay-Text füllt jetzt sein eigenes Feld: Eine kurze Zeile in einer großen Sprechblase wird nicht mehr verkleinert, damit sie zum Rest der Seite passt, und der Schriftgrößen-Regler im Editor funktioniert wieder und reicht bis zur größten Größe, die das Feld aufnehmen kann",
 	"help_overlay_text_size_has": "Die Overlay-Textgröße hat einen gespeicherten globalen Standardwert zusätzlich zu einer Anpassung pro Band.",
 	"help_overview": "Überblick",
 	"help_page_navigation": "Seitennavigation",

@@ -647,6 +647,7 @@
 	"help_overlay_badges_states": "Badge e stati dell'overlay:",
 	"help_overlay_box_selected_for": "Riquadro dell'overlay selezionato per la modifica con i controlli",
 	"help_overlay_settings": "Impostazioni overlay:",
+	"help_overlay_text_now_fills": "Il testo in overlay ora riempie il proprio riquadro: una riga breve in un grande fumetto non viene più rimpicciolita per adeguarsi al resto della pagina, e il cursore della dimensione del testo nell’editor torna a funzionare e arriva fino alla dimensione più grande che il riquadro può contenere",
 	"help_overlay_text_size_has": "La dimensione del testo dell'overlay ha un valore predefinito globale memorizzato insieme alla regolazione per volume.",
 	"help_overview": "Panoramica",
 	"help_page_navigation": "Navigazione tra le pagine",
