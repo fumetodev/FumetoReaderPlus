@@ -54,7 +54,7 @@ import { recordGate, recordGateResult } from './gate-telemetry.js';
 import { bidiVisualOrder, paragraphDirection, requiresExplicitBidiRuns, resolveBidiRuns } from './bidi.js';
 import { createCooperativeYieldBudget, type CooperativeYieldBudget } from './cooperative-yield.js';
 
-export const OVERLAY_ALGORITHM_VERSION = 'overlay-layout-v2-policy-33';
+export const OVERLAY_ALGORITHM_VERSION = 'overlay-layout-v2-policy-34';
 
 /**
  * Bench-only switches.
@@ -131,7 +131,7 @@ export interface OverlayFillTrace {
 	regionRect: Rect;
 	profile: string;
 	size: number;
-	outcome: 'fits' | 'incomplete' | 'outside-region' | 'over-budget' | 'cut-word' | 'collision';
+	outcome: 'fits' | 'incomplete' | 'outside-region' | 'outside-footprint' | 'cut-word' | 'collision';
 	lines: number;
 }
 
@@ -168,8 +168,7 @@ type TypographyProfile = {
 	paddingScale: number;
 	minimumPadding: number;
 	lineCountScale: number;
-	/** Where a stack shorter than the region sits: -1 top, 0 middle, 1 bottom, or anywhere between. */
-	verticalBias: number;
+	verticalBias: -1 | 0 | 1;
 	penalty: number;
 };
 
@@ -345,6 +344,8 @@ const SOFT_HYPHEN = '­';
  */
 type RelayoutContext = {
 	rect: Rect;
+	/** The size this candidate was accepted at: a known fit in this rect with this profile. */
+	fontSize: number;
 	profile: TypographyProfile;
 	writingMode: OverlayWritingMode;
 	contour?: Point[];
@@ -369,7 +370,7 @@ type RelayoutContext = {
 	paddingRatio?: number;
 	/**
 	 * The automatic sound-effect prominence cap this candidate was sized under
-	 * (`automaticSfxFontCap`), carried so fill refinement honours it too:
+	 * (`automaticFreeTextFontCap`), carried so fill refinement honours it too:
 	 * a short SFX that won a source-region window must not grow from the
 	 * source's own stroke scale to whatever fills the window. Absent means no
 	 * cap (everything but sound effects, manual typography, no measurable
@@ -378,8 +379,8 @@ type RelayoutContext = {
 	glyphFontCap?: number;
 	/**
 	 * Free text only: the union of the item's source bounds, which its erasure
-	 * whitewashes. The fill refinement lets the text's card grow to that box's
-	 * area and no more.
+	 * whitewashes. With the card the candidate search chose, it is the free
+	 * text's footprint, which the fill refinement grows the text inside.
 	 */
 	sourceBounds?: Rect;
 	/**
@@ -394,18 +395,11 @@ type RelayoutContext = {
 	 *
 	 * Not set for manual rectangles or free text, which the refinement bounds
 	 * itself: a manual rectangle is the item's region outright, and free text
-	 * may grow only within the white box already painted for it
-	 * (`sourceBounds`, by area), because its card is the tight ink rect and an
-	 * unbounded growth would push a white box into artwork.
+	 * may grow only within its footprint (its source's box and the card it was
+	 * placed with), because its card is the tight ink rect and an unbounded
+	 * growth would push a white box into artwork.
 	 */
 	boundedRegion?: boolean;
-	/**
-	 * A height-locked window over a free item's own source columns (one of
-	 * `sourceRegionWindows`). It is bounded like a band, but it is the item's
-	 * own, so the fill refinement may move free text into it: that is the window
-	 * that puts wide English over the tall Japanese it replaces.
-	 */
-	sourceRegion?: boolean;
 };
 
 /**
@@ -498,30 +492,35 @@ function isSfxTyped(item: OverlayItemV2, entry: PageTranslationEntry | undefined
 }
 
 /**
- * Fill refinement (policy-22, widened in policy-33): the candidate ladder samples
- * sizes coarsely (its step can exceed 10pt in a generous balloon), and assignment
- * keeps the best *sampled* size — leaving visible white space a between-rungs
- * size would have used. After assignment, every placement grows to the largest
- * size its OWN region holds, bisecting upward on the 0.25 grid from the winning
- * size and re-running the layout at the SAME rect. A trial is accepted only if it
- * stays inside the region, introduces no emergency breaks, and its line boxes
- * stay clear of every other placed item's ink (the page-level registry below).
+ * Fill refinement (policy-22, widened in policy-33, bounded in policy-34): the
+ * candidate ladder samples sizes coarsely (its step can exceed 10pt in a
+ * generous balloon), and assignment keeps the best *sampled* size — leaving
+ * visible white space a between-rungs size would have used. After assignment,
+ * every placement grows to the largest size its OWN region holds, re-running
+ * the layout at the SAME rect with the SAME typography profile. A trial is
+ * accepted only if it stays inside the region, introduces no emergency breaks,
+ * and its line boxes stay clear of every other placed item's ink (the
+ * page-level registry below).
  *
  * The region is what the item owns: its balloon contour, its stacked band or
- * source-region window, or the rectangle the user drew. Free text grows inside
- * its search window until its card covers as much as the white box erased for
- * its source (or its current card, if larger), so the page loses no more
- * artwork to white than the source's own erasure already took.
+ * source-region window, or the rectangle the user drew. Free text owns none, so
+ * it grows inside its FOOTPRINT: the box of its source lettering together with
+ * the card the candidate search placed it with. The overlay keeps the extent,
+ * in width and in height, of the text it replaces and of the card it was given.
+ *
+ * Growth changes the size and nothing else. Policy-33 also let it switch to a
+ * tighter spacing profile, a stack set off-centre, or another of a free item's
+ * search windows, and bounded free text by its erasure's AREA: every one of
+ * those bought size with the shape the scorer had chosen. Balloon text crept to
+ * within a few pixels of the outline (the gap to the contour fell from 12 to 2px
+ * and 15 to 4px on real pages) and unenclosed text was re-wrapped into a strip
+ * up to twice its source's width. The scorer weighs spacing, position and box
+ * growth against size; the refinement only fills the gap its ladder left.
  *
  * Nothing caps a size against other items. Font sizes on a page are not meant to
  * match: a short line in a large balloon fills its balloon however small its
  * neighbours' text is (the policy-26..32 page-median clamp left such lines at a
  * few percent of their balloon).
- *
- * The winner's typography profile is tried first. The other readable profiles
- * its geometry allows (tighter leading and padding, a stack set higher or lower
- * where the balloon is wider) are tried after it, and win only for a clearly
- * larger size: spacing and position are not traded for a pixel.
  *
  * Every placed item records the largest size its region holds as
  * `maxFontSize`, user-pinned sizes included, so the editor can offer exactly the
@@ -530,10 +529,14 @@ function isSfxTyped(item: OverlayItemV2, entry: PageTranslationEntry | undefined
  * reveal rungs are left alone.
  */
 const FILL_REFINEMENT_MAX_PROBES = 9;
-/** A profile other than the winner's must buy at least this much more size. */
-const FILL_PROFILE_SWITCH_GAIN = 1.04;
-/** Each step down when an item's largest size is measured from the top. */
-const FILL_SCAN_STEP = 0.88;
+/**
+ * Each step down when an item's largest size is measured from the top. Fit is
+ * not monotone in the size, and the sizes that fit can be a band a pixel or two
+ * wide: a geometric 12% step stepped over them (a balloon placed at 27.25 stayed
+ * there although 30 fitted), so the scan is linear. Each attempt is one layout
+ * of one text, and the analytic ceiling starts it close to the answer.
+ */
+const FILL_SCAN_STEP_PX = 1;
 /**
  * How far the ink a text needs at one size may fall short of what the placed
  * lines measured, per pixel of font size: hyphens come and go with the wrap
@@ -570,15 +573,14 @@ async function maximizeSelectedFonts(
 		if (!item) continue;
 		const context = planned.winningCandidateId ? contexts.get(planned.winningCandidateId) : undefined;
 		if (!context) continue;
-		// Free text owns no region of its own. It may grow inside its search
-		// window until its card is as large as the white box erased for its
-		// source (or the card it already has, if that is larger): English is wide
-		// where the vertical source is tall, so the card takes the source's area
-		// rather than its outline, and the page loses no more artwork to white.
-		const freeCardBudget = !hasOwnedRegion(context) && !item.manual.rect && context.tightInk && planned.rect
-			? Math.max(rectArea(context.sourceBounds ?? planned.rect), rectArea(planned.rect))
+		// Free text owns no region of its own. Its card may grow only inside the
+		// box of the lettering it replaces and the card it was placed with: the
+		// source's extent is where the reader expects the text, and the card is
+		// the shape the scorer chose for it.
+		const freeFootprint = !hasOwnedRegion(context) && !item.manual.rect && context.tightInk && planned.rect
+			? rectUnion(planned.rect, context.sourceBounds ?? planned.rect)
 			: undefined;
-		if (!hasOwnedRegion(context) && !item.manual.rect && freeCardBudget === undefined) continue;
+		if (!hasOwnedRegion(context) && !item.manual.rect && freeFootprint === undefined) continue;
 		const pinned = item.manual.referenceFontSize !== undefined;
 		const neighborInk: Rect[] = [];
 		for (const [otherId, rects] of inkByItem) {
@@ -587,10 +589,9 @@ async function maximizeSelectedFonts(
 		const writingMode = planned.writingMode ?? 'horizontal-tb';
 		const attempt = (
 			target: number,
-			profile: TypographyProfile,
 			region: RelayoutContext
 		): { lines: OverlayRenderLineV2[]; lineHeight: number } | null => {
-			const rect = region.rect;
+			const { rect, profile } = region;
 			const lineHeight = quantize(target * profile.lineHeightRatio);
 			const padding = quantize(Math.max(profile.minimumPadding, target * paddingRatio * profile.paddingScale));
 			const laidOut = writingMode === 'vertical-rl'
@@ -638,8 +639,8 @@ async function maximizeSelectedFonts(
 			};
 			if (!laidOut.complete || laidOut.lines.length === 0) return outcome('incomplete');
 			if (!inkInsideOwnedRegion(laidOut.lines, region, padding, writingMode)) return outcome('outside-region');
-			if (freeCardBudget !== undefined
-				&& rectArea(tightInkRect(laidOut.lines, Math.max(1, padding), page)) > freeCardBudget + 1 / 64) return outcome('over-budget');
+			if (freeFootprint !== undefined
+				&& !rectContains(freeFootprint, tightInkRect(laidOut.lines, Math.max(1, padding), page))) return outcome('outside-footprint');
 			// Growth must not degrade wrap quality: a larger font that only fits by
 			// chopping words mid-syllable is worse than the smaller clean layout.
 			if (laidOut.lines.some((line) => line.breakAfter === 'emergency')) return outcome('cut-word');
@@ -649,7 +650,8 @@ async function maximizeSelectedFonts(
 			outcome('fits');
 			return { lines: laidOut.lines, lineHeight };
 		};
-		type Grown = { lines: OverlayRenderLineV2[]; lineHeight: number; size: number; profile: TypographyProfile; region: RelayoutContext; candidateId: string };
+		type Fit = { lines: OverlayRenderLineV2[]; lineHeight: number; size: number };
+		type Grown = Fit & { region: RelayoutContext; candidateId: string };
 		const startSize = planned.font.size;
 		// Ink the text needs per pixel of font size: the placed lines' advances over
 		// the size they were set at. Shaping is close to linear in the size and
@@ -657,113 +659,103 @@ async function maximizeSelectedFonts(
 		// size, and `FILL_INK_SLACK` covers what it misses.
 		const advancePerPx = planned.lines.reduce((sum, line) => sum + line.advance, 0) / startSize;
 		const unbreakable = writingMode === 'horizontal-tb' && !/[\s­‐-—-]/u.test(context.layoutText.trim());
-		const growIn = async (region: RelayoutContext, candidateId: string, floor: number): Promise<Grown | null> => {
-			// The region is the geometric bound: the layout, contour and collision
-			// checks decide what fits. (A 0.75-height / 0.6-width rule of thumb here
-			// under-reported the largest size a short line really fits.)
-			const ceiling = quantize(Math.min(
-				region.rect.height,
-				region.rect.width,
-				// Sound effects keep their prominence cap through refinement: a short
-				// word growing into a generous window must not read louder than the
-				// lettering it covers. Dialogue and free text have no such cap.
-				region.glyphFontCap ?? Infinity
-			), 0.25);
-			// No layout can need more ink than the region holds. Line boxes are
-			// stacked inside the region (inside the contour, under the free-text
-			// budget), so their area, `advance × lineHeight` summed, is at most the
-			// usable area; and a text with no break opportunity sits on one row, so
-			// its advance is at most the region's width less the padding. Both bound
-			// the size from above and make the top-down scan below start near where
-			// the answer is instead of at the region's edge.
-			const usableArea = Math.min(
-				rectArea(region.rect),
-				region.contour ? polygonArea(region.contour) : Infinity,
-				freeCardBudget ?? Infinity
-			);
-			const profileCeiling = (profile: TypographyProfile): number => {
-				if (!(advancePerPx > 0) || writingMode !== 'horizontal-tb') return ceiling;
-				let bound = Math.sqrt(usableArea / (FILL_INK_SLACK * advancePerPx * profile.lineHeightRatio));
-				if (unbreakable) bound = Math.min(bound, (region.rect.width - 2 * profile.minimumPadding) / (FILL_INK_SLACK * advancePerPx));
-				return Math.min(ceiling, quantize(bound, 0.25));
-			};
-			type Fit = { lines: OverlayRenderLineV2[]; lineHeight: number; size: number };
-			// Binary search for the largest size in [lo, hi] that fits, `found` being
-			// what already fits at `lo` (if anything was tried there).
-			const climb = async (profile: TypographyProfile, region: RelayoutContext, lo: number, hi: number, found: Fit | null): Promise<Fit | null> => {
-				for (let probe = 0; probe < FILL_REFINEMENT_MAX_PROBES && hi - lo > 0.25; probe += 1) {
-					await yieldBudget.checkpoint();
-					const mid = quantize((lo + hi) / 2, 0.25);
-					if (mid <= lo || mid > hi) break;
-					const fit = attempt(mid, profile, region);
-					if (fit) {
-						lo = mid;
-						found = { ...fit, size: mid };
-					} else {
-						hi = quantize(mid - 0.25, 0.25);
-					}
-				}
-				return found;
-			};
-			let grown: Grown | null = null;
-			if (experiments.fillDenseScan && recordFill) {
-				for (const profile of growthProfiles(item, region, writingMode)) {
-					for (let size = Math.floor(ceiling); size > startSize; size -= 1) attempt(size, profile, region);
+		// Binary search for the largest size in [lo, hi] that fits, `found` being
+		// what already fits at `lo` (if anything was tried there).
+		const climb = async (lo: number, hi: number, found: Fit | null): Promise<Fit | null> => {
+			for (let probe = 0; probe < FILL_REFINEMENT_MAX_PROBES && hi - lo > 0.25; probe += 1) {
+				await yieldBudget.checkpoint();
+				const mid = quantize((lo + hi) / 2, 0.25);
+				if (mid <= lo || mid > hi) break;
+				const fit = attempt(mid, context);
+				if (fit) {
+					lo = mid;
+					found = { ...fit, size: mid };
+				} else {
+					hi = quantize(mid - 0.25, 0.25);
 				}
 			}
-			for (const [index, profile] of growthProfiles(item, region, writingMode).entries()) {
-				const top = profileCeiling(profile);
-				const bar = index === 0 ? floor : Math.max(floor, (grown?.size ?? floor) * FILL_PROFILE_SWITCH_GAIN);
-				if (top - bar <= 0.25) continue;
-				// What fits is not monotone in the size: a line wraps differently at
-				// every size, and in a round balloon a smaller size can fail where a
-				// larger one fits. Climbing up from the placed size stops at the first
-				// such gap (measured: the pinned probe's top-down scan found larger
-				// sizes than the climb for 11 of 46 boxes), so every item is measured
-				// from the top down: the first fitting size on a geometric scan, then
-				// a bisection between it and the last failure above it.
-				let found: Fit | null = null;
-				let failedAbove = top + 0.25;
-				for (let size = top; size > bar; ) {
-					await yieldBudget.checkpoint();
-					const fit = attempt(size, profile, region);
-					if (fit) {
-						found = await climb(profile, region, size, quantize(failedAbove - 0.25, 0.25), { ...fit, size });
-						break;
-					}
-					failedAbove = size;
-					const next = quantize(size * FILL_SCAN_STEP, 0.25);
-					size = next < size ? next : size - 0.25;
-				}
-				// The scan's last step can clear the bar by up to a step's width, and
-				// the sizes just above the bar are where a profile most often wins
-				// (measured: a single word that fit at 133–135.75 under one profile,
-				// and nowhere above, was missed by a scan that stepped from 139.75 to
-				// 123). So a scan that found nothing ends with a probe just above the
-				// bar — the placed size itself, in the winner's own region — and a
-				// bisection up to the lowest size that failed.
-				if (!found && failedAbove - 0.25 > bar) {
-					const hi = quantize(failedAbove - 0.25, 0.25);
-					if (index === 0 && region === context) {
-						found = await climb(profile, region, startSize, hi, null);
-					} else {
-						const entry = quantize(bar + 0.25, 0.25);
-						if (entry <= hi) {
-							await yieldBudget.checkpoint();
-							const fit = attempt(entry, profile, region);
-							if (fit) found = await climb(profile, region, entry, hi, { ...fit, size: entry });
-						}
-					}
-				}
-				if (!found) continue;
-				if (found.size > bar && found.size > (grown?.size ?? 0)) grown = { ...found, profile, region, candidateId };
-			}
-			return grown;
+			return found;
 		};
-		const regions = (): Array<[string, RelayoutContext]> => [
-			[planned.winningCandidateId!, context],
-			...(freeCardBudget !== undefined ? alternativeFreeWindows(contexts, planned, context) : [])
-		];
+		// The region is the geometric bound: the layout, contour, footprint and
+		// collision checks decide what fits. (A 0.75-height / 0.6-width rule of
+		// thumb here under-reported the largest size a short line really fits.)
+		const bounds = freeFootprint ?? context.rect;
+		const ceiling = quantize(Math.min(
+			bounds.height,
+			bounds.width,
+			// Sound effects keep their prominence cap through refinement: a short
+			// word growing into a generous window must not read louder than the
+			// lettering it covers. Dialogue and free text have no such cap.
+			context.glyphFontCap ?? Infinity
+		), 0.25);
+		// No layout can need more ink than the region holds. Line boxes are
+		// stacked inside the region (inside the contour, inside the free-text
+		// footprint), so their area, `advance × lineHeight` summed, is at most the
+		// usable area; and a text with no break opportunity sits on one row, so
+		// its advance is at most the region's width less the padding. Both bound
+		// the size from above and make the top-down scan below start near where
+		// the answer is instead of at the region's edge.
+		const usableArea = Math.min(
+			rectArea(context.rect),
+			context.contour ? polygonArea(context.contour) : Infinity,
+			freeFootprint ? rectArea(freeFootprint) : Infinity
+		);
+		let top = ceiling;
+		if (advancePerPx > 0 && writingMode === 'horizontal-tb') {
+			let bound = Math.sqrt(usableArea / (FILL_INK_SLACK * advancePerPx * context.profile.lineHeightRatio));
+			if (unbreakable) bound = Math.min(bound, (Math.min(context.rect.width, bounds.width) - 2 * context.profile.minimumPadding) / (FILL_INK_SLACK * advancePerPx));
+			top = Math.min(top, quantize(bound, 0.25));
+		}
+		if (experiments.fillDenseScan && recordFill) {
+			for (let size = Math.floor(ceiling); size > startSize; size -= 1) attempt(size, context);
+		}
+		// What fits is not monotone in the size: a line wraps differently at
+		// every size, and in a round balloon a smaller size can fail where a
+		// larger one fits. Climbing up from the placed size stops at the first
+		// such gap (measured: the pinned probe's top-down scan found larger
+		// sizes than the climb for 11 of 46 boxes), so every item is measured
+		// from the top down: the first fitting size on a 1px scan, then a
+		// bisection on the 0.25 grid between it and the last failure above it.
+		// A scan that finds nothing ends with a bisection up from the placed
+		// size, inside the last pixel it stepped over.
+		let best: Fit | null = null;
+		if (top - startSize > 0.25) {
+			let failedAbove = top + 0.25;
+			for (let size = top; size > startSize; ) {
+				await yieldBudget.checkpoint();
+				const fit = attempt(size, context);
+				if (fit) {
+					best = await climb(size, quantize(failedAbove - 0.25, 0.25), { ...fit, size });
+					break;
+				}
+				failedAbove = size;
+				size = quantize(size - FILL_SCAN_STEP_PX, 0.25);
+			}
+			if (!best && failedAbove - 0.25 > startSize) best = await climb(startSize, quantize(failedAbove - 0.25, 0.25), null);
+			// The candidate search already laid this text out at other sizes in the
+			// same rect with the same profile, and every one it accepted fitted
+			// (unless a neighbour has grown into it since). The scan can step over
+			// such a size where fit is not monotone — measured: a balloon whose
+			// accepted 34.75 and 36.5 both lay between two failed scan probes, so it
+			// stayed at 32.25 — so the larger ones are tried last, largest first.
+			const known = [...contexts]
+				.filter(([candidateId, region]) => candidateId.startsWith(`${planned.itemId}:`)
+					&& region.profile.id === context.profile.id
+					&& region.writingMode === context.writingMode
+					&& sameRect(region.rect, context.rect)
+					&& region.fontSize > (best?.size ?? startSize))
+				.map(([, region]) => region.fontSize)
+				.sort((a, b) => b - a);
+			for (const size of new Set(known)) {
+				if (size <= (best?.size ?? startSize)) break;
+				await yieldBudget.checkpoint();
+				const fit = attempt(size, context);
+				if (fit) {
+					best = await climb(size, Math.max(size, top), { ...fit, size });
+					break;
+				}
+			}
+		}
 		const apply = (grown: Grown): void => {
 			planned.lines = grown.lines;
 			planned.font = { ...planned.font!, size: grown.size, lineHeight: grown.lineHeight };
@@ -774,8 +766,8 @@ async function maximizeSelectedFonts(
 				planned.rect = tightInkRect(
 					grown.lines,
 					Math.max(1, quantize(Math.max(
-						grown.profile.minimumPadding,
-						grown.size * (grown.region.paddingRatio ?? 0) * grown.profile.paddingScale
+						grown.region.profile.minimumPadding,
+						grown.size * (grown.region.paddingRatio ?? 0) * grown.region.profile.paddingScale
 					))),
 					page
 				);
@@ -790,75 +782,27 @@ async function maximizeSelectedFonts(
 			}
 			inkByItem.set(planned.itemId, grown.lines.map((line) => line.bounds));
 		};
-		// Free text was placed in one of several search windows around its source,
-		// on a coarse size ladder. Another of those windows can hold a clearly larger
-		// size — wider where the English is wide — so try the largest few of them.
-		let best: Grown | null = null;
-		for (const [index, [candidateId, region]] of regions().entries()) {
-			const grown = await growIn(region, candidateId, index === 0 ? startSize : (best?.size ?? startSize) * FILL_PROFILE_SWITCH_GAIN);
-			if (grown && grown.size > (best?.size ?? startSize)) best = grown;
-		}
 		planned.maxFontSize = Math.max(startSize, best?.size ?? startSize);
 		if (pinned) {
 			// A size the user pinned is measured above and never grown. The one
 			// change made here is to reach the pin itself when the candidate search
-			// fell short of it: the measurement's stack positions are not on the
-			// candidate ladder, so a size it found can be one no candidate offered.
+			// fell short of it: the measurement is finer than the candidate ladder,
+			// so a size it found can be one no candidate offered.
 			const target = pinnedTypography(item) ? quantize(item.manual.referenceFontSize!, 0.25) : undefined;
 			if (target === undefined || startSize >= target - 0.125) continue;
-			exact: for (const [candidateId, region] of itemRegions(contexts, planned, context)) {
-				for (const profile of growthProfiles(item, region, writingMode)) {
-					await yieldBudget.checkpoint();
-					const fit = attempt(target, profile, region);
-					if (fit) {
-						apply({ ...fit, size: target, profile, region, candidateId });
-						planned.maxFontSize = Math.max(planned.maxFontSize, target);
-						break exact;
-					}
+			for (const [candidateId, region] of itemRegions(contexts, planned, context)) {
+				await yieldBudget.checkpoint();
+				const fit = attempt(target, region);
+				if (fit) {
+					apply({ ...fit, size: target, region, candidateId });
+					planned.maxFontSize = Math.max(planned.maxFontSize, target);
+					break;
 				}
 			}
 			continue;
 		}
-		if (best && best.size > startSize) apply(best);
+		if (best && best.size > startSize) apply({ ...best, region: context, candidateId: planned.winningCandidateId! });
 	}
-}
-
-/** How many of a free item's other search windows the fill refinement tries. */
-const FILL_ALTERNATIVE_WINDOWS = 6;
-
-/**
- * A free item's other accepted search windows, largest first: free-text
- * windows (tight-ink cards) of the same item whose window still contains the
- * centre of the item's source, so the text stays over what it translates. The
- * height-locked source windows count: they are wide where the English is wide,
- * and the erasure-area budget still bounds what grows in them. A stacked band
- * does not — its extent is the shared region's, not this item's.
- */
-function alternativeFreeWindows(
-	contexts: Map<string, RelayoutContext>,
-	planned: PlannedOverlayItemV2,
-	winner: RelayoutContext
-): Array<[string, RelayoutContext]> {
-	const source = winner.sourceBounds;
-	if (!source) return [];
-	const cx = source.x + source.width / 2;
-	const cy = source.y + source.height / 2;
-	const prefix = `${planned.itemId}:`;
-	const seen = new Set<string>([`${winner.rect.x},${winner.rect.y},${winner.rect.width},${winner.rect.height}`]);
-	const windows: Array<[string, RelayoutContext]> = [];
-	for (const [candidateId, region] of contexts) {
-		if (!candidateId.startsWith(prefix) || candidateId === planned.winningCandidateId) continue;
-		if (!region.tightInk || region.contour || (region.boundedRegion && !region.sourceRegion) || region.writingMode !== winner.writingMode) continue;
-		const rect = region.rect;
-		if (cx < rect.x || cx > rect.x + rect.width || cy < rect.y || cy > rect.y + rect.height) continue;
-		const key = `${rect.x},${rect.y},${rect.width},${rect.height}`;
-		if (seen.has(key)) continue;
-		seen.add(key);
-		windows.push([candidateId, region]);
-	}
-	return windows
-		.sort((a, b) => rectArea(b[1].rect) - rectArea(a[1].rect) || compareCanonicalText(a[0], b[0]))
-		.slice(0, FILL_ALTERNATIVE_WINDOWS);
 }
 
 /**
@@ -871,7 +815,7 @@ function itemRegions(
 	winner: RelayoutContext
 ): Array<[string, RelayoutContext]> {
 	const key = (region: RelayoutContext) =>
-		`${region.rect.x},${region.rect.y},${region.rect.width},${region.rect.height},${region.contour ? 'c' : ''}${region.boundedRegion ? 'b' : ''}${region.tightInk ? 't' : ''}`;
+		`${region.rect.x},${region.rect.y},${region.rect.width},${region.rect.height},${region.contour ? 'c' : ''}${region.boundedRegion ? 'b' : ''}${region.tightInk ? 't' : ''},${region.profile.id}`;
 	const seen = new Set<string>([key(winner)]);
 	const regions: Array<[string, RelayoutContext]> = [[planned.winningCandidateId!, winner]];
 	const prefix = `${planned.itemId}:`;
@@ -883,34 +827,21 @@ function itemRegions(
 	return regions;
 }
 
-/**
- * The typography profiles the fill refinement may grow an item with: the
- * winner's own first, then every other readable profile the item's geometry
- * offers (never the degraded rung). The vertically biased stacks are included:
- * a balloon is often widest well above or below its middle, and a short line
- * set there can be much larger than one centred in the narrow waist. Vertical
- * text and free text keep the winner's profile.
- */
-const GROWTH_STACK_POSITIONS = [-0.5, 0.5];
+function rectUnion(a: Rect, b: Rect): Rect {
+	const x = Math.min(a.x, b.x);
+	const y = Math.min(a.y, b.y);
+	return { x, y, width: Math.max(a.x + a.width, b.x + b.width) - x, height: Math.max(a.y + a.height, b.y + b.height) - y };
+}
 
-function growthProfiles(
-	item: OverlayItemV2,
-	context: RelayoutContext,
-	writingMode: OverlayWritingMode
-): TypographyProfile[] {
-	const own = context.profile;
-	if (writingMode !== 'horizontal-tb') return [own];
-	// The winner's own spacing a quarter of the way up and down: the widest part
-	// of a balloon is often between its middle and its rim, and free text in a
-	// window shared with a neighbour's ink grows only on the side away from it.
-	const shifted = GROWTH_STACK_POSITIONS
-		.filter((position) => position !== own.verticalBias)
-		.map((position) => ({ ...own, id: `${own.id}@${position}`, verticalBias: position }));
-	if (!context.contour) return [own, ...shifted];
-	const narrow = context.rect.height > 1.6 * context.rect.width;
-	const alternatives = typographyProfiles(item, writingMode, true, narrow)
-		.filter((profile) => profile.id !== own.id && profile.fitMode !== 'degraded');
-	return [own, ...shifted, ...alternatives];
+function sameRect(a: Rect, b: Rect): boolean {
+	return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}
+
+function rectContains(outer: Rect, inner: Rect): boolean {
+	return inner.x >= outer.x - 1 / 64
+		&& inner.y >= outer.y - 1 / 64
+		&& inner.x + inner.width <= outer.x + outer.width + 1 / 64
+		&& inner.y + inner.height <= outer.y + outer.height + 1 / 64;
 }
 
 function rectArea(rect: Rect): number {
@@ -1303,7 +1234,7 @@ export const CELL_CAPACITY_MARGIN = 1.3;
  * They are additional candidates, so a genuinely better window elsewhere still
  * wins on score.
  *
- * Not for sound effects: `automaticSfxFontCap` and
+ * Not for sound effects: `automaticFreeTextFontCap` and
  * `exceedsAutomaticSfxProminence` exist to stop replacement lettering
  * dominating a panel, and a source-locked box fights both.
  */
@@ -1801,10 +1732,15 @@ function fontSizes(
 	}
 	// Let short translations actually fill generous containers. Fit, contour,
 	// and ink validation below are the authority; a conservative geometric cap
-	// here previously caused the known underfilled-bubble regression, and a
-	// fixed 128px ceiling (not even scaled with the page) held short lines in
-	// big balloons of high-resolution pages to a fraction of their space.
-	const ceiling = Math.max(readableFloor, Math.min(rect.height * 0.75, rect.width * 0.6, ceilingCap));
+	// here previously caused the known underfilled-bubble regression.
+	//
+	// The 128px top only sets where the ladder SAMPLES, not how large a text can
+	// end up: the fill refinement grows every placement past it to the largest
+	// size its region holds. Policy-33 lifted it, and the twelve samples spread
+	// over up to 200px landed 15px apart in a big balloon, so assignment picked
+	// a different and often tighter profile at a size near none of the old
+	// samples — the overlays changed shape, not just size.
+	const ceiling = Math.max(readableFloor, Math.min(128, rect.height * 0.75, rect.width * 0.6, ceilingCap));
 	const step = Math.max(.25, (ceiling - readableFloor) / Math.max(1, sampleCount - 1));
 	const result: number[] = [];
 	for (let value = ceiling; value >= readableFloor && result.length < sampleCount; value -= step) result.push(Math.max(readableFloor, quantize(value, 0.25)));
@@ -1830,29 +1766,34 @@ function graphemeCount(text: string, locale: string): number {
 }
 
 const SFX_FONT_CAP_RATIO = 0.9;
+const FREE_TEXT_FONT_CAP_RATIO = 1.0;
 
 /**
- * Automatic sound effects sit directly on artwork as lettering in their own
- * right. Cap their em by the source lettering's stroke thickness (PP-OCR
+ * Automatic sfx and free-standing text sit directly on artwork, so their card
+ * is pure occlusion — unlike balloon dialogue there is no detected white space
+ * to reclaim. Cap the em by the source lettering's stroke thickness (PP-OCR
  * bounds, median across the item's merged sources) so the replacement never
- * reads more prominently than the effect it covers. Readability floors still
- * win below the cap, and manual geometry or a pinned size is an explicit user
- * decision that bypasses it.
+ * reads more prominently than the lettering it covers; longer translations
+ * wrap into more lines at source scale instead of growing the font. Readability
+ * floors still win below the cap, and manual geometry or a pinned size is an
+ * explicit user decision that bypasses it.
  *
- * Other free-standing text is NOT capped (policy-33). Capped at the Japanese
- * glyph size, a short English line sat small inside the white box erased for
- * a long vertical column; the scorer's box-growth term and the fill
- * refinement's bound (the item's own erasure) keep it off the surrounding art.
+ * For free text this caps the candidate LADDER, which decides the card's shape
+ * and window. The fill refinement then grows the text past it, but only inside
+ * the footprint of the source and that card. Policy-33 dropped the cap here
+ * and let assignment pick large sizes in windows far wider than the source.
  */
-function automaticSfxFontCap(
+function automaticFreeTextFontCap(
 	item: OverlayItemV2,
-	input: OverlayLayoutInput
+	input: OverlayLayoutInput,
+	container: OverlayContainerV2 | undefined
 ): number {
 	if (item.manual.rect || item.manual.referenceFontSize !== undefined) return Number.POSITIVE_INFINITY;
 	const scale = medianSourceGlyphScale(item, input);
 	if (scale === undefined) return Number.POSITIVE_INFINITY;
 	if (item.type === 'sfx') return scale * SFX_FONT_CAP_RATIO * input.settings.fontScale;
-	return Number.POSITIVE_INFINITY;
+	if (container && container.kind !== 'free') return Number.POSITIVE_INFINITY;
+	return scale * FREE_TEXT_FONT_CAP_RATIO * input.settings.fontScale;
 }
 
 /**
@@ -2113,7 +2054,7 @@ function horizontalLines(input: {
 	scopeId: string;
 	textLayout: TextLayoutPort;
 	lineCountScale?: number;
-	verticalBias?: number;
+	verticalBias?: -1 | 0 | 1;
 }): { lines: OverlayRenderLineV2[]; complete: boolean } {
 	const availableLines = Math.max(1, Math.floor((input.rect.height - input.padding * 2) / input.lineHeight));
 	const maxLines = Math.max(1, Math.min(availableLines, Math.floor(availableLines * (input.lineCountScale ?? 1))));
@@ -3084,7 +3025,7 @@ export class JointOverlayLayoutService implements OverlayLayoutService {
 				}
 			}
 			const primary = itemFontRuns.find((run) => run.text.trim().length > 0) ?? itemFontRuns[0];
-			const automaticGlyphFontCap = automaticSfxFontCap(item, input);
+			const automaticGlyphFontCap = automaticFreeTextFontCap(item, input, container);
 			const accepted: Candidate[] = [];
 			const rejectedReasons: Array<RejectionReason | undefined> = [];
 			let evaluated = 0;
@@ -3244,16 +3185,18 @@ export class JointOverlayLayoutService implements OverlayLayoutService {
 						recordTrace(trace);
 							relayoutContexts.set(candidateId, {
 								rect,
+								fontSize,
 								profile,
 								writingMode,
 								contour: candidateContour,
 								tail: candidateTail,
 								exclusions: geometry.contourBound ? exclusionPolygons : undefined,
 								boundedRegion: Boolean(geometry.stackedBand || geometry.sourceRegion),
-								sourceRegion: Boolean(geometry.sourceRegion),
 								tightInk: renderedRect !== rect,
 								sourceBounds: renderedRect !== rect ? source ?? undefined : undefined,
-								glyphFontCap: Number.isFinite(automaticGlyphFontCap) ? automaticGlyphFontCap : undefined,
+								// Only a sound effect's cap holds through growth; free text grows
+								// inside its footprint instead.
+								glyphFontCap: item.type === 'sfx' && Number.isFinite(automaticGlyphFontCap) ? automaticGlyphFontCap : undefined,
 								layoutText,
 								fontRuns: itemFontRuns,
 								primary,
