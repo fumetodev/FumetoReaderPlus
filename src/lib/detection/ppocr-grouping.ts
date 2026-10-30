@@ -42,6 +42,7 @@ export interface PPOcrSeparationReason {
 		| 'glyph-scale'
 		| 'free-satellite-span'
 		| 'span-cap'
+		| 'page-area'
 		| 'geometry';
 }
 
@@ -117,14 +118,17 @@ export interface PPOcrGroupingOptions {
 	/** Similar competing bubble overlaps are left explicitly ambiguous. */
 	ambiguityRatio?: number;
 	/**
-	 * Page reading direction, which orders the assigned box IDs within a reading
-	 * band. Box IDs are what the translation prompts address and what the reader
-	 * sidebar lists, so this is the page's direction — not the direction of the
-	 * script inside a group, which stays a typography property (see
-	 * `componentReadingOrder`).
+	 * Page reading direction: which way the reader turns pages. It orders the
+	 * assigned box IDs within a reading band only where the source language
+	 * does not fix the order itself — Japanese is read right to left and top to
+	 * bottom whichever way pages turn, so a Japanese `locale` overrides it (see
+	 * `textReadingDirection`). Box IDs are what the translation prompts address,
+	 * the order a page model reads the page in and the order overlays stack in.
+	 * Not the direction of the script inside a group, which stays a typography
+	 * property (see `componentReadingOrder`).
 	 *
 	 * Defaults to 'rtl': the manga order every corpus, gate and benchmark in this
-	 * repo was captured under. Production callers resolve the real direction with
+	 * repo was captured under. Production callers resolve the page direction with
 	 * `effectiveReadingDirection()` and pass it explicitly.
 	 */
 	readingDirection?: 'rtl' | 'ltr';
@@ -250,6 +254,20 @@ const centerX = (rect: Rect): number => rect.x + rect.width / 2;
 const centerY = (rect: Rect): number => rect.y + rect.height / 2;
 
 /** Locale-independent UTF-16 code-unit ordering for byte-stable plans and traces. */
+/**
+ * The order a page's text is read in, which numbers its boxes. Japanese is read
+ * right to left and top to bottom whatever the page-turn setting says: a reader
+ * may turn pages left to right (it is the default for a volume that does not
+ * pin a direction) and the boxes were then numbered left to right, so the
+ * translation saw a page's lines out of order and the overlays of one passage
+ * stacked jumbled. Other sources follow the page direction (left-to-right
+ * comics read their balloons left to right).
+ */
+export function textReadingDirection(locale: string | undefined, pageDirection: 'rtl' | 'ltr' | undefined): 'rtl' | 'ltr' {
+	if (locale?.trim().toLowerCase().split(/[-_]/u)[0] === 'ja') return 'rtl';
+	return pageDirection ?? 'rtl';
+}
+
 function compareStrings(left: string, rightValue: string): number {
 	return left < rightValue ? -1 : left > rightValue ? 1 : 0;
 }
@@ -829,6 +847,51 @@ function overlapLength(startA: number, endA: number, startB: number, endB: numbe
 	return Math.max(0, Math.min(endA, endB) - Math.max(startA, startB));
 }
 
+/**
+ * Whether `ruby` is furigana on `base`: a short reading, 1.6–4.5× thinner than
+ * its line, within that line's span and touching it. The extractor's furigana
+ * filter suppresses the same shape inside a group (`translation/furigana-filter.ts`,
+ * whose thickness and coverage constants these are), but it only ever sees one
+ * group, and ruby the grouper kept apart (over 3.5× smaller than its base, as
+ * title lettering often is) became an utterance of its own: the reading above a
+ * page's title was translated and set over it.
+ *
+ * Tighter than the filter, because here nothing has grouped the two yet:
+ * measured on the reviewed pages, the filter's adjacency (0.8 of the base's
+ * thickness) let fragments 100px from a sound effect's strokes and narrow
+ * narration columns beside large speech text pass as ruby, and broke 7 of 325
+ * labelled groups. Ruby touches its line from outside (a gap within its own
+ * thickness, on the reading side), is a few kana long (at most 6 of its
+ * thicknesses, under 0.6 of the line).
+ */
+const RUBY_THICKNESS_RATIO = 1.6;
+const RUBY_MAX_THICKNESS_RATIO = 4.5;
+const RUBY_SPAN_COVERAGE = 0.7;
+const RUBY_MAX_LENGTH_SHARE = 0.6;
+const RUBY_MAX_ASPECT = 6;
+
+function rubyBeside(ruby: PreparedComponent, base: PreparedComponent): boolean {
+	if (base.direction !== 'vertical' && base.direction !== 'horizontal') return false;
+	const vertical = base.direction === 'vertical';
+	const thickness = (component: PreparedComponent) => vertical ? component.width : component.height;
+	const length = (component: PreparedComponent) => vertical ? component.height : component.width;
+	const ratio = thickness(base) / Math.max(1, thickness(ruby));
+	if (ratio < RUBY_THICKNESS_RATIO || ratio > RUBY_MAX_THICKNESS_RATIO) return false;
+	if (length(ruby) > RUBY_MAX_LENGTH_SHARE * length(base) || length(ruby) > RUBY_MAX_ASPECT * thickness(ruby)) return false;
+	const [rubyStart, rubyEnd] = vertical ? [ruby.y, bottom(ruby)] : [ruby.x, right(ruby)];
+	const [baseStart, baseEnd] = vertical ? [base.y, bottom(base)] : [base.x, right(base)];
+	if (overlapLength(rubyStart, rubyEnd, baseStart, baseEnd) < RUBY_SPAN_COVERAGE * (rubyEnd - rubyStart)) return false;
+	// Furigana is set outside its line: right of a vertical column, above a
+	// horizontal line. Detector boxes carry some margin, so the two may overlap
+	// by a quarter of the line's thickness (measured: a title's reading 19px
+	// into a 127px line's box); a fragment further in, or on the other side, is
+	// other text (a narration column inside large speech lettering's box).
+	const tolerance = 0.25 * thickness(base);
+	if (vertical ? ruby.x < right(base) - tolerance : bottom(ruby) > base.y + tolerance) return false;
+	const gap = vertical ? ruby.x - right(base) : base.y - bottom(ruby);
+	return gap <= thickness(ruby);
+}
+
 function evaluatePair(
 	leftComponent: PreparedComponent,
 	rightComponent: PreparedComponent,
@@ -865,10 +928,20 @@ function evaluatePair(
 			&& Math.max(rightComponent.width, rightComponent.height)
 				< Math.max(leftComponent.width, leftComponent.height) * 0.52;
 	const satellite = leftSatellite || rightSatellite;
+	// Ruby beside its base line joins it at any size, inside a balloon or out
+	// (the extractor then drops its text; see `rubyBeside`).
+	const ruby = satellite && (rubyBeside(leftComponent, rightComponent) || rubyBeside(rightComponent, leftComponent));
 	const directionsCompatible = leftComponent.direction === rightComponent.direction
 		|| leftComponent.direction === 'ambiguous'
 		|| rightComponent.direction === 'ambiguous';
 	if (!directionsCompatible && !satellite) return { score: null, reason: 'direction', satellite };
+	if (ruby) {
+		return {
+			score: quantize(Math.hypot(leftComponent.centerX - rightComponent.centerX, leftComponent.centerY - rightComponent.centerY)
+				/ Math.max(1, Math.max(leftComponent.glyphScale, rightComponent.glyphScale))),
+			satellite
+		};
+	}
 	const orientationDelta = angleDistance(leftComponent.orientationDegrees, rightComponent.orientationDegrees);
 	if (orientationDelta > (satellite ? 42 : leftComponent.bubbleId === undefined ? 20 : 30)) {
 		return { score: null, reason: 'orientation', satellite };
@@ -892,7 +965,13 @@ function evaluatePair(
 	) {
 		return { score: null, reason: 'free-satellite-span', satellite };
 	}
-	if (scaleRatio > (satellite ? 3.5 : sharedBalloon ? BALLOON_GLYPH_SCALE_RATIO : leftComponent.bubbleId === undefined ? 1.75 : 2.15)) {
+	// A small fragment well inside a balloon beside that balloon's text — ruby,
+	// a lone mark, a speck the detector boxed — belongs to it at any size. Kept
+	// apart by the 3.5 bound, it became an utterance of its own: a 13×17px
+	// fragment beside an 81px column was read as と, translated, and given a band
+	// of the balloon (measured on a shōnen page). Body text keeps the bound.
+	const satelliteBound = sharedBalloon ? Number.POSITIVE_INFINITY : 3.5;
+	if (scaleRatio > (satellite ? satelliteBound : sharedBalloon ? BALLOON_GLYPH_SCALE_RATIO : leftComponent.bubbleId === undefined ? 1.75 : 2.15)) {
 		return { score: null, reason: 'glyph-scale', satellite };
 	}
 	const glyph = median([leftComponent.glyphScale, rightComponent.glyphScale]);
@@ -1073,6 +1152,69 @@ export function columnRowOf(components: readonly Rect[], glyph: number): number[
 	return rowOf;
 }
 
+/** The share of the page a free cluster may cover before it must be a text block. */
+const FREE_CLUSTER_PAGE_AREA = 0.08;
+/** Even a text block is not allowed past this share of the page. */
+const TEXT_BLOCK_PAGE_AREA = 0.35;
+/**
+ * How far apart the first glyphs of a block's lines may start, in glyphs.
+ * Vertical narration is set top-aligned and runs out ragged at the bottom; an
+ * opening bracket or a one-glyph indent moves a column's start by about one.
+ */
+const TEXT_BLOCK_LEADING_EDGE_GLYPHS = 1.5;
+/** How far two lines of a block may overlap across the line axis, as a share of the narrower. */
+const TEXT_BLOCK_LINE_OVERLAP = 0.15;
+/** Largest glyph-size ratio between a block's lines (free pairs allow 1.75). */
+const TEXT_BLOCK_GLYPH_RATIO = 1.35;
+
+/**
+ * Whether free components form one block of type: lines of one direction and
+ * one size whose leading edges line up (the tops of vertical columns, the left
+ * ends of horizontal lines), packed densely. Components that overlap along the
+ * line axis are one line (a column the detector cut at its punctuation), and
+ * small fragments — ruby, a lone mark — are not lines and are not measured.
+ */
+function isTextBlock(
+	components: readonly PreparedComponent[],
+	direction: PPOcrGroupDirection,
+	glyph: number,
+	fillRatio: number
+): boolean {
+	if (direction !== 'vertical' && direction !== 'horizontal') return false;
+	if (fillRatio < 0.3) return false;
+	const vertical = direction === 'vertical';
+	const maximumArea = Math.max(...components.map((component) => component.area));
+	const cores = components.filter((component) => component.area >= maximumArea * 0.2);
+	if (cores.some((component) => component.direction !== direction)) return false;
+	const scales = cores.map((component) => component.glyphScale);
+	if (Math.max(...scales) / Math.max(1, Math.min(...scales)) > TEXT_BLOCK_GLYPH_RATIO) return false;
+	// Lines: cores that overlap across the line axis by half the narrower. Two
+	// lines of one block do not overlap at all; a partial overlap is two texts
+	// drawn close together (measured: a lone speech column laid 0.43 of a column
+	// over the edge of a narration block beside it).
+	const lines: Array<{ start: number; end: number; lead: number }> = [];
+	for (const component of [...cores].sort((left, rightValue) =>
+		(vertical ? left.x - rightValue.x : left.y - rightValue.y) || left.componentId - rightValue.componentId)) {
+		const start = vertical ? component.x : component.y;
+		const end = vertical ? right(component) : bottom(component);
+		const lead = vertical ? component.y : component.x;
+		const overlapRatio = (candidate: { start: number; end: number }) =>
+			overlapLength(candidate.start, candidate.end, start, end) / Math.max(1, Math.min(candidate.end - candidate.start, end - start));
+		if (lines.some((candidate) => overlapRatio(candidate) > TEXT_BLOCK_LINE_OVERLAP && overlapRatio(candidate) < 0.5)) return false;
+		const line = lines.find((candidate) => overlapRatio(candidate) >= 0.5);
+		if (line) {
+			line.start = Math.min(line.start, start);
+			line.end = Math.max(line.end, end);
+			line.lead = Math.min(line.lead, lead);
+		} else {
+			lines.push({ start, end, lead });
+		}
+	}
+	if (lines.length < 2) return false;
+	const leads = lines.map((line) => line.lead);
+	return Math.max(...leads) - Math.min(...leads) <= TEXT_BLOCK_LEADING_EDGE_GLYPHS * Math.max(1, glyph);
+}
+
 function clusterValid(
 	components: readonly PreparedComponent[],
 	imageWidth: number,
@@ -1103,7 +1245,15 @@ function clusterValid(
 		// two columns filled 0.96–1.15 of the box were cut in two by one.
 		if (fillRatio < 0.025) return { valid: false };
 	} else {
-		if (area(bounds) > imageWidth * imageHeight * 0.08) return { valid: false };
+		// A guard against a snowball across a page of scattered lettering. A
+		// block of columns set together — the same size, starting on one line —
+		// is one passage however much of the page it covers: a narration block of
+		// a few long columns passes 8% of a page easily, and the cap cut it into
+		// pieces that were translated and laid out as unrelated texts.
+		if (area(bounds) > imageWidth * imageHeight * FREE_CLUSTER_PAGE_AREA
+			&& !(area(bounds) <= imageWidth * imageHeight * TEXT_BLOCK_PAGE_AREA && isTextBlock(components, direction, glyph, fillRatio))) {
+			return { valid: false, reason: 'page-area' };
+		}
 		if (fillRatio < 0.085) return { valid: false };
 	}
 	// The span cap is the one rejection that can cut ONE utterance in two, so
@@ -1619,7 +1769,7 @@ export function groupRawTextComponents(
 	const bubbles = suppressNestedBalloonInstances(bubbleInput, { renumber: false }).bubbles;
 	const minimumOverlap = options.minimumBubbleOverlap ?? 0.18;
 	const ambiguityRatio = options.ambiguityRatio ?? 0.82;
-	const readingDirection = options.readingDirection ?? 'rtl';
+	const readingDirection = textReadingDirection(options.locale, options.readingDirection);
 	const { components, rejected, duplicateIds } = flattenComponents(rawRegions, imageWidth, imageHeight);
 	throwIfGroupingCancelled(options.signal);
 	const verticalCuts = options.panels?.length ? [] : inferCuts(components, bubbles, imageWidth, 'x');
@@ -1922,6 +2072,89 @@ export function groupRawTextComponents(
 			|| centerY(left) - centerY(rightValue)
 			|| left.componentIds[0] - rightValue.componentIds[0];
 	});
+	// Classification is geometric and independent of the order; the block pass
+	// below needs it to keep sound effects out of text blocks.
+	{
+		const medianGlyph = Math.max(1, median(provisional.map((group) => group.trace.glyphScale)));
+		const nearestByGroup = nearestGroupDistances(provisional, medianGlyph);
+		for (const group of provisional) {
+			const classification = initialClassification(
+				group,
+				imageWidth,
+				imageHeight,
+				medianGlyph,
+				nearestByGroup.get(group.id) ?? 99
+			);
+			group.groupKind = classification.kind;
+			group.classificationConfidence = classification.confidence;
+			group.classificationReasons = classification.reasons;
+			group.trace.reasons = [...group.trace.reasons, ...classification.reasons];
+		}
+	}
+	// Fragments of one block of free vertical columns read right to left as a
+	// block. The grouper can still leave a block in pieces (past the span cap,
+	// or a column that starts well below the others), and the page-wide sort
+	// above bands groups by their CENTRE: the longest column of a block — very
+	// often its first — has the lowest centre and was read after the columns to
+	// its left, so the layout stacked the opening line last. Columns of one block
+	// overlap along their height, sit within a column pitch of each other and
+	// share a glyph size; those are read as one unit, from the right, at the
+	// place the block's first fragment holds in the page order, and each later
+	// fragment is marked as continuing the one before it.
+	{
+		const fragments = provisional.filter((group) =>
+			group.bubbleId === undefined && group.direction === 'vertical' && group.groupKind !== 'sfx');
+		const blockOf = new Map<PPOcrTextGroup, PPOcrTextGroup[]>();
+		for (const group of fragments) blockOf.set(group, [group]);
+		const joined = (left: PPOcrTextGroup, rightGroup: PPOcrTextGroup): boolean => {
+			if (left.panelId !== rightGroup.panelId) return false;
+			const glyph = Math.max(1, median([left.trace.glyphScale, rightGroup.trace.glyphScale]));
+			const scale = Math.max(left.trace.glyphScale, rightGroup.trace.glyphScale)
+				/ Math.max(1, Math.min(left.trace.glyphScale, rightGroup.trace.glyphScale));
+			const xGap = Math.max(left.x - right(rightGroup), rightGroup.x - right(left), 0);
+			const xOverlap = overlapLength(left.x, right(left), rightGroup.x, right(rightGroup));
+			const yOverlap = overlapLength(left.y, bottom(left), rightGroup.y, bottom(rightGroup));
+			return scale <= 1.75
+				// Columns, not marks: a block's columns run several glyphs, and two
+				// short fragments side by side are as often lettering as text.
+				&& Math.min(left.height, rightGroup.height) >= 2.5 * glyph
+				&& xGap <= glyph * 2.1
+				// Side by side, not laid over each other (see TEXT_BLOCK_LINE_OVERLAP).
+				&& xOverlap <= TEXT_BLOCK_LINE_OVERLAP * glyph
+				&& yOverlap >= 0.5 * Math.min(left.height, rightGroup.height);
+		};
+		for (let index = 0; index < fragments.length; index += 1) {
+			for (let other = index + 1; other < fragments.length; other += 1) {
+				const a = blockOf.get(fragments[index])!;
+				const b = blockOf.get(fragments[other])!;
+				if (a === b || !joined(fragments[index], fragments[other])) continue;
+				const merged = [...a, ...b];
+				for (const member of merged) blockOf.set(member, merged);
+			}
+		}
+		const emitted = new Set<PPOcrTextGroup>();
+		const reordered: PPOcrTextGroup[] = [];
+		for (const group of provisional) {
+			if (emitted.has(group)) continue;
+			const block = blockOf.get(group);
+			if (!block || block.length < 2) {
+				emitted.add(group);
+				reordered.push(group);
+				continue;
+			}
+			const members = [...block].sort((left, rightGroup) =>
+				right(rightGroup) - right(left) || left.y - rightGroup.y || left.componentIds[0] - rightGroup.componentIds[0]);
+			members.forEach((member, position) => {
+				emitted.add(member);
+				reordered.push(member);
+				if (position > 0 && !member.continuesPrevious) {
+					member.continuesPrevious = true;
+					member.trace.reasons.push('column-block-continuation');
+				}
+			});
+		}
+		provisional.splice(0, provisional.length, ...reordered);
+	}
 	// A span-cap split leaves one utterance as two groups. Where the two are
 	// consecutive in reading order and in the same bubble, the later one is
 	// marked as continuing the earlier, so the layout stacks the halves top to
@@ -1944,23 +2177,7 @@ export function groupRawTextComponents(
 			}
 		}
 	}
-	const medianGlyph = Math.max(1, median(provisional.map((group) => group.trace.glyphScale)));
-	const nearestByGroup = nearestGroupDistances(provisional, medianGlyph);
-	for (let index = 0; index < provisional.length; index += 1) {
-		const group = provisional[index];
-		group.boxId = index + 1;
-		const classification = initialClassification(
-			group,
-			imageWidth,
-			imageHeight,
-			medianGlyph,
-			nearestByGroup.get(group.id) ?? 99
-		);
-		group.groupKind = classification.kind;
-		group.classificationConfidence = classification.confidence;
-		group.classificationReasons = classification.reasons;
-		group.trace.reasons = [...group.trace.reasons, ...classification.reasons];
-	}
+	provisional.forEach((group, index) => { group.boxId = index + 1; });
 	const groupIdByComponent = new Map<number, string>();
 	for (const group of provisional) {
 		for (const componentId of group.componentIds) groupIdByComponent.set(componentId, group.id);
