@@ -32,6 +32,7 @@
 		undoLastOverlayEdit
 	} from '$lib/reader/overlay-edits.js';
 	import { playReaderHaptic } from '$lib/reader/reader-haptics.js';
+	import { pausePanzoom, resumePanzoom } from '$lib/panzoom/index.js';
 	import type { OverlayItemV2, OverlayRenderPlanV2, PlannedOverlayItemV2 } from '$lib/types/index.js';
 
 	interface Props {
@@ -41,6 +42,17 @@
 	let { onedit }: Props = $props();
 
 	let open = $derived($mobileReaderUi.disclosure === 'overlay-boxes');
+
+	// The sheet is mounted inside the reader's viewport, where panzoom cancels
+	// every touchstart it handles. A cancelled touchstart never becomes a click
+	// and cannot scroll, so on a real finger nothing in the sheet worked (a mouse
+	// click goes round panzoom, which is how it passed). Pause it while the sheet
+	// is open, as the floating editor does.
+	$effect(() => {
+		if (!open) return;
+		pausePanzoom();
+		return () => resumePanzoom();
+	});
 	let busyItemId = $state<string | null>(null);
 	let error = $state<string | null>(null);
 
