@@ -9,6 +9,8 @@
 	import { settings } from '$lib/settings/settings.js';
 	import { movingBoxId, resizingBoxId, resizeScaleFont, overlayEditorCloseHandler, overlayEditorDismissHandler } from '$lib/stores/ui-state.js';
 	import { validateOverlayManualConstraints } from '$lib/overlay-layout/index.js';
+	import { readerOverlayPlanningStatus } from '$lib/reader/overlay-planning-status.js';
+	import { currentWindowInsets } from '$lib/insets/window-insets.js';
 	import type { OverlayItemV2, OverlayManualConstraintsV2, Rect } from '$lib/types/index.js';
 	import {
 		buildOverlayEditorManualDraft,
@@ -46,10 +48,48 @@
 	let editHidden = $state(initialValues.hidden);
 	let editWritingMode = $state(initialValues.writingMode);
 	let localResizeScaleFont = $state(false);
+
+	// The font slider works on what the page actually draws. The live plan (it
+	// re-plans on every preview) gives the size the box is drawn at and the
+	// largest size its box holds without cutting a word; the slider runs from a
+	// small floor to that maximum and starts where the text is. 0 = automatic.
+	let plannedItem = $derived($readerOverlayPlanningStatus.plan?.items.find((candidate) => candidate.itemId === item.id));
+	let fit = $state<{ size: number; max: number } | null>(null);
+	// The top of the range only moves when the text or the box changes. A pinned
+	// size is placed wherever that size fits best, and the maximum measured from
+	// there can come out a little lower than from the automatic placement; the
+	// end of the track must not slide out from under a finger that is dragging it.
+	let fitInputs = '';
+	$effect(() => {
+		const planned = plannedItem;
+		if (planned?.status !== 'placed' || !planned.font) return;
+		const inputs = untrack(() => JSON.stringify([editText, editWidth, editHeight, editWritingMode]));
+		const previous = untrack(() => fit);
+		const measured = Math.max(planned.font.size, planned.maxFontSize ?? planned.font.size);
+		fit = { size: planned.font.size, max: previous && inputs === fitInputs ? Math.max(previous.max, measured) : measured };
+		fitInputs = inputs;
+		// A pinned size the box can no longer hold (it was resized under it) is
+		// drawn at the largest size that fits; the slider follows it down.
+		if (untrack(() => editFontSize) > planned.font.size + 0.25) editFontSize = planned.font.size;
+	});
+	const pageShortEdge = capturedDocument
+		? Math.min(capturedDocument.sourceImage.width, capturedDocument.sourceImage.height)
+		: 1200;
+	const fontMin = Math.max(2, Math.round((6 * pageShortEdge) / 1200));
+	let fontMax = $derived(Math.max(fontMin + 1, Math.floor((fit?.max ?? Math.max(editFontSize, 96)) * 2) / 2));
+	let fontSliderValue = $derived(editFontSize > 0 ? editFontSize : (fit?.size ?? fontMin));
+	let fontLabel = $derived(m.reader_font_label({
+		value: editFontSize > 0 ? `${Math.round(editFontSize)}px` : `${m.reader_auto_2()} · ${Math.round(fontSliderValue)}px`
+	}));
 	let deleting = $state(false);
 	let editorTop = $state(0);
 	let editorLeft = $state(0);
+	let sliderInsets = $state({ left: 0, right: 0 });
+	let sliderStyle = $derived(sliderInsets.left || sliderInsets.right
+		? `margin-left:${sliderInsets.left}px; width:calc(100% - ${sliderInsets.left + sliderInsets.right}px)`
+		: undefined);
 	let editorEl: HTMLDivElement | undefined = $state();
+	let contentEl: HTMLDivElement | undefined = $state();
 	let bottomDocked = $state(false);
 	let savePromise: Promise<void> | null = null;
 	let deleted = false;
@@ -57,6 +97,8 @@
 	let discarded = false;
 	let editError = $state<string | null>(null);
 	const margin = 8;
+	/** CSS px kept between the panel and a system gesture strip. */
+	const GESTURE_EDGE_CLEARANCE = 4;
 
 	function updatePosition(): void {
 		if (!viewportEl) return;
@@ -86,6 +128,19 @@
 			bottomDocked = true;
 		}
 		editorLeft = Math.max(margin, Math.min(left, viewport.width - width - margin));
+		// The sliders' tracks stay out of the strips the system keeps along each
+		// edge for its Back swipe. A thumb at either end of its track (where a
+		// fitted font size starts) is otherwise grabbed by a drag the system reads
+		// as Back, and Back cancels the edit. Taps and vertical scrolling there are
+		// the panel's own, so only the tracks move.
+		const insets = currentWindowInsets();
+		const contentPadding = contentEl ? parseFloat(getComputedStyle(contentEl).paddingLeft) || 0 : 0;
+		const trackLeft = viewport.left + editorLeft + contentPadding;
+		const trackRight = viewport.left + editorLeft + width - contentPadding;
+		sliderInsets = {
+			left: insets.gestureLeft > 0 ? Math.max(0, insets.gestureLeft + GESTURE_EDGE_CLEARANCE - trackLeft) : 0,
+			right: insets.gestureRight > 0 ? Math.max(0, trackRight - (window.innerWidth - insets.gestureRight - GESTURE_EDGE_CLEARANCE)) : 0
+		};
 		editorTop = Math.max(margin, Math.min(top, viewport.height - safeBottom - height - margin));
 	}
 
@@ -268,19 +323,25 @@
 			<button type="button" aria-label={m.reader_save_and_close_overlay()} onclick={saveAndDismiss} class="relative flex h-9 items-center justify-center rounded-full bg-primary-600 px-4 text-xs font-semibold text-white active:bg-primary-700 before:absolute before:-inset-1.5 before:content-['']" data-floating-box-editor-done>{m.common_done()}</button>
 		</div>
 	</div>
-	<div class="max-h-[calc(var(--viewport-height,100dvh)-var(--sat,0px)-var(--sab,0px)-64px)] space-y-3 overflow-y-auto overscroll-contain p-3">
+	<div bind:this={contentEl} class="max-h-[calc(var(--viewport-height,100dvh)-var(--sat,0px)-var(--sab,0px)-64px)] space-y-3 overflow-y-auto overscroll-contain p-3">
 		{#if editError}<p class="rounded bg-red-950 p-2 text-xs text-red-200" role="alert">{editError}</p>{/if}
 		<label class="block text-[10px] text-surface-400">{m.reader_translation_label()}
 			<textarea value={editText} oninput={(event) => { editText = event.currentTarget.value; previewDraft(); }} rows="2" class="mt-1 w-full resize-y rounded border border-surface-600 bg-surface-800 px-2 py-1 text-xs text-surface-100"></textarea>
 		</label>
-		<label class="block text-[10px] text-surface-400">{m.reader_font_label({ value: editFontSize === 0 ? m.reader_auto_2() : `${Math.round(editFontSize)}px` })}
-			<input type="range" min="0" max="96" step="1" value={editFontSize} oninput={(event) => { editFontSize = +event.currentTarget.value; previewDraft(); }} class="h-6 w-full accent-teal-500" />
-		</label>
+		<div class="text-[10px] text-surface-400">
+			<div class="flex min-h-6 items-center justify-between gap-2">
+				<span>{fontLabel}</span>
+				{#if editFontSize > 0}
+					<button type="button" onclick={() => { editFontSize = 0; previewDraft(); }} class="rounded bg-surface-800 px-2 py-1 text-[10px] text-teal-300" data-floating-box-editor-font-auto>{m.reader_auto_2()}</button>
+				{/if}
+			</div>
+			<input type="range" min={fontMin} max={fontMax} step="0.5" value={fontSliderValue} aria-label={fontLabel} oninput={(event) => { editFontSize = Math.min(+event.currentTarget.value, fontMax); previewDraft(); }} class="h-6 w-full accent-teal-500" style={sliderStyle} data-floating-box-editor-font />
+		</div>
 		<label class="block text-[10px] text-surface-400">{m.reader_width_label({ px: Math.round(editWidth) })}
-			<input type="range" min="20" max={Math.max(rect.width * 4, 600)} step="1" value={editWidth} oninput={(event) => { editWidth = +event.currentTarget.value; previewDraft(); }} class="h-6 w-full accent-teal-500" />
+			<input type="range" min="20" max={Math.max(rect.width * 4, 600)} step="1" value={editWidth} oninput={(event) => { editWidth = +event.currentTarget.value; previewDraft(); }} class="h-6 w-full accent-teal-500" style={sliderStyle} />
 		</label>
 		<label class="block text-[10px] text-surface-400">{m.reader_height_label({ px: Math.round(editHeight) })}
-			<input type="range" min="10" max={Math.max(rect.height * 4, 400)} step="1" value={editHeight} oninput={(event) => { editHeight = +event.currentTarget.value; previewDraft(); }} class="h-6 w-full accent-teal-500" />
+			<input type="range" min="10" max={Math.max(rect.height * 4, 400)} step="1" value={editHeight} oninput={(event) => { editHeight = +event.currentTarget.value; previewDraft(); }} class="h-6 w-full accent-teal-500" style={sliderStyle} />
 		</label>
 		<div class="flex items-center justify-between gap-2">
 			<label class="flex items-center gap-2 text-[10px] text-surface-300"><input type="checkbox" checked={editHidden} onchange={(event) => { editHidden = event.currentTarget.checked; previewDraft(); }} />{m.reader_hide()}</label>

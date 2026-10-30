@@ -831,6 +831,13 @@ export interface PlannedOverlayItemV2 {
 		lineHeight: number;
 	};
 	lines?: OverlayRenderLineV2[];
+	/**
+	 * The largest font size the item's own region holds for this text (no cut
+	 * words, no collision), measured by the fill refinement. Equal to
+	 * `font.size` for an automatically sized item it could grow no further;
+	 * above it for a size the user pinned smaller. The editor's font range.
+	 */
+	maxFontSize?: number;
 	winningCandidateId?: string;
 	score?: OverlayCandidateScore;
 }
