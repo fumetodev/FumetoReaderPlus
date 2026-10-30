@@ -79,6 +79,9 @@ export interface MobileUiFixtureHost {
 	};
 	restoreNavigation(snapshot: ReturnType<MobileUiFixtureHost['snapshotNavigation']>): void;
 	inspectReaderTranslation(): ReturnType<typeof readerPageTranslationController.inspect>;
+	encdecTranslatePage(lines: string[], decode?: number[], abortAfterMs?: number): Promise<
+		{ variant: string; wallMs: number } & ({ texts: string[]; ms: number; windows: number } | { error: string })
+	>;
 	hymt2Translate(text: string): Promise<{ variant: string; path: string; out: string }>;
 	snapshotSettings(): FumetoSettings;
 	prepareReaderEvidenceSettings(): void;
@@ -749,6 +752,26 @@ export function installMobileUiFixtureHost(target: Window = window): () => void 
 		inspectReaderTranslation() {
 			return readerPageTranslationController.inspect();
 		},
+		async encdecTranslatePage(lines: string[], decode?: number[], abortAfterMs?: number) {
+			// Debug-only: one page through the selected encoder-decoder model, the
+			// call page mode makes. abortAfterMs aborts it mid-page to prove the
+			// native cancel path.
+			const [{ activeHyMT2Variant, isEncDecVariant }, { translatePageWithEncDec }] = await Promise.all([
+				import('$lib/translation/gguf-model-manager.js'),
+				import('$lib/translation/encdec-translator.js')
+			]);
+			const variant = activeHyMT2Variant();
+			if (!isEncDecVariant(variant)) throw new Error(`selected model ${variant} is not an encoder-decoder model`);
+			const controller = new AbortController();
+			if (abortAfterMs !== undefined) setTimeout(() => controller.abort(), abortAfterMs);
+			const started = performance.now();
+			try {
+				const result = await translatePageWithEncDec(variant, lines, { decode, signal: controller.signal });
+				return { variant, ...result, wallMs: performance.now() - started };
+			} catch (error) {
+				return { variant, error: error instanceof Error ? `${error.name}: ${error.message}` : String(error), wallMs: performance.now() - started };
+			}
+		},
 		async hymt2Translate(text: string, targetLang = 'en', sourceLang = 'ja') {
 			// Debug-only: proves variant resolution + native load + inference in
 			// one call (the exact path production translation takes).
@@ -766,7 +789,7 @@ export function installMobileUiFixtureHost(target: Window = window): () => void 
 			const path = await getModelPath();
 			if (isEncDecVariant(variant)) {
 				const { translateWithEncDec } = await import('$lib/translation/encdec-translator.js');
-				return { variant, path, sourceLang, targetLang, out: await translateWithEncDec(text) };
+				return { variant, path, sourceLang, targetLang, out: await translateWithEncDec(variant, text) };
 			}
 			// Loads only when the selected model is not the resident one, as the
 			// translation service does. Reloading on every call made each

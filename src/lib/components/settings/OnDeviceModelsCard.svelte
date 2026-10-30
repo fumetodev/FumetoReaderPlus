@@ -8,9 +8,9 @@
 	import { modelMemoryAdvice, readDeviceMemory, type MemoryAdvice } from '$lib/device/device-memory.js';
 	import { installedOcrModelBytes, ocrModelDownloadState } from '$lib/detection/ocr-model-manager.js';
 	import { installedSfxModelBytes, sfxModelDownloadState } from '$lib/detection/sfx-model-manager.js';
-	import { cancelEncDecModelDownload, deleteEncDecModel, downloadEncDecModel, encdecModelDownloadState, ENCDEC_MODEL_TOTAL_BYTES, isEncDecModelReady } from '$lib/translation/encdec-model-manager.js';
+	import { cancelEncDecModelDownload, deleteEncDecModel, downloadEncDecModel, encdecModelDownloadStates, encdecModelTotalBytes, isEncDecModelReady, type EncDecModelId } from '$lib/translation/encdec-model-manager.js';
 	import { encdecAvailable } from '$lib/translation/encdec-translator.js';
-	import { HYMT2_VARIANTS } from '$lib/translation/gguf-model-manager.js';
+	import { HYMT2_VARIANTS, ENCDEC_HYMT2_VARIANTS } from '$lib/translation/gguf-model-manager.js';
 	import { untrack } from 'svelte';
 
 	// Read once: total RAM doesn't change, and the advice must be identical
@@ -43,17 +43,22 @@
 		'index-manga-v1': false
 	});
 
-	// The encoder-decoder translator runs only where its native bridge is (Android); elsewhere it has no row.
+	// The encoder-decoder translators run only where their native bridge is (Android); elsewhere they have no row.
 	const encdecRuns = encdecAvailable();
-	let encdecReady = $state(false);
+	let encdecReady = $state<Record<EncDecModelId, boolean>>({ fumetotranslate: false, 'manga-ja-en-v1': false });
+	const fumetotranslateDownload = encdecModelDownloadStates.fumetotranslate;
+	const mangaJaEnV1Download = encdecModelDownloadStates['manga-ja-en-v1'];
+	let encdecStates = $derived({ fumetotranslate: $fumetotranslateDownload, 'manga-ja-en-v1': $mangaJaEnV1Download });
 
 	async function refreshEncDecReady(): Promise<void> {
-		encdecReady = encdecRuns && (await isEncDecModelReady().catch(() => false));
+		const next: Record<EncDecModelId, boolean> = { fumetotranslate: false, 'manga-ja-en-v1': false };
+		for (const id of ENCDEC_HYMT2_VARIANTS) next[id] = encdecRuns && (await isEncDecModelReady(id).catch(() => false));
+		encdecReady = next;
 	}
 
 	$effect(() => {
-		const status = $encdecModelDownloadState.status;
-		if (status === 'idle' || status === 'completed') untrack(() => { void refreshEncDecReady(); });
+		const statuses = [$fumetotranslateDownload.status, $mangaJaEnV1Download.status];
+		if (statuses.every((status) => status === 'idle' || status === 'completed' || status === 'error')) untrack(() => { void refreshEncDecReady(); });
 	});
 
 	async function refreshDownloaded(): Promise<void> {
@@ -92,7 +97,7 @@
 
 	interface ModelRow {
 		key: string;
-		variant: BundledHyMT2Variant | 'manga-ja-en-v1' | 'custom';
+		variant: BundledHyMT2Variant | EncDecModelId | 'custom';
 		name: string;
 		sizeMB: number;
 		usedFor: string;
@@ -106,19 +111,21 @@
 	}
 
 	let rows = $derived.by((): ModelRow[] => {
+		// A replaced model has a row only while its files are on the device.
 		const encdec: ModelRow[] = encdecRuns
-			? [{
-				key: 'manga-ja-en-v1',
-				variant: 'manga-ja-en-v1',
-				name: HYMT2_VARIANTS['manga-ja-en-v1'].label,
-				sizeMB: Math.round(ENCDEC_MODEL_TOTAL_BYTES / (1024 * 1024)),
+			? ENCDEC_HYMT2_VARIANTS.filter((id) => !HYMT2_VARIANTS[id].deprecated || encdecReady[id]).map((id) => ({
+				key: id,
+				variant: id,
+				name: HYMT2_VARIANTS[id].label,
+				sizeMB: Math.round(encdecModelTotalBytes(id) / (1024 * 1024)),
 				usedFor: m.settings_models_on_device_translation_fast(),
-				state: $encdecModelDownloadState,
-				ready: encdecReady,
-				download: () => void downloadEncDecModel().catch(() => {}),
-				cancel: () => cancelEncDecModelDownload(),
-				remove: () => void deleteEncDecModel().catch(() => {})
-			}]
+				state: encdecStates[id],
+				ready: encdecReady[id],
+				deprecated: HYMT2_VARIANTS[id].deprecated,
+				download: () => void downloadEncDecModel(id).catch(() => {}),
+				cancel: () => cancelEncDecModelDownload(id),
+				remove: () => void deleteEncDecModel(id).then(() => refreshEncDecReady()).catch(() => {})
+			}))
 			: [];
 		const bundled: ModelRow[] = BUNDLED_HYMT2_VARIANTS.filter((variant) => !bundledSpec(variant).deprecated || downloaded[variant]).map((variant) => {
 			const spec = bundledSpec(variant);

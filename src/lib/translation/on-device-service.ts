@@ -27,7 +27,9 @@ import {
 	isModelDownloaded,
 	type HyMT2Variant
 } from './gguf-model-manager.js';
-import { encdecAvailable, translateWithEncDec } from './encdec-translator.js';
+import { encdecAvailable, translatePageWithEncDec, translateWithEncDec } from './encdec-translator.js';
+import { ENCDEC_MODELS } from './encdec-model-manager.js';
+import { offerEncDecReplacement } from './encdec-handoff.js';
 import { onDeviceModelLabel } from './on-device-model-label.js';
 import {
 	extractTextWithPPOCR,
@@ -124,6 +126,11 @@ export interface OnDeviceRuntimeOverrides {
 	 * temperatures passes it here instead of touching settings.
 	 */
 	temperature?: number;
+	/**
+	 * FumetoTranslate's mode for this run (`settings.encdecMode` when omitted). A
+	 * volume job passes the mode it started with, like its label.
+	 */
+	encdecMode?: FumetoSettings['encdecMode'];
 }
 
 /** Recognition already run for a page, so the model phase can start from it. */
@@ -568,7 +575,7 @@ function overlayTypeFromRegion(region: DetectedTextRegion): OverlayEntry['type']
  */
 async function requireDownloadedModel(variant: HyMT2Variant = activeHyMT2Variant()): Promise<void> {
 	if (isEncDecVariant(variant) && !encdecAvailable()) {
-		throw new Error('The fast translation model runs on Android only. Choose another model in Settings → Translation → On-Device.');
+		throw new Error('This translation model runs on Android only. Choose another model in Settings → Translation → On-Device.');
 	}
 	if (await isModelDownloaded(variant)) return;
 	if (HYMT2_VARIANTS[variant].deprecated) {
@@ -684,7 +691,12 @@ export async function translatePageOnDevice(
 	// Read once: the label stored with this page and the engine that translates it must be the same model.
 	const pageVariant = activeHyMT2Variant();
 	const pageUsesEncDec = isEncDecVariant(pageVariant);
-	const pageModel = onDeviceModelLabel(pageVariant, ocrProvider);
+	const pageEncDecMode = options?.runtimeOverrides?.encdecMode ?? currentSettings.encdecMode ?? 'page';
+	// A page model in page mode translates the page's blocks in one call, each with the rest of the page in view.
+	const pageReadsWholePage = isEncDecVariant(pageVariant) && ENCDEC_MODELS[pageVariant].pageModel && pageEncDecMode === 'page';
+	const pageModel = onDeviceModelLabel(pageVariant, ocrProvider, pageEncDecMode);
+	// Someone still on a replaced model is offered its successor once; the page translates either way.
+	if (HYMT2_VARIANTS[pageVariant].replacedBy) void offerEncDecReplacement();
 	const pageTranslationSnapshot = (
 		entries: PageTranslationEntry[],
 		overlayData: PageOverlayData,
@@ -875,6 +887,74 @@ export async function translatePageOnDevice(
 		console.warn(`[on-device] ${variantLabel} model loaded`);
 	}
 
+	// Blocks the model never sees. Non-dialogue meta (credits, page markers,
+	// counters) and shaky-OCR groups skip it entirely: per-region Hy-MT2 calls
+	// cost ~10 s each and garbage input only yields fabricated output (report
+	// T5). So does a group the learned filter calls a sound effect while SFX
+	// overlays are hidden.
+	const modelSkip = (index: number): 'skipped-meta-or-low-confidence' | 'skipped-sfx' | null => {
+		const region = translatedRegions[index];
+		if (
+			!isRequiredTranslationRegion(region)
+			&& (region.classificationReasons?.includes('non-dialogue-meta')
+				|| (region.recognitionConfidence !== undefined
+					&& region.recognitionConfidence < REQUIRED_RECOGNITION_CONFIDENCE))
+		) return 'skipped-meta-or-low-confidence';
+		if (!region.inBubble && isLearnedSfx(region.sfxScore, sfxSkipThreshold)) return 'skipped-sfx';
+		return null;
+	};
+
+	// Page mode: every block the model will translate goes in one call, in
+	// reading order, and is its context; skipped blocks and dictionary sound
+	// effects are neither. The loop below then takes each block's translation
+	// from here and validates it exactly as it would a per-block answer.
+	let wholePage: { texts: Map<number, string>; error: unknown; msPerBlock: number } | null = null;
+	if (translationBackend === 'translategemma' && pageReadsWholePage && isEncDecVariant(pageVariant)) {
+		const modelBlocks = validBlocks
+			.map((_, index) => index)
+			.filter((index) => modelSkip(index) === null && !lookupSfx(validBlocks[index].text));
+		wholePage = { texts: new Map(), error: null, msPerBlock: 0 };
+		if (modelBlocks.length > 0) {
+			throwIfTranslationCancelled(signal);
+			console.warn(`[on-device] Phase 2: translating ${modelBlocks.length} blocks as one page`);
+			const inferenceStarted = performance.now();
+			try {
+				modelCalls += 1;
+				const result = await translatePageWithEncDec(pageVariant, modelBlocks.map((index) => validBlocks[index].text), { signal });
+				modelBlocks.forEach((index, k) => wholePage!.texts.set(index, result.texts[k] ?? ''));
+			} catch (err) {
+				throwIfTranslationCancelled(signal);
+				wholePage.error = err;
+			} finally {
+				const ms = performance.now() - inferenceStarted;
+				translationInferenceMs += ms;
+				wholePage.msPerBlock = ms / modelBlocks.length;
+			}
+			throwIfTranslationCancelled(signal);
+		}
+	}
+
+	// The overlay as translated so far: published after every block, or once at
+	// the end of a page translated as a whole (its blocks finish together).
+	const publishEntriesSnapshot = (): void => {
+		const progressive = createOverlayDocumentV2({
+			draft: { regions: [...overlayDraft.regions], entries: [...overlayDraft.entries] },
+			entries: pageEntries,
+			sourceImage,
+			locale: overlayTargetLocale(targetLang),
+			baseDirection: 'auto',
+			documentRevision: ++documentRevision,
+			pipeline: `on-device-${ocrProvider}`
+		});
+		pageEntries.splice(0, pageEntries.length, ...progressive.entries);
+		if (publishProgressiveSnapshot(
+			pageTranslationSnapshot(progressive.entries, progressive.document),
+			progressive.document
+		)) {
+			if (firstOverlayStoreMs === null) firstOverlayStoreMs = performance.now() - pageStarted;
+		}
+	};
+
 	for (let i = 0; i < validBlocks.length; i++) {
 		throwIfTranslationCancelled(signal);
 		const block = validBlocks[i];
@@ -909,23 +989,15 @@ export async function translatePageOnDevice(
 			error: blockError
 		});
 
-		// Non-dialogue meta (credits, page markers, counters) and shaky-OCR
-		// groups skip the model entirely: per-region Hy-MT2 calls cost ~10 s
-		// each and garbage input only yields fabricated output (report T5).
-		if (
-			!required
-			&& (region.classificationReasons?.includes('non-dialogue-meta')
-				|| (region.recognitionConfidence !== undefined
-					&& region.recognitionConfidence < REQUIRED_RECOGNITION_CONFIDENCE))
-		) {
+		const skip = modelSkip(i);
+		if (skip === 'skipped-meta-or-low-confidence') {
 			console.warn(`[on-device] Phase 2: block=${block.blockIndex} skipped (non-dialogue meta / low OCR confidence)`);
-			emitBlockResult(blockResult('skipped-meta-or-low-confidence'));
+			emitBlockResult(blockResult(skip));
 			continue;
 		}
-
-		if (!region.inBubble && isLearnedSfx(region.sfxScore, sfxSkipThreshold)) {
+		if (skip === 'skipped-sfx') {
 			console.warn(`[on-device] Phase 2: block=${block.blockIndex} skipped (learned sound-effect filter)`);
-			emitBlockResult(blockResult('skipped-sfx'));
+			emitBlockResult(blockResult(skip));
 			continue;
 		}
 
@@ -944,25 +1016,34 @@ export async function translatePageOnDevice(
 			// no second attempt to make (the removed ML Kit backend had one).
 			try {
 				throwIfTranslationCancelled(signal);
-				console.warn(`[on-device] Phase 2: translating block=${block.blockIndex} chars=${block.text.length} backend=${translationBackend}`);
+				if (!wholePage) console.warn(`[on-device] Phase 2: translating block=${block.blockIndex} chars=${block.text.length} backend=${translationBackend}`);
 
-				const inferenceStarted = performance.now();
-				try {
-					modelCalls += 1;
-					translatedText = pageUsesEncDec
-						? await translateWithEncDec(block.text, signal)
-						: await translateWithHyMT2(
-							block.text,
-							effectiveSourceLang,
-							targetLang,
-							signal,
-							options?.runtimeOverrides?.temperature
-						);
+				if (wholePage) {
+					// Translated with the page above; a failed page call fails each of its blocks.
+					blockInferenceMs = wholePage.msPerBlock;
+					if (wholePage.error) throw wholePage.error;
+					translatedText = wholePage.texts.get(i) ?? '';
 					if (translatedText.trim().length > 0) hyModelSuccesses += 1;
 					else hyModelErrors += 1;
-				} finally {
-					blockInferenceMs = performance.now() - inferenceStarted;
-					translationInferenceMs += blockInferenceMs;
+				} else {
+					const inferenceStarted = performance.now();
+					try {
+						modelCalls += 1;
+						translatedText = isEncDecVariant(pageVariant)
+							? await translateWithEncDec(pageVariant, block.text, signal)
+							: await translateWithHyMT2(
+								block.text,
+								effectiveSourceLang,
+								targetLang,
+								signal,
+								options?.runtimeOverrides?.temperature
+							);
+						if (translatedText.trim().length > 0) hyModelSuccesses += 1;
+						else hyModelErrors += 1;
+					} finally {
+						blockInferenceMs = performance.now() - inferenceStarted;
+						translationInferenceMs += blockInferenceMs;
+					}
 				}
 				throwIfTranslationCancelled(signal);
 			} catch (err) {
@@ -1072,23 +1153,9 @@ export async function translatePageOnDevice(
 		pageEntries.push(pageEntry);
 
 		// Progressive overlay update — TranslationOverlay.svelte re-renders
-		const progressive = createOverlayDocumentV2({
-			draft: { regions: [...overlayDraft.regions], entries: [...overlayDraft.entries] },
-			entries: pageEntries,
-			sourceImage,
-			locale: overlayTargetLocale(targetLang),
-			baseDirection: 'auto',
-			documentRevision: ++documentRevision,
-			pipeline: `on-device-${ocrProvider}`
-		});
-		pageEntries.splice(0, pageEntries.length, ...progressive.entries);
-		if (publishProgressiveSnapshot(
-			pageTranslationSnapshot(progressive.entries, progressive.document),
-			progressive.document
-		)) {
-			if (firstOverlayStoreMs === null) firstOverlayStoreMs = performance.now() - pageStarted;
-		}
+		if (!wholePage) publishEntriesSnapshot();
 	}
+	if (wholePage && pageEntries.length > 0) publishEntriesSnapshot();
 
 	if (invalidRequiredBlocks.length > 0 && overlayDraft.entries.length === 0) {
 		// Nothing translated cleanly: fail the page outright (retryable).
@@ -1186,7 +1253,9 @@ export async function translateRegionOnDevice(
 	// Named before any work starts, like the page pipeline's: the record should
 	// say what was selected when the translation was asked for.
 	const variant = activeHyMT2Variant();
-	const model = onDeviceModelLabel(variant, ocrProvider);
+	const encdecMode = currentSettings.encdecMode ?? 'page';
+	const model = onDeviceModelLabel(variant, ocrProvider, encdecMode);
+	if (HYMT2_VARIANTS[variant].replacedBy) void offerEncDecReplacement();
 
 	let blocks: RecognizedBlock[];
 	blocks = (await recognizeWithPPOCR(imageFile, {
@@ -1236,7 +1305,25 @@ export async function translateRegionOnDevice(
 		translatedText = sfxResult;
 	} else if (isEncDecVariant(variant)) {
 		await requireDownloadedModel(variant);
-		translatedText = await translateWithEncDec(recognizedText, signal);
+		if (ENCDEC_MODELS[variant].pageModel && encdecMode === 'page') {
+			// The page was read anyway: its other blocks, in reading order, are the
+			// region's context, and the region's text stands where the first block
+			// it covers stood. Only the region is translated.
+			const covered = new Set(matchingBlocks);
+			const lines: string[] = [];
+			let target = -1;
+			for (const b of blocks) {
+				if (covered.has(b)) {
+					if (target < 0) { target = lines.length; lines.push(recognizedText); }
+				} else if (isMeaningfulOcrText(b.text) && !lookupSfx(b.text)) {
+					lines.push(b.text);
+				}
+			}
+			console.warn(`[on-device] region: translating 1 of ${lines.length} page blocks`);
+			translatedText = (await translatePageWithEncDec(variant, lines, { decode: [target], signal })).texts[target];
+		} else {
+			translatedText = await translateWithEncDec(variant, recognizedText, signal);
+		}
 	} else {
 		if (!(await isActiveHyMT2ModelLoaded())) {
 			throwIfTranslationCancelled(signal);

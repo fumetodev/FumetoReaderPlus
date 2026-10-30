@@ -22,19 +22,22 @@ export interface SettingsSearchEntry {
 	keywords: () => string;
 	/** English vocabulary, always searched too. */
 	keywordsEn: string[];
+	/** The Translation tab's pipeline section the control sits in, when it is in one. */
+	subTab?: 'off-device' | 'on-device';
 }
 
 export const SETTINGS_SEARCH_INDEX: SettingsSearchEntry[] = [
-	{ tab: 'translation', anchor: 'providers', label: () => m.settings_search_providers_label(), keywords: () => m.settings_search_providers_keywords(), keywordsEn: ['api key', 'openrouter', 'claude', 'ollama', 'lm studio', 'model', 'connect', 'vision'] },
+	{ tab: 'translation', subTab: 'off-device', anchor: 'providers', label: () => m.settings_search_providers_label(), keywords: () => m.settings_search_providers_keywords(), keywordsEn: ['api key', 'openrouter', 'claude', 'ollama', 'lm studio', 'model', 'connect', 'vision'] },
 	{ tab: 'translation', anchor: 'pipeline', label: () => m.settings_search_pipeline_label(), keywords: () => m.settings_search_pipeline_keywords(), keywordsEn: ['cloud', 'offline', 'local', 'on device', 'off device'] },
-	{ tab: 'translation', anchor: 'language-pair', label: () => m.settings_search_language_pair_label(), keywords: () => m.settings_search_language_pair_keywords(), keywordsEn: ['japanese', 'english', 'source language', 'target language'] },
-	{ tab: 'translation', anchor: 'translation-mode', label: () => m.settings_search_translation_mode_label(), keywords: () => m.settings_search_translation_mode_keywords(), keywordsEn: ['context', 'isolated', 'page context', 'full context', 'mode 1', 'mode 2', 'mode 3'] },
-	{ tab: 'translation', anchor: 'skip-review', label: () => m.settings_search_skip_review_label(), keywords: () => m.settings_search_skip_review_keywords(), keywordsEn: ['pass 2', 'review pass', 'cost'] },
-	{ tab: 'translation', anchor: 'advanced-llm', label: () => m.settings_search_advanced_llm_label(), keywords: () => m.settings_search_advanced_llm_keywords(), keywordsEn: ['temperature', 'max tokens', 'context size', 'advanced'] },
-	{ tab: 'translation', anchor: 'on-device-backend', label: () => m.settings_search_on_device_backend_label(), keywords: () => m.settings_search_on_device_backend_keywords(), keywordsEn: ['ml kit', 'hy-mt2', 'llama', 'gguf'] },
-	{ tab: 'translation', anchor: 'hymt2-model', label: () => m.settings_search_hymt2_model_label(), keywords: () => m.settings_search_hymt2_model_keywords(), keywordsEn: ['hy-mt2', 'index-translate', 'gguf', 'variant', 'standard', 'upgraded', 'v2', 'v3', 'v5', 'multilingual', 'custom model', 'own model', 'import model'] },
-	{ tab: 'translation', anchor: 'on-device-temperature', label: () => m.settings_search_on_device_temperature_label(), keywords: () => m.settings_search_on_device_temperature_keywords(), keywordsEn: ['temperature', 'creativity', 'randomness', 'deterministic', 'greedy', 'sampler', 'on device'] },
-	{ tab: 'translation', anchor: 'ocr-provider', label: () => m.settings_search_ocr_provider_label(), keywords: () => m.settings_search_ocr_provider_keywords(), keywordsEn: ['ml kit', 'pp-ocr', 'ppocr', 'text recognition'] },
+	{ tab: 'translation', subTab: 'off-device', anchor: 'language-pair', label: () => m.settings_search_language_pair_label(), keywords: () => m.settings_search_language_pair_keywords(), keywordsEn: ['japanese', 'english', 'source language', 'target language'] },
+	{ tab: 'translation', subTab: 'off-device', anchor: 'translation-mode', label: () => m.settings_search_translation_mode_label(), keywords: () => m.settings_search_translation_mode_keywords(), keywordsEn: ['context', 'isolated', 'page context', 'full context', 'mode 1', 'mode 2', 'mode 3'] },
+	{ tab: 'translation', subTab: 'off-device', anchor: 'skip-review', label: () => m.settings_search_skip_review_label(), keywords: () => m.settings_search_skip_review_keywords(), keywordsEn: ['pass 2', 'review pass', 'cost'] },
+	{ tab: 'translation', subTab: 'off-device', anchor: 'advanced-llm', label: () => m.settings_search_advanced_llm_label(), keywords: () => m.settings_search_advanced_llm_keywords(), keywordsEn: ['temperature', 'max tokens', 'context size', 'advanced'] },
+	{ tab: 'translation', subTab: 'on-device', anchor: 'on-device-backend', label: () => m.settings_search_on_device_backend_label(), keywords: () => m.settings_search_on_device_backend_keywords(), keywordsEn: ['ml kit', 'hy-mt2', 'llama', 'gguf'] },
+	{ tab: 'translation', subTab: 'on-device', anchor: 'hymt2-model', label: () => m.settings_search_hymt2_model_label(), keywords: () => m.settings_search_hymt2_model_keywords(), keywordsEn: ['hy-mt2', 'index-translate', 'gguf', 'variant', 'standard', 'upgraded', 'v2', 'v3', 'v5', 'multilingual', 'custom model', 'own model', 'import model'] },
+	{ tab: 'translation', subTab: 'on-device', anchor: 'encdec-mode', label: () => m.settings_search_encdec_mode_label(), keywords: () => m.settings_search_encdec_mode_keywords(), keywordsEn: ['page mode', 'line mode', 'fumetotranslate', 'context', 'whole page', 'one line'] },
+	{ tab: 'translation', subTab: 'on-device', anchor: 'on-device-temperature', label: () => m.settings_search_on_device_temperature_label(), keywords: () => m.settings_search_on_device_temperature_keywords(), keywordsEn: ['temperature', 'creativity', 'randomness', 'deterministic', 'greedy', 'sampler', 'on device'] },
+	{ tab: 'translation', subTab: 'on-device', anchor: 'ocr-provider', label: () => m.settings_search_ocr_provider_label(), keywords: () => m.settings_search_ocr_provider_keywords(), keywordsEn: ['ml kit', 'pp-ocr', 'ppocr', 'text recognition'] },
 	{ tab: 'translation', anchor: 'background-translation', label: () => m.settings_search_background_translation_label(), keywords: () => m.settings_search_background_translation_keywords(), keywordsEn: ['notification', 'screen off', 'minimized', 'foreground service'] },
 	{ tab: 'overlay', anchor: 'overlay-enabled', label: () => m.settings_search_overlay_enabled_label(), keywords: () => m.settings_search_overlay_enabled_keywords(), keywordsEn: ['translated text', 'toggle overlay'] },
 	{ tab: 'overlay', anchor: 'sfx-overlays', label: () => m.settings_search_sfx_overlays_label(), keywords: () => m.settings_search_sfx_overlays_keywords(), keywordsEn: ['sfx', 'sound effects', 'onomatopoeia', 'official style', 'untranslated'] },

@@ -493,6 +493,8 @@ export function startVolumeTranslation(
 	run = runVolumeTranslation(volumeUuid, options, onProgress, controller).finally(() => {
 		if (activeRuns.get(volumeUuid) === run) activeRuns.delete(volumeUuid);
 		if (abortControllers.get(volumeUuid) === controller) abortControllers.delete(volumeUuid);
+		// A model handoff waits for the last job to end (encdec-handoff.ts).
+		if (activeRuns.size === 0) void import('./encdec-handoff.js').then((mod) => mod.completeEncDecHandoff()).catch(() => undefined);
 	});
 	activeRuns.set(volumeUuid, run);
 	return run;
@@ -636,7 +638,7 @@ async function runVolumeTranslation(
 			job.diagnostics.provider_type = provider.config.type;
 		} else {
 			const ocr = $settings.onDeviceOCRProvider ?? 'ppocr';
-			job.model = onDeviceModelLabel(activeHyMT2Variant(), ocr);
+			job.model = onDeviceModelLabel(activeHyMT2Variant(), ocr, $settings.encdecMode);
 		}
 
 		// Pre-load model in LM Studio (ensures exactly one model is loaded).
@@ -1100,7 +1102,9 @@ async function runTranslationPass(
 							targetLang: $settings.targetLanguage,
 							ocrProvider: $settings.onDeviceOCRProvider,
 							translationBackend: $settings.onDeviceTranslationBackend,
-							overlayMode: $settings.overlayMode
+							overlayMode: $settings.overlayMode,
+							// The mode the job started with, like its label.
+							encdecMode: $settings.encdecMode
 						},
 							onProgress: (progress: OnDeviceProgressState) => {
 							if (signal.aborted) return;

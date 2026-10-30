@@ -49,11 +49,19 @@ export class SettingsDraft {
 
 	// Translation (on-device)
 	translationPipeline = $state<'off-device' | 'on-device'>('off-device');
+	/**
+	 * Which pipeline's section the Translation tab shows: VIEW state, never
+	 * applied. Every hydrate (every entry into Settings) points it at the
+	 * pipeline that runs; browsing the other section lasts until Settings is
+	 * left. Settings search moves it to the section holding a result.
+	 */
+	translationSubTab = $state<'off-device' | 'on-device'>('off-device');
 	onDeviceSourceLang = $state('auto');
 	onDeviceTargetLang = $state('en');
 	onDeviceOCRProvider = $state<'ppocr'>('ppocr');
 	onDeviceTranslationBackend = $state<'translategemma'>('translategemma');
 	hyMT2Variant = $state<FumetoSettings['hyMT2Variant']>('stock');
+	encdecMode = $state<FumetoSettings['encdecMode']>('page');
 	onDeviceTemperature = $state(ON_DEVICE_TEMPERATURE_DEFAULT);
 	backgroundTranslation = $state(false);
 	localProviderConcurrency = $state(1);
@@ -111,6 +119,7 @@ export class SettingsDraft {
 		this.activeProviderId = s.activeProviderId;
 		this.pendingApiKeys = new Map();
 		this.translationPipeline = s.translationPipeline;
+		this.translationSubTab = s.translationPipeline;
 		this.onDeviceSourceLang = s.onDeviceSourceLang;
 		this.onDeviceTargetLang = s.onDeviceTargetLang;
 		this.onDeviceOCRProvider = s.onDeviceOCRProvider;
@@ -126,6 +135,7 @@ export class SettingsDraft {
 		this.hyMT2Variant = (s.hyMT2Variant as string) === 'manga-v1' ? 'manga-v2'
 			: (s.hyMT2Variant as string) === 'manga-v4' ? 'manga-v5'
 			: (s.hyMT2Variant ?? 'stock');
+		this.encdecMode = s.encdecMode ?? 'page';
 		this.onDeviceTemperature = s.onDeviceTemperature ?? ON_DEVICE_TEMPERATURE_DEFAULT;
 		this.backgroundTranslation = s.backgroundTranslation;
 		this.localProviderConcurrency = s.localProviderConcurrency;
@@ -177,6 +187,7 @@ export class SettingsDraft {
 			onDeviceOCRProvider: this.onDeviceOCRProvider,
 			onDeviceTranslationBackend: this.onDeviceTranslationBackend,
 			hyMT2Variant: this.hyMT2Variant,
+			encdecMode: this.encdecMode,
 			onDeviceTemperature: this.onDeviceTemperature,
 			onDeviceSourceLang: this.onDeviceSourceLang,
 			onDeviceTargetLang: this.onDeviceTargetLang,

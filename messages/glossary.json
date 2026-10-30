@@ -2,6 +2,7 @@
 	"$comment": "Terms every draft must carry through verbatim, patterns that are never prose, and per-locale preferred/forbidden vocabulary. The validator rejects a draft that drops a neverTranslate term present in its source or that matches a forbidden pattern.",
 	"neverTranslate": [
 		"FumetoReaderPlus",
+		"FumetoTranslate",
 		"Fumeto",
 		"OpenRouter",
 		"OpenAI",

@@ -6,10 +6,11 @@
 	import Switch from '$lib/components/ui/Switch.svelte';
 	import { slidingSelection } from '$lib/util/sliding-selection.js';
 	import { randomUUID } from '$lib/util/uuid.js';
-	import { ggufDownloadState, downloadHyMT2Model, cancelModelDownload as cancelGgufDownload, deleteHyMT2Model, isModelDownloaded, variantUsesFixedSampling, variantCannotTranslatePair, HYMT2_VARIANTS, BUNDLED_HYMT2_VARIANTS, bundledSpec, type HyMT2Variant, type BundledHyMT2Variant } from '$lib/translation/gguf-model-manager.js';
+	import { ggufDownloadState, downloadHyMT2Model, cancelModelDownload as cancelGgufDownload, deleteHyMT2Model, isModelDownloaded, variantUsesFixedSampling, variantCannotTranslatePair, HYMT2_VARIANTS, BUNDLED_HYMT2_VARIANTS, ENCDEC_HYMT2_VARIANTS, bundledSpec, type HyMT2Variant, type BundledHyMT2Variant } from '$lib/translation/gguf-model-manager.js';
 	import { modelMemoryAdvice, readDeviceMemory } from '$lib/device/device-memory.js';
-	import { encdecModelDownloadState, downloadEncDecModel, cancelEncDecModelDownload, ENCDEC_MODEL_TOTAL_BYTES } from '$lib/translation/encdec-model-manager.js';
+	import { encdecModelDownloadStates, downloadEncDecModel, cancelEncDecModelDownload, encdecModelTotalBytes, ENCDEC_MODELS } from '$lib/translation/encdec-model-manager.js';
 	import { encdecAvailable, releaseEncDec } from '$lib/translation/encdec-translator.js';
+	import { onEncDecHandoff } from '$lib/translation/encdec-handoff.js';
 	import { recommendedHyMT2Variant } from '$lib/translation/recommended-model.js';
 	import { ocrModelDownloadState, downloadOcrModels, cancelOcrModelDownload, deleteOcrModels, areOcrModelsReady, OCR_MODELS_TOTAL_BYTES } from '$lib/detection/ocr-model-manager.js';
 
@@ -28,11 +29,13 @@
 	import ModelPicker from './ModelPicker.svelte';
 
 	// ============================================================
-	// Pipeline sub-tabs — VIEW state only. Selecting a sub-tab no longer
-	// changes which pipeline runs (review §3.1.1); the explicit switch
-	// control below does.
+	// Pipeline sub-tabs — VIEW state only (`draft.translationSubTab`).
+	// Selecting a sub-tab never changes which pipeline runs (review §3.1.1);
+	// the explicit switch control below does. The draft owns it so every
+	// entry into Settings can point it at the running pipeline: this tab is
+	// created before the draft is hydrated and then kept alive, so a copy
+	// taken here showed Off-Device on first entry whatever was running.
 	// ============================================================
-	let translationSubTab = $state<'off-device' | 'on-device'>(draft.translationPipeline);
 
 	// ============================================================
 	// Multi-provider editor state (transient — resets when the tab unmounts)
@@ -337,6 +340,7 @@
 		'manga-v3': false,
 		'manga-v5': false,
 		'index-manga-v1': false,
+		fumetotranslate: false,
 		'manga-ja-en-v1': false,
 		custom: false
 	});
@@ -354,6 +358,13 @@
 	let visibleBundledVariants = $derived(
 		BUNDLED_HYMT2_VARIANTS.filter((v) => !HYMT2_VARIANTS[v].deprecated || hyMT2Downloaded[v] || draft.hyMT2Variant === v)
 	);
+	let visibleEncDecVariants = $derived(
+		ENCDEC_HYMT2_VARIANTS.filter((v) => !HYMT2_VARIANTS[v].deprecated || hyMT2Downloaded[v] || draft.hyMT2Variant === v)
+	);
+	// Each encoder-decoder model downloads on its own; a store per model keeps one's progress off the other's card.
+	const fumetotranslateDownload = encdecModelDownloadStates.fumetotranslate;
+	const mangaJaEnV1Download = encdecModelDownloadStates['manga-ja-en-v1'];
+	let encdecStates = $derived({ fumetotranslate: $fumetotranslateDownload, 'manga-ja-en-v1': $mangaJaEnV1Download });
 
 	// Vision models (PP-OCR detector + recogniser, rtmdet layout). Downloaded
 	// on demand; the readiness flag drives the card below and nothing else, so
@@ -379,6 +390,7 @@
 			'manga-v3': false,
 			'manga-v5': false,
 			'index-manga-v1': false,
+			fumetotranslate: false,
 			'manga-ja-en-v1': false,
 			custom: false
 		};
@@ -392,9 +404,19 @@
 		// The encoder-decoder translator's files can disappear behind this tab's back: its engine deletes a file that
 		// fails the integrity check and resets the download state to idle. Re-probe whenever that state settles, so the
 		// card offers Download again instead of a Ready model that can never load.
-		const status = $encdecModelDownloadState.status;
-		if (hyMT2ChecksLoaded && (status === 'idle' || status === 'completed')) untrack(() => { void refreshHyMT2Downloaded(); });
+		const statuses = [$fumetotranslateDownload.status, $mangaJaEnV1Download.status];
+		if (hyMT2ChecksLoaded && statuses.every((status) => status === 'idle' || status === 'completed' || status === 'error')) untrack(() => { void refreshHyMT2Downloaded(); });
 	});
+
+	// A finished download of a replaced model's successor moves the selection in the store; this draft must follow,
+	// or its next apply would select the model whose files were just removed.
+	$effect(() => onEncDecHandoff((old, successor) => {
+		if (draft.hyMT2Variant === old) {
+			draft.hyMT2Variant = successor;
+			draft.encdecMode = 'page';
+		}
+		void refreshHyMT2Downloaded();
+	}));
 
 	async function selectHyMT2Variant(variant: HyMT2Variant): Promise<void> {
 		if (draft.hyMT2Variant === variant) return;
@@ -519,7 +541,7 @@
 	let llamaBridgeAvailable = $state(false);
 
 	$effect(() => {
-		if (translationSubTab === 'on-device' && !onDeviceChecksLoaded) {
+		if (draft.translationSubTab === 'on-device' && !onDeviceChecksLoaded) {
 			onDeviceChecksLoaded = true;
 			llamaBridgeAvailable = isLlamaBridgeAvailable();
 		}
@@ -572,16 +594,16 @@
 		<button
 			type="button"
 			role="tab"
-			aria-selected={translationSubTab === tab.value}
+			aria-selected={draft.translationSubTab === tab.value}
 			aria-label={draft.translationPipeline === tab.value ? m.settings_translation_label_active_pipeline({ label: tab.label() }) : tab.label()}
-			onclick={() => (translationSubTab = tab.value as 'off-device' | 'on-device')}
-			class="relative flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors {translationSubTab === tab.value
+			onclick={() => (draft.translationSubTab = tab.value as 'off-device' | 'on-device')}
+			class="relative flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors {draft.translationSubTab === tab.value
 				? 'text-white'
 				: 'text-surface-400 hover:text-surface-200'}"
 		>
 			{#if draft.translationPipeline === tab.value}
 				<!-- Dot, not text: e2e helpers match on exact button text -->
-				<span class="h-1.5 w-1.5 shrink-0 rounded-full {translationSubTab === tab.value ? 'bg-green-300' : 'bg-green-400'}" title={m.settings_translation_active_pipeline()} aria-hidden="true"></span>
+				<span class="h-1.5 w-1.5 shrink-0 rounded-full {draft.translationSubTab === tab.value ? 'bg-green-300' : 'bg-green-400'}" title={m.settings_translation_active_pipeline()} aria-hidden="true"></span>
 			{/if}
 			{tab.label()}
 		</button>
@@ -589,22 +611,22 @@
 </div>
 
 <!-- Explicit pipeline switch — browsing a sub-tab must not change behavior -->
-{#if draft.translationPipeline !== translationSubTab}
+{#if draft.translationPipeline !== draft.translationSubTab}
 	<div class="mb-4 flex items-center justify-between gap-3 rounded-lg border border-primary-600/40 bg-primary-600/10 px-3 py-2.5">
 		<p class="text-xs text-surface-200">
 			<RichMessage message={m.settings_translation_currently_run({ pipeline: draft.translationPipeline === 'off-device' ? m.settings_translation_off_device() : m.settings_translation_on_device() })} emClass="font-medium" />
 		</p>
 		<button
 			type="button"
-			onclick={() => (draft.translationPipeline = translationSubTab)}
+			onclick={() => (draft.translationPipeline = draft.translationSubTab)}
 			class="shrink-0 rounded-md bg-primary-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-700"
 		>
-			{m.settings_translation_use_pipeline({ pipeline: translationSubTab === 'off-device' ? m.settings_translation_off_device() : m.settings_translation_on_device() })}
+			{m.settings_translation_use_pipeline({ pipeline: draft.translationSubTab === 'off-device' ? m.settings_translation_off_device() : m.settings_translation_on_device() })}
 		</button>
 	</div>
 {/if}
 
-{#if translationSubTab === 'off-device'}
+{#if draft.translationSubTab === 'off-device'}
 <div class="space-y-5">
 	<!-- LLM Providers -->
 	<div data-settings-anchor="providers">
@@ -1002,7 +1024,7 @@
 		     ONNX Runtime the encoder-decoder translator; the name shown is the
 		     family of the selected model. -->
 		<div class="rounded-lg bg-surface-800 px-3 py-2">
-			<span class="text-xs font-medium text-primary-400" data-on-device-backend-name>{selectedIsEncDec ? HYMT2_VARIANTS['manga-ja-en-v1'].title() : selectedIsIndexTranslate ? m.settings_translation_index_translate_2b() : m.settings_translation_hy_mt2_1_8b()}</span>
+			<span class="text-xs font-medium text-primary-400" data-on-device-backend-name>{selectedIsEncDec ? HYMT2_VARIANTS[draft.hyMT2Variant].title() : selectedIsIndexTranslate ? m.settings_translation_index_translate_2b() : m.settings_translation_hy_mt2_1_8b()}</span>
 		</div>
 		<p class="mt-1.5 text-[11px] text-surface-500">
 			{#if selectedIsEncDec}
@@ -1070,94 +1092,133 @@
 		<div class="rounded-lg border border-surface-700 bg-surface-800/50 px-4 py-3" data-hymt2-variant-picker>
 			<p class="mb-1 text-[11px] text-surface-500">{m.settings_translation_model_used_by_the()}</p>
 			{#if encdecRuns}
-				{@const spec = HYMT2_VARIANTS['manga-ja-en-v1']}
-				{@const downloaded = hyMT2Downloaded['manga-ja-en-v1']}
-				{@const downloadingThis = $encdecModelDownloadState.status === 'downloading'}
-				{@const memoryAdvice = modelMemoryAdvice(deviceMemory?.totalBytes ?? null, ENCDEC_MODEL_TOTAL_BYTES)}
-				<!-- The native encoder-decoder translator: same card anatomy as the GGUF variants below, its own
-				     download (several pinned files) and its own engine. -->
-				<label class="mt-1.5 block rounded-[var(--radius-card)] border px-3 py-2.5 {draft.hyMT2Variant === 'manga-ja-en-v1' ? 'border-primary-500/60 bg-primary-600/10' : 'border-surface-700'}" data-hymt2-variant="manga-ja-en-v1">
-					<div class="flex items-center gap-3">
-						<input
-							type="radio"
-							name="hymt2-variant"
-							class="h-4 w-4 shrink-0 accent-primary-500"
-							checked={draft.hyMT2Variant === 'manga-ja-en-v1'}
-							onchange={() => void selectHyMT2Variant('manga-ja-en-v1')}
-							data-testid="hymt2-variant-manga-ja-en-v1"
-						/>
-						<p class="min-w-0 flex-1 text-xs font-medium text-surface-200" data-hymt2-title>{spec.title()}</p>
-						{#if recommendedVariant === 'manga-ja-en-v1'}
-							<span class="shrink-0 rounded-full bg-primary-600/20 px-2 py-0.5 text-[10px] font-medium text-primary-300" data-hymt2-recommended>{m.settings_translation_model_recommended()}</span>
+				{#each visibleEncDecVariants as variant (variant)}
+					{@const spec = HYMT2_VARIANTS[variant]}
+					{@const state = encdecStates[variant]}
+					{@const downloaded = hyMT2Downloaded[variant]}
+					{@const downloadingThis = state.status === 'downloading'}
+					{@const memoryAdvice = modelMemoryAdvice(deviceMemory?.totalBytes ?? null, encdecModelTotalBytes(variant))}
+					<!-- The native encoder-decoder translators: same card anatomy as the GGUF variants below, their own
+					     downloads (several pinned files each) and their own engine. -->
+					<label class="mt-1.5 block rounded-[var(--radius-card)] border px-3 py-2.5 {draft.hyMT2Variant === variant ? 'border-primary-500/60 bg-primary-600/10' : 'border-surface-700'}" data-hymt2-variant={variant} data-settings-anchor="model-{variant}">
+						<div class="flex items-center gap-3">
+							<input
+								type="radio"
+								name="hymt2-variant"
+								class="h-4 w-4 shrink-0 accent-primary-500"
+								checked={draft.hyMT2Variant === variant}
+								onchange={() => void selectHyMT2Variant(variant)}
+								data-testid="hymt2-variant-{variant}"
+							/>
+							<p class="min-w-0 flex-1 text-xs font-medium text-surface-200" data-hymt2-title>{spec.title()}</p>
+							{#if spec.deprecated}
+								<span class="shrink-0 rounded-full bg-surface-700 px-2 py-0.5 text-[10px] font-medium text-surface-400" data-hymt2-deprecated>{m.settings_translation_model_deprecated()}</span>
+							{:else if recommendedVariant === variant}
+								<span class="shrink-0 rounded-full bg-primary-600/20 px-2 py-0.5 text-[10px] font-medium text-primary-300" data-hymt2-recommended>{m.settings_translation_model_recommended()}</span>
+							{/if}
+						</div>
+						<div class="mt-1.5 flex items-center gap-3">
+							<div class="min-w-0 flex-1" data-hymt2-meta>
+								<p class="text-[11px] text-surface-400">{m.settings_translation_meta_model({ value: spec.modelName })}</p>
+								<p class="text-[11px] text-surface-400">{m.settings_translation_meta_size({ value: spec.sizeLabel })}</p>
+								<p class="text-[11px] text-surface-400">{m.settings_translation_meta_quant({ value: spec.quantLabel })}</p>
+								{#if memoryAdvice.level === 'tight' || memoryAdvice.level === 'low'}
+									<p
+										data-memory-advice={memoryAdvice.level}
+										class="mt-0.5 text-[11px] {memoryAdvice.level === 'low' ? 'text-red-400' : 'text-amber-400'}"
+									>
+										{memoryAdvice.message}
+									</p>
+								{/if}
+							</div>
+							<div class="flex shrink-0 flex-col items-stretch justify-center gap-2" data-hymt2-actions>
+								{#if downloadingThis}
+									<button
+										type="button"
+										onclick={() => cancelEncDecModelDownload(variant)}
+										class="rounded-full bg-surface-700 px-3 py-1.5 text-[11px] font-medium text-surface-300 transition-colors hover:bg-surface-600"
+									>
+										{m.common_cancel()}
+									</button>
+								{:else if downloaded}
+									<span class="rounded-full bg-green-600/20 px-3 py-1 text-center text-[11px] font-medium text-green-400">{m.settings_models_ready()}</span>
+									<button
+										type="button"
+										onclick={async () => {
+											await deleteHyMT2Model(variant).catch(() => undefined);
+											await refreshHyMT2Downloaded();
+											// A deprecated model cannot be downloaded again: leave the selection on one that can translate.
+											if (spec.deprecated && draft.hyMT2Variant === variant) await selectHyMT2Variant(recommendedVariant);
+										}}
+										class="rounded-full bg-red-600/20 px-3 py-1.5 text-[11px] font-medium text-red-400 transition-colors hover:bg-red-600/30"
+										data-testid="hymt2-delete-{variant}"
+									>
+										{m.settings_models_delete()}
+									</button>
+								{:else if !spec.deprecated}
+									<button
+										type="button"
+										onclick={async () => {
+											await downloadEncDecModel(variant).catch(() => undefined);
+											await refreshHyMT2Downloaded();
+										}}
+										class="rounded-full bg-primary-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+										data-testid="hymt2-download-{variant}"
+									>
+										{m.settings_models_download()}
+									</button>
+								{/if}
+							</div>
+						</div>
+						{#if downloadingThis && state.progress}
+							{@const pct = state.progress.totalBytes > 0
+								? Math.round((state.progress.downloadedBytes / state.progress.totalBytes) * 100)
+								: 0}
+							<div class="mt-2 h-1.5 w-full rounded-full bg-surface-700">
+								<div class="h-1.5 rounded-full bg-primary-500 transition-all" style="width: {pct}%"></div>
+							</div>
+							<p class="mt-1 text-[11px] text-surface-500">
+								{m.settings_translation_download_progress({ done: (state.progress.downloadedBytes / 1024 / 1024) | 0, total: (state.progress.totalBytes / 1024 / 1024) | 0, pct })}
+							</p>
 						{/if}
-					</div>
-					<div class="mt-1.5 flex items-center gap-3">
-						<div class="min-w-0 flex-1" data-hymt2-meta>
-							<p class="text-[11px] text-surface-400">{m.settings_translation_meta_model({ value: spec.modelName })}</p>
-							<p class="text-[11px] text-surface-400">{m.settings_translation_meta_size({ value: spec.sizeLabel })}</p>
-							<p class="text-[11px] text-surface-400">{m.settings_translation_meta_quant({ value: spec.quantLabel })}</p>
-							{#if memoryAdvice.level === 'tight' || memoryAdvice.level === 'low'}
-								<p
-									data-memory-advice={memoryAdvice.level}
-									class="mt-0.5 text-[11px] {memoryAdvice.level === 'low' ? 'text-red-400' : 'text-amber-400'}"
-								>
-									{memoryAdvice.message}
+						{#if state.status === 'error'}
+							<p class="mt-2 break-words text-[11px] text-red-400">{state.error}</p>
+						{/if}
+						<p class="mt-1.5 text-[11px] italic text-surface-500" data-hymt2-description>{spec.description()}</p>
+						{#if spec.deprecated && spec.replacedBy}
+							<p class="mt-1 text-[11px] text-amber-400/90" data-hymt2-deprecated-note>{m.settings_translation_encdec_replaced_note({ model: HYMT2_VARIANTS[spec.replacedBy].title() })}</p>
+						{/if}
+						{#if ENCDEC_MODELS[variant].pageModel && draft.hyMT2Variant === variant}
+							<!-- How the selected page model reads a page. Shown only while it is the selected model: the
+							     others have one way of reading. -->
+							<div class="mt-2.5" data-settings-anchor="encdec-mode">
+								<p class="mb-1 text-[11px] font-medium text-surface-300">{m.settings_translation_encdec_mode_label()}</p>
+								<div class="relative flex gap-1 rounded-full bg-surface-container-high p-1" role="radiogroup" aria-label={m.settings_translation_encdec_mode_label()} use:slidingSelection>
+									{#each [
+										{ value: 'page', label: () => m.settings_translation_encdec_mode_page() },
+										{ value: 'line', label: () => m.settings_translation_encdec_mode_line() }
+									] as mode (mode.value)}
+										<button
+											type="button"
+											role="radio"
+											aria-checked={draft.encdecMode === mode.value}
+											onclick={() => (draft.encdecMode = mode.value as 'page' | 'line')}
+											class="relative flex flex-1 items-center justify-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors {draft.encdecMode === mode.value
+												? 'text-white'
+												: 'text-surface-400 hover:text-surface-200'}"
+											data-testid="encdec-mode-{mode.value}"
+										>
+											{mode.label()}
+										</button>
+									{/each}
+								</div>
+								<p class="mt-1.5 text-[11px] text-surface-500" data-encdec-mode-help>
+									{draft.encdecMode === 'page' ? m.settings_translation_encdec_mode_page_help() : m.settings_translation_encdec_mode_line_help()}
 								</p>
-							{/if}
-						</div>
-						<div class="flex shrink-0 flex-col items-stretch justify-center gap-2" data-hymt2-actions>
-							{#if downloadingThis}
-								<button
-									type="button"
-									onclick={() => cancelEncDecModelDownload()}
-									class="rounded-full bg-surface-700 px-3 py-1.5 text-[11px] font-medium text-surface-300 transition-colors hover:bg-surface-600"
-								>
-									{m.common_cancel()}
-								</button>
-							{:else if downloaded}
-								<span class="rounded-full bg-green-600/20 px-3 py-1 text-center text-[11px] font-medium text-green-400">{m.settings_models_ready()}</span>
-								<button
-									type="button"
-									onclick={async () => {
-										await deleteHyMT2Model('manga-ja-en-v1').catch(() => undefined);
-										await refreshHyMT2Downloaded();
-									}}
-									class="rounded-full bg-red-600/20 px-3 py-1.5 text-[11px] font-medium text-red-400 transition-colors hover:bg-red-600/30"
-									data-testid="hymt2-delete-manga-ja-en-v1"
-								>
-									{m.settings_models_delete()}
-								</button>
-							{:else}
-								<button
-									type="button"
-									onclick={async () => {
-										await downloadEncDecModel().catch(() => undefined);
-										await refreshHyMT2Downloaded();
-									}}
-									class="rounded-full bg-primary-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-									data-testid="hymt2-download-manga-ja-en-v1"
-								>
-									{m.settings_models_download()}
-								</button>
-							{/if}
-						</div>
-					</div>
-					{#if downloadingThis && $encdecModelDownloadState.progress}
-						{@const pct = $encdecModelDownloadState.progress.totalBytes > 0
-							? Math.round(($encdecModelDownloadState.progress.downloadedBytes / $encdecModelDownloadState.progress.totalBytes) * 100)
-							: 0}
-						<div class="mt-2 h-1.5 w-full rounded-full bg-surface-700">
-							<div class="h-1.5 rounded-full bg-primary-500 transition-all" style="width: {pct}%"></div>
-						</div>
-						<p class="mt-1 text-[11px] text-surface-500">
-							{m.settings_translation_download_progress({ done: ($encdecModelDownloadState.progress.downloadedBytes / 1024 / 1024) | 0, total: ($encdecModelDownloadState.progress.totalBytes / 1024 / 1024) | 0, pct })}
-						</p>
-					{/if}
-					{#if $encdecModelDownloadState.status === 'error'}
-						<p class="mt-2 break-words text-[11px] text-red-400">{$encdecModelDownloadState.error}</p>
-					{/if}
-					<p class="mt-1.5 text-[11px] italic text-surface-500" data-hymt2-description>{spec.description()}</p>
-				</label>
+							</div>
+						{/if}
+					</label>
+				{/each}
 			{/if}
 			{#each visibleBundledVariants as variantKey (variantKey)}
 				{@const variant = variantKey as BundledHyMT2Variant}
@@ -1435,9 +1496,11 @@
 		{/if}
 	</div>
 
+	<!-- On-device sampler temperature. Not shown for the encoder-decoder translators: their beam search has no
+	     sampler, so the setting would be a control that does nothing. -->
+	{#if !selectedIsEncDec}
 	<div class="border-t border-surface-700"></div>
 
-	<!-- On-device sampler temperature -->
 	<div data-settings-anchor="on-device-temperature">
 		<h3 class="mb-2 block text-xs font-semibold uppercase tracking-wider text-surface-400">{m.settings_translation_translation_temperature()}</h3>
 		<div class="rounded-lg border border-surface-700 bg-surface-800/50 px-4 py-3">
@@ -1485,6 +1548,7 @@
 			{/if}
 		</div>
 	</div>
+	{/if}
 
 	<div class="border-t border-surface-700"></div>
 

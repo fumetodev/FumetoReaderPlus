@@ -23,10 +23,20 @@ const RECORD_NAMES: Record<HyMT2Variant, string> = {
 	'manga-v3': 'hymt2-manga-v3',
 	'manga-v5': 'hymt2-manga-v5',
 	'index-manga-v1': 'index-translate-manga-v1',
+	fumetotranslate: 'fumetotranslate',
 	'manga-ja-en-v1': 'manga-ja-en-v1',
 	custom: 'custom-gguf'
 };
 
-export function onDeviceModelLabel(variant: HyMT2Variant, ocrProvider: string): string {
-	return `on-device-${RECORD_NAMES[variant]}-${ocrProvider}`;
+/**
+ * Models with a page mode and a line mode record which one made the translation
+ * (`on-device-fumetotranslate-page-ppocr`), so pages of one volume made in
+ * different modes can be told apart. The mode defaults to page, the setting's
+ * default.
+ */
+const MODEL_HAS_MODES: Partial<Record<HyMT2Variant, true>> = { fumetotranslate: true };
+
+export function onDeviceModelLabel(variant: HyMT2Variant, ocrProvider: string, encdecMode: 'page' | 'line' = 'page'): string {
+	const name = MODEL_HAS_MODES[variant] ? `${RECORD_NAMES[variant]}-${encdecMode}` : RECORD_NAMES[variant];
+	return `on-device-${name}-${ocrProvider}`;
 }

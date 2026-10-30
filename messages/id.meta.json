@@ -1284,6 +1284,26 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:57:17.047Z"
 	},
+	"encdec_replacement_notice_body": {
+		"sourceHash": "c8c6d06ee3c767e1",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-29T23:16:27.887Z"
+	},
+	"encdec_replacement_notice_download": {
+		"sourceHash": "41533734a5a7b89d",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-29T23:16:27.887Z"
+	},
+	"encdec_replacement_notice_later": {
+		"sourceHash": "c19525e91f26d3c4",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-29T23:16:27.887Z"
+	},
+	"encdec_replacement_notice_title": {
+		"sourceHash": "a09d3c41e88d312f",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-29T23:16:27.887Z"
+	},
 	"error_auth": {
 		"sourceHash": "de4953056fa670f7",
 		"model": "anthropic/claude-sonnet-5",
@@ -2785,9 +2805,9 @@
 		"draftedAt": "2026-08-28T00:13:01.711Z"
 	},
 	"help_settings_translation_on_device": {
-		"sourceHash": "800a68a2e5fec1e7",
+		"sourceHash": "a682c3e6531ad52e",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
-		"draftedAt": "2026-10-19T23:03:16.846Z"
+		"draftedAt": "2026-10-29T23:16:27.887Z"
 	},
 	"help_settings_translation_tab_showing": {
 		"sourceHash": "abd0c1e8b830a70e",
@@ -3813,6 +3833,16 @@
 		"sourceHash": "d3eff064bb51577e",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:59:05.306Z"
+	},
+	"model_variant_fumetotranslate_description": {
+		"sourceHash": "657d54d5427db403",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-29T23:16:27.887Z"
+	},
+	"model_variant_fumetotranslate_title": {
+		"sourceHash": "c3c163c1a492af25",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-29T23:16:27.887Z"
 	},
 	"model_variant_index_manga_v1_description": {
 		"sourceHash": "1ca7111976144ed8",
@@ -5729,6 +5759,16 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:56:04.677Z"
 	},
+	"settings_search_encdec_mode_keywords": {
+		"sourceHash": "29ff6cca261d8ebb",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-29T23:16:27.887Z"
+	},
+	"settings_search_encdec_mode_label": {
+		"sourceHash": "9d80b509fb5f3143",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-29T23:16:27.887Z"
+	},
 	"settings_search_help_root_keywords": {
 		"sourceHash": "767a5c07db9285ab",
 		"model": "anthropic/claude-sonnet-5",
@@ -5740,9 +5780,9 @@
 		"draftedAt": "2026-08-27T23:56:04.677Z"
 	},
 	"settings_search_hymt2_model_keywords": {
-		"sourceHash": "d66c89c29017eefc",
+		"sourceHash": "d59bdfa2cea7aea3",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
-		"draftedAt": "2026-10-19T23:03:16.846Z"
+		"draftedAt": "2026-10-29T23:16:27.887Z"
 	},
 	"settings_search_hymt2_model_label": {
 		"sourceHash": "e8238bc35e30f47c",
@@ -6523,6 +6563,36 @@
 		"sourceHash": "dfeb698f293839ee",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-10-19T23:02:07.025Z"
+	},
+	"settings_translation_encdec_mode_label": {
+		"sourceHash": "ebbe82dae7a338d5",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-29T23:16:27.887Z"
+	},
+	"settings_translation_encdec_mode_line": {
+		"sourceHash": "1a849e52a46d5087",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-29T23:16:27.887Z"
+	},
+	"settings_translation_encdec_mode_line_help": {
+		"sourceHash": "48131c9154f369e1",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-29T23:16:27.887Z"
+	},
+	"settings_translation_encdec_mode_page": {
+		"sourceHash": "8bbbede63344badf",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-29T23:16:27.887Z"
+	},
+	"settings_translation_encdec_mode_page_help": {
+		"sourceHash": "fa09261ff48c7fbc",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-29T23:16:27.887Z"
+	},
+	"settings_translation_encdec_replaced_note": {
+		"sourceHash": "c9d25f3f3109f276",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-10-29T23:16:27.887Z"
 	},
 	"settings_translation_failed_to_connect": {
 		"sourceHash": "2668ea9f2355c5e8",
