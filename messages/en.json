@@ -576,6 +576,7 @@
 	"help_fig_zoom_presets": "Zoom presets",
 	"help_filter_volumes_by_tags": "Filter volumes by tags if volumes have tags assigned.",
 	"help_fix_single_box_li": "<em>Fix a single box:</em> long-press the box and tap Edit to change its text yourself. LLM re-revision runs at page scope on mobile (per-entry revision is available in the desktop side panel).",
+	"help_fixed_a_narration_block_could": "Fixed: a narration block of several columns could be split into two pieces wrapped around each other, with its overlays stacked out of order. Overlays that share a space now stack in the order they were translated",
 	"help_fixed_an_api_key_typed": "Fixed: an API key typed into a provider row and left open was not saved when leaving Settings, and a stale failure marker could stay on a page that had since been translated",
 	"help_fixed_crashes_and_freezes_on": "Fixed crashes and freezes: on-device translation no longer closes the app on some phones and tablets, batch translation uses far less memory, and changing the system font or display size no longer restarts the app",
 	"help_fixed_nothing_in_the": "Fixed: nothing in the reader's \"Boxes on this page\" list responded to taps, and Settings → Translation opened on Off-Device even while on-device translation was running",

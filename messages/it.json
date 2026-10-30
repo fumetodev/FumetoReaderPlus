@@ -576,6 +576,7 @@
 	"help_fig_zoom_presets": "Preimpostazioni di zoom",
 	"help_filter_volumes_by_tags": "Filtra i volumi per tag se ai volumi sono stati assegnati dei tag.",
 	"help_fix_single_box_li": "<em>Correggi un singolo riquadro:</em> tieni premuto il riquadro e tocca Modifica per cambiarne tu stesso il testo. La ri-revisione tramite LLM viene eseguita a livello di pagina su mobile (la revisione per singola voce è disponibile nel pannello laterale desktop).",
+	"help_fixed_a_narration_block_could": "Corretto: un blocco di narrazione su più colonne poteva dividersi in due parti incastrate l’una nell’altra, con gli overlay impilati nell’ordine sbagliato. Gli overlay che condividono uno spazio ora si impilano nell’ordine in cui sono stati tradotti",
 	"help_fixed_an_api_key_typed": "Risolto: una chiave API digitata in una riga del provider e lasciata aperta non veniva salvata all'uscita da Impostazioni, e un indicatore di errore obsoleto poteva rimanere su una pagina che era stata tradotta nel frattempo",
 	"help_fixed_crashes_and_freezes_on": "Risolti arresti e blocchi: la traduzione sul dispositivo non chiude più l'app su alcuni telefoni e tablet, la traduzione in batch usa molta meno memoria e cambiare la dimensione del carattere o dello schermo di sistema non riavvia più l'app",
 	"help_fixed_nothing_in_the": "Corretto: nella lista «Riquadri in questa pagina» del lettore nulla rispondeva al tocco, e Impostazioni → Traduzione si apriva su Fuori dispositivo anche con la traduzione sul dispositivo attiva",
