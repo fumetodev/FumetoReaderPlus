@@ -73,7 +73,8 @@ async function executePageTranslation(context: ReaderPageTranslationRunContext) 
 							targetLang: context.settings.onDeviceTargetLang,
 							ocrProvider: context.settings.onDeviceOCRProvider,
 							translationBackend: context.settings.onDeviceTranslationBackend,
-							overlayMode: context.settings.overlayMode
+							overlayMode: context.settings.overlayMode,
+							encdecMode: context.settings.encdecMode
 						},
 						shouldPublishProgressiveUpdate: context.shouldPublish,
 						onProgressiveSnapshot: (snapshot) => {

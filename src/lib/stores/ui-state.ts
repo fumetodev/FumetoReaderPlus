@@ -32,6 +32,12 @@ export const settingsNavigationBusy = writable<boolean>(false);
 /** One-shot: tab the settings dialog should open on (deep links). */
 export const settingsInitialTab = writable<'translation' | 'overlay' | 'display' | 'libraries' | 'help' | null>(null);
 
+/**
+ * One-shot: the control Settings scrolls to when it opens (deep links), and the
+ * Translation tab's pipeline section it sits in.
+ */
+export const settingsInitialAnchor = writable<{ anchor: string; subTab?: 'off-device' | 'on-device' } | null>(null);
+
 /** One-shot: Help section to auto-expand when the Help tab mounts. */
 export const helpInitialSection = writable<string | null>(null);
 

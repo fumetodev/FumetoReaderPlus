@@ -309,14 +309,26 @@ export interface FumetoSettings {
 	 *
 	 * 'index-manga-v1' is not a Hy-MT2 file at all but a fine-tune of
 	 * Index-Translate 2B; the setting keeps its name because stored profiles
-	 * are keyed on it. 'manga-ja-en-v1' is not even a GGUF: it is the native
-	 * encoder-decoder translator (encdec-translator.ts).
+	 * are keyed on it. 'fumetotranslate' and 'manga-ja-en-v1' are not even
+	 * GGUFs: they are the native encoder-decoder translators
+	 * (encdec-translator.ts), the second replaced by the first.
 	 *
 	 * The default stays 'stock' for a stored profile that never had the key; a
 	 * fresh install is seeded with the recommended model instead
 	 * (`seedRecommendedOnDeviceModel`).
 	 */
-	hyMT2Variant: 'stock' | 'manga-v2' | 'manga-v3' | 'manga-v5' | 'index-manga-v1' | 'manga-ja-en-v1' | 'custom';
+	hyMT2Variant: 'stock' | 'manga-v2' | 'manga-v3' | 'manga-v5' | 'index-manga-v1' | 'fumetotranslate' | 'manga-ja-en-v1' | 'custom';
+	/**
+	 * How FumetoTranslate reads a page. 'page' translates the page's text blocks
+	 * together, each with the rest of the page in view (better and faster);
+	 * 'line' translates every block on its own. The other models ignore it.
+	 */
+	encdecMode: 'page' | 'line';
+	/**
+	 * Whether the one-time notice offering FumetoTranslate to someone still
+	 * translating with the model it replaced has been shown.
+	 */
+	encdecReplacementNoticeShown: boolean;
 	/**
 	 * The user's imported on-device model, if any. Absent until an import
 	 * succeeds; cleared when it is deleted.
@@ -442,6 +454,8 @@ export const DEFAULT_SETTINGS: FumetoSettings = {
 	onDeviceOCRProvider: 'ppocr',
 	onDeviceTranslationBackend: 'translategemma',
 	hyMT2Variant: 'stock',
+	encdecMode: 'page',
+	encdecReplacementNoticeShown: false,
 	customModel: undefined,
 	onDeviceTemperature: ON_DEVICE_TEMPERATURE_DEFAULT,
 	onDeviceSourceLang: 'auto',
@@ -639,6 +653,15 @@ export function migratePersistedSettings(rawValue: unknown): SettingsMigrationRe
 			parsed.onDeviceTemperature = usable;
 			needsSave = needsSave || raw.onDeviceTemperature !== undefined;
 		}
+	}
+
+	if (parsed.encdecMode !== 'page' && parsed.encdecMode !== 'line') {
+		parsed.encdecMode = DEFAULT_SETTINGS.encdecMode;
+		needsSave = needsSave || raw.encdecMode !== undefined;
+	}
+	if (typeof parsed.encdecReplacementNoticeShown !== 'boolean') {
+		parsed.encdecReplacementNoticeShown = DEFAULT_SETTINGS.encdecReplacementNoticeShown;
+		needsSave = needsSave || raw.encdecReplacementNoticeShown !== undefined;
 	}
 
 	// The filter strength indexes a calibration table; anything outside 0..1

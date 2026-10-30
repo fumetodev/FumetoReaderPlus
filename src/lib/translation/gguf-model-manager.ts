@@ -38,7 +38,7 @@ import {
 	type PromptProfile
 } from './llamacpp-bridge.js';
 import { exists as fsExists, remove as fsRemove, stat as fsStat } from '@tauri-apps/plugin-fs';
-import { deleteEncDecModel, isEncDecModelReady } from './encdec-model-manager.js';
+import { deleteEncDecModel, isEncDecModelReady, type EncDecModelId } from './encdec-model-manager.js';
 import { recommendedHyMT2Variant } from './recommended-model.js';
 import { appDataDir, join } from '@tauri-apps/api/path';
 
@@ -63,11 +63,11 @@ export type BundledHyMT2Variant =
 	| 'manga-v5'
 	| 'index-manga-v1';
 /**
- * The on-device encoder-decoder translator: not a GGUF and not run by llama.cpp. Its files, download and native
- * engine live in encdec-model-manager.ts / encdec-translator.ts; it is an entry here so Settings, the stored model
- * label and the language-pair warning treat it like every other choice.
+ * The on-device encoder-decoder translators: not GGUFs and not run by llama.cpp. Their files, downloads and native
+ * engine live in encdec-model-manager.ts / encdec-translator.ts; they are entries here so Settings, the stored model
+ * label and the language-pair warning treat them like every other choice. The variant id is the model's id there.
  */
-export type EncDecVariant = 'manga-ja-en-v1';
+export type EncDecVariant = EncDecModelId;
 export type HyMT2Variant = BundledHyMT2Variant | EncDecVariant | 'custom';
 
 export interface HyMT2VariantSpec {
@@ -121,6 +121,12 @@ export interface HyMT2VariantSpec {
 	 * Delete but no Download — and the records it wrote keep their label.
 	 */
 	deprecated?: boolean;
+	/**
+	 * The model that takes a deprecated model's place. Once it is downloaded, the
+	 * handoff (encdec-handoff.ts) moves the selection to it and removes the old
+	 * model's files, so the old model's owner is never left without one.
+	 */
+	replacedBy?: HyMT2Variant;
 }
 
 export const HYMT2_VARIANTS: Record<HyMT2Variant, HyMT2VariantSpec> = {
@@ -203,9 +209,21 @@ export const HYMT2_VARIANTS: Record<HyMT2Variant, HyMT2VariantSpec> = {
 		fixedSampling: true,
 		japaneseToEnglishOnly: true
 	},
+	fumetotranslate: {
+		kind: 'encdec',
+		// The model's folder under appDataDir()/models/ (ENCDEC_MODELS.fumetotranslate.dir).
+		filename: 'fumetotranslate',
+		label: 'FumetoTranslate manga JA-EN (ONNX int8)',
+		title: () => m.model_variant_fumetotranslate_title(),
+		modelName: 'fumetotranslate-manga-ja-translator',
+		sizeLabel: '~448MB',
+		quantLabel: 'INT8',
+		description: () => m.model_variant_fumetotranslate_description(),
+		japaneseToEnglishOnly: true
+	},
 	'manga-ja-en-v1': {
 		kind: 'encdec',
-		// The model's folder under appDataDir()/models/ (ENCDEC_MODEL.dir).
+		// The model's folder under appDataDir()/models/ (ENCDEC_MODELS['manga-ja-en-v1'].dir).
 		filename: 'manga-ja-en-v1',
 		label: 'Manga JA-EN translator v1 (ONNX int8)',
 		title: () => m.model_variant_manga_ja_en_v1_title(),
@@ -213,7 +231,9 @@ export const HYMT2_VARIANTS: Record<HyMT2Variant, HyMT2VariantSpec> = {
 		sizeLabel: '~443MB',
 		quantLabel: 'INT8',
 		description: () => m.model_variant_manga_ja_en_v1_description(),
-		japaneseToEnglishOnly: true
+		japaneseToEnglishOnly: true,
+		deprecated: true,
+		replacedBy: 'fumetotranslate'
 	},
 	custom: {
 		kind: 'custom',
@@ -238,6 +258,9 @@ export const BUNDLED_HYMT2_VARIANTS = [
 	'manga-v5',
 	'index-manga-v1'
 ] as const;
+
+/** The encoder-decoder translators, in picker order. Settings shows a deprecated one only to its owner. */
+export const ENCDEC_HYMT2_VARIANTS = ['fumetotranslate', 'manga-ja-en-v1'] as const satisfies readonly EncDecVariant[];
 
 export function isEncDecVariant(variant: HyMT2Variant): variant is EncDecVariant {
 	return HYMT2_VARIANTS[variant].kind === 'encdec';
@@ -276,6 +299,7 @@ export function bundledSpec(
 export function activeHyMT2Variant(): HyMT2Variant {
 	const stored = get(settings) as { hyMT2Variant?: string; customModel?: unknown };
 	const value = stored.hyMT2Variant;
+	if (value === 'fumetotranslate') return 'fumetotranslate';
 	if (value === 'manga-ja-en-v1') return 'manga-ja-en-v1';
 	if (value === 'index-manga-v1') return 'index-manga-v1';
 	if (value === 'manga-v5' || value === 'manga-v4') return 'manga-v5';
@@ -427,7 +451,7 @@ export async function getModelPath(variant: HyMT2Variant = activeHyMT2Variant())
  * Check if the Hy-MT2 1.8B 1.25-bit GGUF has been downloaded.
  */
 export async function isModelDownloaded(variant: HyMT2Variant = activeHyMT2Variant()): Promise<boolean> {
-	if (isEncDecVariant(variant)) return isEncDecModelReady();
+	if (isEncDecVariant(variant)) return isEncDecModelReady(variant);
 	try {
 		const path = await getModelPath(variant);
 		return await fsExists(path);
@@ -510,7 +534,7 @@ export function cancelModelDownload(): void {
  * Delete the downloaded local-translation GGUF model.
  */
 export async function deleteHyMT2Model(variant: HyMT2Variant = activeHyMT2Variant()): Promise<void> {
-	if (isEncDecVariant(variant)) return deleteEncDecModel();
+	if (isEncDecVariant(variant)) return deleteEncDecModel(variant);
 	ggufDownloadState.set({
 		status: 'deleting',
 		variant,

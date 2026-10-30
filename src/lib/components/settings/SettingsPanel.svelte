@@ -12,7 +12,7 @@
 	import { tick } from 'svelte';
 	import { get } from 'svelte/store';
 	import { searchSettings, type SettingsSearchMatch } from '$lib/settings/settings-search.js';
-	import { settingsLoading, settingsInitialTab } from '$lib/stores/ui-state.js';
+	import { settingsLoading, settingsInitialTab, settingsInitialAnchor } from '$lib/stores/ui-state.js';
 	import { settings } from '$lib/settings/settings.js';
 	import { settingsDraft as draft, scheduleApply } from './settings-state.svelte.js';
 	import { slidingSelection } from '$lib/util/sliding-selection.js';
@@ -55,14 +55,54 @@
 	async function jumpToSearchResult(match: SettingsSearchMatch) {
 		settingsTab = match.tab;
 		searchQuery = '';
+		await scrollToAnchor(match.anchor, match.subTab);
+	}
+
+	async function scrollToAnchor(anchor: string, subTab?: 'off-device' | 'on-device') {
+		// A control in the Translation tab's other pipeline section is not in the
+		// page until that section shows.
+		if (subTab) draft.translationSubTab = subTab;
 		await tick();
-		// Anchors can sit inside collapsed <details> — open them first.
-		const target = scrollElement?.querySelector<HTMLElement>(`[data-settings-anchor="${match.anchor}"]`);
+		// Search results replace the tab, so a jump re-creates it, and the
+		// on-device model list loads after that: it grows above the controls
+		// below it, and a control inside it does not exist yet. Follow the target
+		// until it holds still (or the user takes over), rather than scrolling
+		// once to where it was.
+		const scroller = scrollElement;
+		if (!scroller) return;
+		let userMoved = false;
+		const stop = () => { userMoved = true; };
+		scroller.addEventListener('touchstart', stop, { once: true, passive: true });
+		scroller.addEventListener('wheel', stop, { once: true, passive: true });
+		let target: HTMLElement | null = null;
+		let lastTop: number | null = null;
+		let stillFrames = 0;
+		const started = performance.now();
+		try {
+			while (!userMoved && stillFrames < 10 && performance.now() - started < 3000) {
+				target = scroller.querySelector<HTMLElement>(`[data-settings-anchor="${anchor}"]`);
+				if (target) {
+					// Anchors can sit inside collapsed <details> — open them first.
+					if (target instanceof HTMLDetailsElement) target.open = true;
+					const top = target.getBoundingClientRect().top;
+					if (lastTop === null || Math.abs(top - lastTop) > 1) {
+						target.scrollIntoView({ block: 'center' });
+						lastTop = target.getBoundingClientRect().top;
+						stillFrames = 0;
+					} else {
+						stillFrames += 1;
+					}
+				}
+				await new Promise((resolve) => requestAnimationFrame(resolve));
+			}
+		} finally {
+			scroller.removeEventListener('touchstart', stop);
+			scroller.removeEventListener('wheel', stop);
+		}
 		if (!target) return;
-		if (target instanceof HTMLDetailsElement) target.open = true;
-		target.scrollIntoView({ block: 'center' });
-		target.classList.add('settings-search-flash');
-		setTimeout(() => target.classList.remove('settings-search-flash'), 1700);
+		const flashed = target;
+		flashed.classList.add('settings-search-flash');
+		setTimeout(() => flashed.classList.remove('settings-search-flash'), 1700);
 	}
 
 	// Hydrate the draft from the store on every activation edge.
@@ -75,6 +115,11 @@
 				settingsInitialTab.set(null);
 			}
 			draft.hydrate(get(settings));
+			const initialAnchor = get(settingsInitialAnchor);
+			if (initialAnchor) {
+				settingsInitialAnchor.set(null);
+				void scrollToAnchor(initialAnchor.anchor, initialAnchor.subTab);
+			}
 			// Release the hydration guard only after this effect batch settled,
 			// so the watch effect's first run (which tracks every field) never
 			// schedules an apply for the hydration itself.

@@ -12,6 +12,7 @@
 	import TabsView from '$lib/components/tabs/TabsView.svelte';
 	import MobileBottomBar from '$lib/components/mobile/MobileBottomBar.svelte';
 	import ToastHost from '$lib/components/ui/ToastHost.svelte';
+	import EncDecReplacementNotice from '$lib/components/ui/EncDecReplacementNotice.svelte';
 	import PageViewer from '$lib/components/reader/PageViewer.svelte';
 	import BookReader from '$lib/components/reader/BookReader.svelte';
 	import MobileBookTocPanel from '$lib/components/mobile/MobileBookTocPanel.svelte';
@@ -413,8 +414,20 @@
 
 		// Load API key from encrypted storage (+ migrate from plaintext if needed)
 		await initSecureSettings();
-		// A profile still on a deprecated model it never downloaded moves to the recommended one.
-		void import('$lib/translation/gguf-model-manager.js').then((mod) => mod.moveOffUnavailableDeprecatedModel()).catch(() => undefined);
+		// A profile still on a deprecated model it never downloaded moves to the recommended one. Then the owner of a
+		// replaced encoder-decoder model moves onto its successor if that is downloaded, and from now on whenever its
+		// download finishes.
+		void import('$lib/translation/gguf-model-manager.js')
+			.then((mod) => mod.moveOffUnavailableDeprecatedModel())
+			.then(async () => {
+				const [{ completeEncDecHandoff }, { onEncDecModelReady }] = await Promise.all([
+					import('$lib/translation/encdec-handoff.js'),
+					import('$lib/translation/encdec-model-manager.js')
+				]);
+				onEncDecModelReady(() => void completeEncDecHandoff());
+				await completeEncDecHandoff();
+			})
+			.catch(() => undefined);
 		// Do not delay the first frame while the one-time provider download cache
 		// cleanup runs; the helper first waits for the v12 DB migration to commit.
 		void cleanupRetiredProviderStorage();
@@ -723,6 +736,7 @@
 
 	{#if isMobile}
 		<ToastHost />
+		<EncDecReplacementNotice />
 	{/if}
 	<OcrModelSheet />
 	{#if isMobile && ($appView === 'catalog' || $appView === 'tabs' || $appView === 'settings')}
