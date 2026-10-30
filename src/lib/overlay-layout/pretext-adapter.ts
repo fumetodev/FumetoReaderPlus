@@ -6,6 +6,7 @@ import {
 	prepareWithSegments,
 	setLocale,
 	type LayoutCursor,
+	type LayoutLineRange,
 	type PreparedTextWithSegments
 } from '@chenglou/pretext';
 import type {
@@ -132,6 +133,31 @@ export function classifyOverlayBreak(
 	return endCursor.graphemeIndex > 0 ? 'emergency' : 'legal';
 }
 
+/**
+ * The width of the whitespace a line ends with, which `pre-wrap` lets hang
+ * past the line's edge: Pretext breaks a line as if a trailing space took no
+ * room (its fit advance is 0) but reports the line's width with the space
+ * painted. Every consumer of a line's width means the ink — the fit check, the
+ * centring, the contour test — so the hanging space is taken off. Left on, it
+ * made a line that fitted look several pixels too wide for its row, and whole
+ * sizes were rejected: on real pages a balloon's text was refused at every
+ * readable size and set at 6px, and what fitted was not monotone in the size.
+ */
+function hangingWhitespaceWidth(prepared: PreparedTextWithSegments, range: LayoutLineRange): number {
+	// A line that ends inside a segment ended on a grapheme of a word.
+	if (range.end.graphemeIndex > 0) return 0;
+	const internal = prepared as unknown as { kinds: string[]; lineEndPaintAdvances: number[] };
+	let width = 0;
+	for (let index = range.end.segmentIndex - 1; index >= range.start.segmentIndex; index -= 1) {
+		const kind = internal.kinds[index];
+		if (kind !== 'preserved-space' && kind !== 'space') break;
+		// A line that starts at this segment hangs nothing of its own before it.
+		if (index === range.start.segmentIndex && range.start.graphemeIndex > 0) break;
+		width += internal.lineEndPaintAdvances[index] ?? 0;
+	}
+	return width;
+}
+
 export class BoundedPretextAdapter implements TextLayoutPort {
 	private readonly records = new Map<string, CacheRecord>();
 	private readonly graphemeCache = new Map<string, { scopeId: string; starts: number[]; lastUsed: number }>();
@@ -192,8 +218,25 @@ export class BoundedPretextAdapter implements TextLayoutPort {
 		let sourceCursor = 0;
 		const lines: TextLinePlan['lines'] = [];
 		for (const constraint of constraints) {
-			const range = layoutNextLineRange(record.prepared, cursor, constraint.width);
+			let range = layoutNextLineRange(record.prepared, cursor, constraint.width);
 			if (!range) break;
+			// Pretext 0.0.8 can return a line wider than it was asked for: in a word
+			// with two soft hyphens, the second break opportunity replaces the first
+			// even when the hyphenated prefix no longer fits, and the line ends
+			// there with its hyphen past the edge ("but to commis-" at 168.5px in a
+			// 161px row, where "but to com-" fits). Asking again with the limit
+			// lowered by the overshoot makes it take the earlier opportunity.
+			let limit = constraint.width;
+			for (let retry = 0; retry < 4; retry += 1) {
+				const overshoot = range.width - hangingWhitespaceWidth(record.prepared, range) - constraint.width;
+				if (!(overshoot > 1 / 64)) break;
+				// The limit only decides which opportunity is taken; it falls until the
+				// over-wide one is no longer reachable.
+				limit -= Math.max(overshoot, 1);
+				const narrower = layoutNextLineRange(record.prepared, cursor, limit);
+				if (!narrower || (narrower.end.segmentIndex === cursor.segmentIndex && narrower.end.graphemeIndex === cursor.graphemeIndex)) break;
+				range = narrower;
+			}
 			const materialized = materializeLineRange(record.prepared, range);
 			const source = sourceRange(record.input.text, materialized.text, sourceCursor);
 			sourceCursor = source.next;
@@ -203,7 +246,7 @@ export class BoundedPretextAdapter implements TextLayoutPort {
 			const isEnd = range.end.segmentIndex >= record.prepared.segments.length;
 			lines.push({
 				text: materialized.text,
-				width: materialized.width,
+				width: materialized.width - hangingWhitespaceWidth(record.prepared, range),
 				startUtf16: source.start,
 				endUtf16: source.end,
 				startGrapheme,
