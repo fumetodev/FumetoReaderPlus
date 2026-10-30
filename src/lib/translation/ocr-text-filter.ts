@@ -16,3 +16,32 @@ const MEANINGFUL_OCR_CHARACTER = (() => {
 export function isMeaningfulOcrText(text: string): boolean {
 	return MEANINGFUL_OCR_CHARACTER.test(text.trim());
 }
+
+const LATIN_LETTER = (() => {
+	try {
+		return new RegExp('\\p{Script=Latin}', 'u');
+	} catch {
+		return /[A-Za-zÀ-ɏＡ-Ｚａ-ｚ]/;
+	}
+})();
+const CJK_OR_HANGUL = (() => {
+	try {
+		return new RegExp('[\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}]', 'u');
+	} catch {
+		return /[ぁ-ヿㇰ-ㇿ㐀-鿿가-힯豈-﫿ｦ-ﾝ]/;
+	}
+})();
+
+/**
+ * Lettering already written in the language the page is translated into: an
+ * English label on a drawn notebook, a sign, an "OK!". It is readable as it is,
+ * and an overlay would only paint a plate over the original with the same word
+ * (measured: a handwritten "NOTEBOOK" came back as "Notebook" under a white
+ * plate). Only English targets, whose script is the one such lettering uses:
+ * for any other target the English is still worth translating.
+ */
+export function isAlreadyInTargetLanguage(text: string, targetLanguage: string): boolean {
+	if (targetLanguage.trim().toLowerCase().split(/[-_]/u)[0] !== 'en') return false;
+	const trimmed = text.trim();
+	return LATIN_LETTER.test(trimmed) && !CJK_OR_HANGUL.test(trimmed);
+}
