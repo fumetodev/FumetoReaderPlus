@@ -649,6 +649,7 @@
 	"help_overlay_settings": "Impostazioni overlay:",
 	"help_overlay_text_now_fills": "Il testo in overlay ora riempie il proprio riquadro: una riga breve in un grande fumetto non viene più rimpicciolita per adeguarsi al resto della pagina, e il cursore della dimensione del testo nell’editor torna a funzionare e arriva fino alla dimensione più grande che il riquadro può contenere",
 	"help_overlay_text_size_has": "La dimensione del testo dell'overlay ha un valore predefinito globale memorizzato insieme alla regolazione per volume.",
+	"help_overlays_keep_their_original": "Gli overlay tornano a mantenere la forma e la posizione del testo originale: il testo resta lontano dal bordo dei fumetti e il testo senza riquadro non si allarga più di quello che sostituisce, mentre ogni riquadro usa ancora il testo più grande che ci sta",
 	"help_overview": "Panoramica",
 	"help_page_navigation": "Navigazione tra le pagine",
 	"help_pay_per_use_via": "Pagamento in base all'uso tramite OpenRouter. I modelli con visione costano più per richiesta ma producono traduzioni significativamente migliori.",

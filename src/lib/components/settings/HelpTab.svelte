@@ -759,6 +759,7 @@
 		<div class="px-4 pb-4 pt-2 text-xs leading-relaxed text-surface-300" transition:slide={{ duration: motionDuration(200) }}>
 			<p class="font-medium text-surface-200">{m.help_version_line({ version: APP_VERSION })}</p>
 			<ul class="mt-1 list-disc space-y-1 pl-4">
+				<li>{m.help_overlays_keep_their_original()}</li>
 				<li>{m.help_overlay_text_now_fills()}</li>
 				<li>{m.help_fumetotranslate_replaces_the_fast()}</li>
 				<li>{m.help_if_you_have_the()}</li>

@@ -649,6 +649,7 @@
 	"help_overlay_settings": "Ajustes de la superposición:",
 	"help_overlay_text_now_fills": "El texto superpuesto ahora llena su propio cuadro: una línea corta en un bocadillo grande ya no se reduce para igualar al resto de la página, y el control de tamaño de fuente del editor vuelve a funcionar y llega hasta el tamaño más grande que cabe en el cuadro",
 	"help_overlay_text_size_has": "El tamaño de texto de la superposición tiene un valor predeterminado global recordado, además de un ajuste por volumen.",
+	"help_overlays_keep_their_original": "Las superposiciones vuelven a conservar la forma y la posición del texto original: el texto no toca el contorno de los bocadillos y el texto sin recuadro ya no se extiende más que lo que sustituye, y cada cuadro sigue usando la fuente más grande que cabe",
 	"help_overview": "Descripción general",
 	"help_page_navigation": "Navegación de páginas",
 	"help_pay_per_use_via": "Pago por uso a través de OpenRouter. Los modelos de visión cuestan más por solicitud pero producen traducciones significativamente mejores.",
