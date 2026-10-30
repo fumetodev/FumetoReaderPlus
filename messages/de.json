@@ -649,6 +649,7 @@
 	"help_overlay_settings": "Overlay-Einstellungen:",
 	"help_overlay_text_now_fills": "Overlay-Text füllt jetzt sein eigenes Feld: Eine kurze Zeile in einer großen Sprechblase wird nicht mehr verkleinert, damit sie zum Rest der Seite passt, und der Schriftgrößen-Regler im Editor funktioniert wieder und reicht bis zur größten Größe, die das Feld aufnehmen kann",
 	"help_overlay_text_size_has": "Die Overlay-Textgröße hat einen gespeicherten globalen Standardwert zusätzlich zu einer Anpassung pro Band.",
+	"help_overlays_keep_their_original": "Overlays behalten wieder Form und Position des Originaltexts: Der Text hält Abstand zum Rand der Sprechblase, und Text ohne Rahmen wird nicht mehr breiter als das, was er ersetzt, während jedes Feld weiterhin die größte passende Schrift verwendet",
 	"help_overview": "Überblick",
 	"help_page_navigation": "Seitennavigation",
 	"help_pay_per_use_via": "Bezahlung pro Nutzung über OpenRouter. Vision-Modelle kosten pro Anfrage mehr, liefern aber deutlich bessere Übersetzungen.",

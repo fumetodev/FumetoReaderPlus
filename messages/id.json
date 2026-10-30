@@ -644,6 +644,7 @@
 	"help_overlay_settings": "Pengaturan lapisan:",
 	"help_overlay_text_now_fills": "Teks lapisan kini memenuhi kotaknya sendiri: baris pendek di balon besar tidak lagi dikecilkan agar sama dengan bagian lain halaman, dan penggeser ukuran huruf di editor berfungsi lagi dan mencapai ukuran terbesar yang muat di kotak",
 	"help_overlay_text_size_has": "Ukuran teks lapisan memiliki nilai bawaan global yang diingat beserta penyesuaian per volume.",
+	"help_overlays_keep_their_original": "Lapisan kembali mengikuti bentuk dan posisi teks asli: teks tidak menempel pada garis balon dan teks tanpa kotak tidak lagi melebar melebihi teks yang digantikannya, sementara setiap kotak tetap memakai huruf terbesar yang muat",
 	"help_overview": "Ikhtisar",
 	"help_page_navigation": "Navigasi halaman",
 	"help_pay_per_use_via": "Bayar sesuai penggunaan melalui OpenRouter. Model visi lebih mahal per permintaan tetapi menghasilkan terjemahan yang jauh lebih baik.",

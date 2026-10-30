@@ -649,6 +649,7 @@
 	"help_overlay_settings": "Réglages du calque :",
 	"help_overlay_text_now_fills": "Le texte des calques remplit désormais son propre calque : une ligne courte dans une grande bulle n’est plus réduite pour s’aligner sur le reste de la page, et le curseur de taille de police de l’éditeur fonctionne à nouveau et va jusqu’à la plus grande taille que le calque peut contenir",
 	"help_overlay_text_size_has": "La taille du texte du calque possède une valeur par défaut globale mémorisée, ainsi qu’un ajustement par volume.",
+	"help_overlays_keep_their_original": "Les calques reprennent la forme et la position du texte d’origine : le texte reste à l’écart du contour des bulles et le texte sans cadre ne s’étale plus au-delà de ce qu’il remplace, tandis que chaque calque garde la plus grande police qui tient",
 	"help_overview": "Présentation",
 	"help_page_navigation": "Navigation des pages",
 	"help_pay_per_use_via": "Paiement à l’usage via OpenRouter. Les modèles de vision coûtent plus par requête mais produisent des traductions nettement meilleures.",

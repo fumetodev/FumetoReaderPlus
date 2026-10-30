@@ -649,6 +649,7 @@
 	"help_overlay_settings": "Configurações de sobreposição:",
 	"help_overlay_text_now_fills": "O texto sobreposto agora preenche a própria caixa: uma linha curta em um balão grande não é mais reduzida para combinar com o resto da página, e o controle de tamanho da fonte do editor volta a funcionar e vai até o maior tamanho que cabe na caixa",
 	"help_overlay_text_size_has": "O tamanho do texto de sobreposição tem um padrão global memorizado, além do ajuste por volume.",
+	"help_overlays_keep_their_original": "As sobreposições voltam a manter a forma e a posição do texto original: o texto fica longe do contorno dos balões e o texto sem moldura não se espalha mais além do que substitui, enquanto cada caixa continua usando a maior fonte que cabe",
 	"help_overview": "Visão geral",
 	"help_page_navigation": "Navegação de páginas",
 	"help_pay_per_use_via": "Pago por uso via OpenRouter. Modelos com visão custam mais por solicitação, mas produzem traduções significativamente melhores.",
