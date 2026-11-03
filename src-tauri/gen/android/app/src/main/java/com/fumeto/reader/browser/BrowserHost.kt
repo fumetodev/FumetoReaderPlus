@@ -239,7 +239,12 @@ class BrowserHost(private val activity: Activity, private val emit: (JSONObject)
         if (listReady.count == 0L || !blocking) return web.loadUrl(url)
         // Parsing the lists takes a moment, and the first download longer; the page waits for them, within reason.
         worker.execute {
-            listReady.await(LIST_WAIT_MS, TimeUnit.MILLISECONDS)
+            try {
+                listReady.await(LIST_WAIT_MS, TimeUnit.MILLISECONDS)
+            } catch (_: InterruptedException) {
+                // destroy() stops the workers; uncaught here, the interruption would end the app as it closes.
+                return@execute
+            }
             listReady.countDown()
             main.post { if (view === web) web.loadUrl(url) }
         }
