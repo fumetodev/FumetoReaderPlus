@@ -42,8 +42,8 @@ import {
 /** The library id web chapters sit under. No library has it, so no catalog view, count or scan reaches them. */
 export const WEB_CHAPTER_LIBRARY_ID = '__fumeto_web__';
 
-/** How many of a chapter's first pages are fingerprinted to recognise a saved chapter. */
-const PROBE_PAGES = 2;
+/** How many of a chapter's first pages are fingerprinted to recognise a saved chapter (`findSavedChapter`). */
+const PROBE_PAGES = 3;
 
 let openChapter: string | null = null;
 
@@ -116,7 +116,7 @@ export async function openWebChapter(
 	if ((await savedWebChapterIds()).size > 0) {
 		const probe = new WebPageSource(provisional, pageUrl, pageUrls, 'reader');
 		await Promise.allSettled(Array.from({ length: Math.min(PROBE_PAGES, pages.length) }, (_, i) => probe.getPage(i)));
-		const match = await findSavedChapter(fingerprintsSeen(provisional));
+		const match = await findSavedChapter(fingerprintsSeen(provisional), pages.length);
 		if (match && (!options.expect || match.volume_uuid === options.expect)) {
 			return { opened: await reopenSaved(match, provisional, pages, pageUrl), saved: match };
 		}
@@ -174,11 +174,11 @@ async function reopenSaved(
 	const existing = await db.volumes.get(volumeUuid);
 	if (!existing) return false;
 	// The pages fetched to recognise it are the chapter's now; their fingerprints are checked against its stored
-	// translations as any page of it is (a page the site replaced loses its stale translation).
+	// translations as any page of it is (`pageFetched`).
 	const probed = fingerprintsSeen(provisional);
 	adoptFingerprints(provisional, volumeUuid);
 	await adoptWebChapterPages(provisional, volumeUuid);
-	for (const [index, print] of probed.entries()) if (print) await pageFetched(volumeUuid, index, print);
+	for (const [index, print] of probed.entries()) if (print) await pageFetched(volumeUuid, index, print, pages.length);
 	const volume: VolumeMetadata = {
 		...existing,
 		page_count: pages.length,

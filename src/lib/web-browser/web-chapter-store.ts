@@ -48,12 +48,14 @@ export function forgetFingerprints(volumeUuid: string): void {
 }
 
 /**
- * A page of a chapter was fetched: remember its fingerprint, and for a saved chapter make sure no translation
- * stored for that position belongs to another image — the site may have reordered or replaced pages since. A
- * translation of this image stored at another position moves here; one of a different image is dropped (drawn over
- * this page it would be wrong). Runs before the page is handed to the reader.
+ * A page of a chapter was fetched: remember its fingerprint, and for a saved chapter make sure what is stored for
+ * that position is this image's — the site may have reordered, added or dropped pages since. Translations of this
+ * image move here from wherever they were; translations of another image found here are set aside past the
+ * chapter's last page, where no page shows them, until their image turns up again. Nothing is deleted: a chapter
+ * read once from its second page, or a page the site put in front, would otherwise cost every translation after it.
+ * Runs before the page is handed to the reader. `pageCount` is how many pages the chapter has as it is read now.
  */
-export async function pageFetched(volumeUuid: string, index: number, fingerprint: string): Promise<void> {
+export async function pageFetched(volumeUuid: string, index: number, fingerprint: string, pageCount: number): Promise<void> {
 	const prints = seen.get(volumeUuid) ?? [];
 	prints[index] = fingerprint;
 	seen.set(volumeUuid, prints);
@@ -61,55 +63,79 @@ export async function pageFetched(volumeUuid: string, index: number, fingerprint
 	await db.transaction('rw', db.web_chapters, db.page_translations, async () => {
 		const chapter = await db.web_chapters.get(volumeUuid);
 		if (!chapter) return;
-		const stored = chapter.pageFingerprints;
+		const stored = [...chapter.pageFingerprints];
 		if (stored[index] === fingerprint) return;
-		const here = await translationsAt(volumeUuid, index);
-		const sameImageHere = here.filter((t) => translationFingerprint(t) === fingerprint);
-		const otherImageHere = here.filter((t) => {
-			const print = translationFingerprint(t);
-			return print !== fingerprint && (print !== null || (stored[index] ?? '') !== '');
-		});
-		if (otherImageHere.length) await db.page_translations.bulkDelete(otherImageHere.map((t) => t.id));
-		if (sameImageHere.length === 0) {
-			const from = stored.indexOf(fingerprint);
-			if (from >= 0 && from !== index) {
-				for (const t of await translationsAt(volumeUuid, from)) {
-					if (translationFingerprint(t) === fingerprint || translationFingerprint(t) === null) {
-						await db.page_translations.update(t.id, { page_index: index });
-					}
-				}
-				stored[from] = '';
+		const rows = await db.page_translations.where('volume_uuid').equals(volumeUuid).toArray();
+		// A translation names its image; one that does not is of the image the chapter knew at its position.
+		const imageOf = (t: PageTranslation) => translationFingerprint(t) ?? stored[t.page_index] ?? '';
+		const here = rows.filter((t) => t.page_index === index);
+		const away = new Map<string, PageTranslation[]>();
+		for (const t of here) {
+			const image = imageOf(t);
+			if (image && image !== fingerprint) away.set(image, [...(away.get(image) ?? []), t]);
+		}
+		for (const [image, list] of away) {
+			const spot = Math.max(stored.length, pageCount);
+			while (stored.length < spot) stored.push('');
+			stored.push(image);
+			for (const t of list) await moveTranslation(t, spot);
+		}
+		if (!here.some((t) => imageOf(t) === fingerprint)) {
+			for (const t of rows) {
+				if (t.page_index !== index && imageOf(t) === fingerprint) await moveTranslation(t, index);
 			}
 		}
-		const next = [...stored];
-		while (next.length <= index) next.push('');
-		next[index] = fingerprint;
-		await db.web_chapters.update(volumeUuid, { pageFingerprints: next });
+		for (let i = 0; i < stored.length; i++) if (i !== index && stored[i] === fingerprint) stored[i] = '';
+		while (stored.length <= index) stored.push('');
+		stored[index] = fingerprint;
+		await db.web_chapters.update(volumeUuid, { pageFingerprints: stored });
 	});
 }
 
-function translationsAt(volumeUuid: string, index: number): Promise<PageTranslation[]> {
-	return db.page_translations.where('[volume_uuid+page_index]').equals([volumeUuid, index]).toArray();
+/**
+ * Moves a translation to another position. A batch translation's row is named after its page
+ * (`vol_trans_<volume>_<page>`) and the batch writes over that name, so a moved one takes the name of where it is now.
+ */
+async function moveTranslation(t: PageTranslation, to: number): Promise<void> {
+	const batchRow = `vol_trans_${t.volume_uuid}_`;
+	const id = t.id.startsWith(batchRow) ? `${batchRow}${to}` : t.id;
+	if (id !== t.id) await db.page_translations.delete(t.id);
+	t.id = id;
+	t.page_index = to;
+	await db.page_translations.put({ ...t });
 }
 
 function translationFingerprint(t: PageTranslation): string | null {
 	return t.overlay_data?.sourceImage?.fingerprint ?? null;
 }
 
-/** The saved chapter whose pages these are, by the fingerprints of a few of them; null when none is clearly it. */
-export async function findSavedChapter(fingerprints: string[]): Promise<WebChapterRecord | null> {
-	const prints = fingerprints.filter(Boolean);
-	if (prints.length === 0 || (await saved()).size === 0) return null;
-	const score = new Map<string, number>();
-	for (const print of new Set(prints)) {
-		for (const id of await db.web_chapters.where('pageFingerprints').equals(print).primaryKeys()) {
-			score.set(id, (score.get(id) ?? 0) + 1);
-		}
+/**
+ * The saved chapter whose pages these are, by the fingerprints of its first pages (`fingerprints[i]` is page i's,
+ * empty where it could not be fetched); null when none is clearly it. A chapter of several pages needs two of them:
+ * chapters of one series often open with the same credits or cover page, and taking another chapter for a saved one
+ * re-points it and drops its translations page by page. Nor may a page be another image where the chapter knows
+ * which image it has there.
+ */
+export async function findSavedChapter(fingerprints: string[], pageCount: number): Promise<WebChapterRecord | null> {
+	const prints = new Set(fingerprints.filter(Boolean));
+	if (prints.size === 0 || (await saved()).size === 0) return null;
+	const needed = Math.min(2, pageCount);
+	const candidates = new Set<string>();
+	for (const print of prints) {
+		for (const id of await db.web_chapters.where('pageFingerprints').equals(print).primaryKeys()) candidates.add(id);
 	}
-	const ranked = [...score.entries()].sort((a, b) => b[1] - a[1]);
-	// A tie means the pages are shared (a series' credits page): not enough to say which chapter this is.
-	if (ranked.length === 0 || (ranked.length > 1 && ranked[0][1] === ranked[1][1])) return null;
-	return (await db.web_chapters.get(ranked[0][0])) ?? null;
+	const ranked: { chapter: WebChapterRecord; score: number }[] = [];
+	for (const chapter of await db.web_chapters.bulkGet([...candidates])) {
+		if (!chapter) continue;
+		const known = new Set(chapter.pageFingerprints.filter(Boolean));
+		const score = [...prints].filter((print) => known.has(print)).length;
+		const conflict = fingerprints.some((print, index) => !!print && !known.has(print) && !!chapter.pageFingerprints[index]);
+		if (score >= needed && !conflict) ranked.push({ chapter, score });
+	}
+	ranked.sort((a, b) => b.score - a.score);
+	// A tie means the pages are shared between saved chapters: not enough to say which chapter this is.
+	if (ranked.length === 0 || (ranked.length > 1 && ranked[0].score === ranked[1].score)) return null;
+	return ranked[0].chapter;
 }
 
 export interface SaveDetails {

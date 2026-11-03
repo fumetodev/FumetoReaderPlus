@@ -162,7 +162,7 @@ export class WebPageSource implements PageSource {
 			operation: async ({ signal }) => {
 				const kept = await this.fromDisk(index);
 				if (kept) {
-					await pageFetched(this.volumeUuid, index, await sha256Bytes(await kept.arrayBuffer()));
+					await pageFetched(this.volumeUuid, index, await sha256Bytes(await kept.arrayBuffer()), this.pageUrls.length);
 					remember(key, kept);
 					return kept;
 				}
@@ -175,7 +175,7 @@ export class WebPageSource implements PageSource {
 				}
 				const bytes = await readFile(await join(await pagesFolder(this.volumeUuid), String(index)));
 				// The page's fingerprint, as the overlay pipeline takes it: how a saved chapter knows its pages.
-				await pageFetched(this.volumeUuid, index, await sha256Bytes(bytes));
+				await pageFetched(this.volumeUuid, index, await sha256Bytes(bytes), this.pageUrls.length);
 				const blob = new Blob([bytes], { type: fetched.mime });
 				remember(key, blob);
 				return blob;
