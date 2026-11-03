@@ -104,7 +104,10 @@ class BrowserHost(private val activity: Activity, private val emit: (JSONObject)
     @Volatile var stateJson: String = "{}"
         private set
 
-    val fetcher = PageFetcher({ cookieJar }, { userAgent })
+    val fetcher = PageFetcher(object : PageFetcher.Cookies {
+        override fun get(url: String): String? = cookieJar?.getCookie(url)
+        override fun set(url: String, setCookie: String) { cookieJar?.setCookie(url, setCookie) }
+    }, { userAgent })
 
     private val listsDir get() = File(activity.filesDir, "browser-lists")
     private val pagesDir get() = File(activity.dataDir, "web-pages")
