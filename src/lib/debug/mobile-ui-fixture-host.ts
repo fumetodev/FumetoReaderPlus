@@ -9,6 +9,8 @@ import type {
 	PageTranslationEntryDraft,
 	RemoteFolder,
 	VolumePageRecord,
+	AppView,
+	ReaderReturnView,
 	VolumeMetadata,
 } from '$lib/types/index.js';
 import {
@@ -68,10 +70,10 @@ export interface MobileUiFixtureHost {
 	}>;
 	openFixtureReader(volumeUuid: string, pageIndex?: number): Promise<void>;
 	snapshotNavigation(): {
-		appView: 'catalog' | 'reader' | 'settings' | 'tabs';
+		appView: AppView;
 		currentVolume: VolumeMetadata | null;
 		currentPageIndex: number;
-		readerReturnView: 'catalog' | 'tabs';
+		readerReturnView: ReaderReturnView;
 		selectedLibraryId: string | null;
 		currentSubfolder: string;
 		currentRemoteFolderId: string | null;

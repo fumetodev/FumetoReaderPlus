@@ -10,6 +10,10 @@
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import CatalogView from '$lib/components/reader/CatalogView.svelte';
 	import TabsView from '$lib/components/tabs/TabsView.svelte';
+	import BrowserView from '$lib/components/web-browser/BrowserView.svelte';
+	import WebChallengeBanner from '$lib/components/web-browser/WebChallengeBanner.svelte';
+	import { browserBack, installBrowserController } from '$lib/web-browser/browser-controller.js';
+	import { installWebChapterLifecycle, purgeWebChapters } from '$lib/web-browser/web-chapter.js';
 	import MobileBottomBar from '$lib/components/mobile/MobileBottomBar.svelte';
 	import ToastHost from '$lib/components/ui/ToastHost.svelte';
 	import EncDecReplacementNotice from '$lib/components/ui/EncDecReplacementNotice.svelte';
@@ -88,6 +92,7 @@
 	let uninstallInsetAdapter: (() => void) | null = null;
 	let uninstallOrientationPolicy: (() => void) | null = null;
 	let uninstallNativeResultWake: (() => void) | null = null;
+	let uninstallBrowserController: (() => void) | null = null;
 	let uninstallTranslationConfigGuard: (() => void) | null = null;
 	let uninstallMobileUiFixtureHost: (() => void) | null = null;
 	let stopCatalogMigration: (() => void) | null = null;
@@ -146,10 +151,15 @@
 				stopCatalogMigration = scheduleCatalogV16Migration();
 				// v17 page split runs on the same maintenance lane, after v16.
 				stopVolumePagesMigration = scheduleVolumePagesMigration();
-				// A batch the app was closed under carries on.
-				resumeInterruptedTranslations().catch((error: unknown) => {
-					console.warn('Resuming interrupted translations failed:', error);
-				});
+				// Web chapters never outlive the app (no chapter can be open at launch); then a batch the app
+				// was closed under carries on.
+				void purgeWebChapters()
+					.catch((error: unknown) => console.warn('Removing leftover web chapters failed:', error))
+					.finally(() => {
+						resumeInterruptedTranslations().catch((error: unknown) => {
+							console.warn('Resuming interrupted translations failed:', error);
+						});
+					});
 			});
 		});
 		stopWaitingForCatalogMigration = () => {
@@ -160,6 +170,11 @@
 
 	// Latch: once Settings has been entered, its view stays mounted (keep-alive).
 	let settingsViewEverOpened = $state(false);
+	// The same for the in-app browser, whose page state lives in its native view.
+	let browserViewEverOpened = $state(false);
+	$effect(() => {
+		if (isMobile && $appView === 'browser') browserViewEverOpened = true;
+	});
 	$effect(() => {
 		if (isMobile && $appView === 'settings') settingsViewEverOpened = true;
 	});
@@ -289,6 +304,11 @@
 		if (isMobile) uninstallOrientationPolicy = installReaderOrientationPolicy();
 		// A picker's answer can sit in the runtime until the next native call.
 		if (isMobile) uninstallNativeResultWake = installNativeResultWake();
+		// The in-app browser (Android, where the system WebView can give it a profile of its own).
+		if (isMobile) {
+			installWebChapterLifecycle();
+			uninstallBrowserController = installBrowserController();
+		}
 		if (includesDebugMobileUiFixtures && isMobile && window.__fumeto_android?.isDebugBuild?.() === true) {
 			const { installMobileUiFixtureHost } = await import('$lib/debug/mobile-ui-fixture-host.js');
 			uninstallMobileUiFixtureHost = installMobileUiFixtureHost();
@@ -366,6 +386,10 @@
 				// Catalog-scoped dialogs (details/revise/rename/move/…) take Back
 				// priority over view navigation, mirroring the reader's port.
 				if (get(catalogTransientCloseHandler)?.()) return false;
+				if (get(appView) === 'browser') {
+					browserBack();
+					return false;
+				}
 				if (get(appView) === 'tabs') {
 					appView.set('catalog');
 					return false;
@@ -606,6 +630,8 @@
 		uninstallOrientationPolicy = null;
 		uninstallNativeResultWake?.();
 		uninstallNativeResultWake = null;
+		uninstallBrowserController?.();
+		uninstallBrowserController = null;
 		uninstallMobileUiFixtureHost?.();
 		uninstallMobileUiFixtureHost = null;
 		uninstallOcrBenchmarkHost?.();
@@ -697,6 +723,18 @@
 			>
 				<TabsView active={$appView === 'tabs'} />
 			</div>
+			{#if isMobile && browserViewEverOpened}
+				<!-- The in-app browser: mounted on first entry, then kept like Tabs. The web page is a native
+				     view the BrowserView lays over its page rectangle, and hides whenever this layer is hidden. -->
+				<div
+					class="absolute inset-0"
+					class:invisible={$appView !== 'browser'}
+					class:pointer-events-none={$appView !== 'browser'}
+					inert={$appView !== 'browser'}
+				>
+					<BrowserView active={$appView === 'browser'} />
+				</div>
+			{/if}
 			{#if isMobile && settingsViewEverOpened}
 				<!-- Settings is a real destination: lazily mounted on first entry
 				     (the settingsLoading overlay covers that one build), then kept
@@ -737,12 +775,15 @@
 	{#if isMobile}
 		<ToastHost />
 		<EncDecReplacementNotice />
+		{#if $appView === 'reader'}
+			<WebChallengeBanner />
+		{/if}
 	{/if}
 	<OcrModelSheet />
-	{#if isMobile && ($appView === 'catalog' || $appView === 'tabs' || $appView === 'settings')}
+	{#if isMobile && ($appView === 'catalog' || $appView === 'tabs' || $appView === 'settings' || $appView === 'browser')}
 		<!-- One dock, three destinations. Settings is a peer view now — the
 		     dialog-era second bar instance is gone. -->
-		<MobileBottomBar active={$appView} onnavigate={navigateMobile} disabled={$appView === 'settings' && $settingsNavigationBusy} />
+		<MobileBottomBar active={$appView === 'browser' ? 'tabs' : $appView} onnavigate={navigateMobile} disabled={$appView === 'settings' && $settingsNavigationBusy} />
 	{/if}
 
 	<!-- Mobile bottom bar (reader only; slides away with the chrome). The

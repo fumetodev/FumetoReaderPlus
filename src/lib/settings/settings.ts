@@ -12,6 +12,7 @@ import { get, writable } from 'svelte/store';
 import { randomUUID } from '$lib/util/uuid.js';
 import type { PageViewMode, TranslationMode } from '$lib/types/index.js';
 import type { ProviderConfig } from '$lib/translation/llm-types.js';
+import { isBrowserSearchEngine, type BrowserSearchEngine } from '$lib/web-browser/address.js';
 
 import { initFsPersistence, readSettingsFromFile, writeSettingsToFile } from './settings-persistence.js';
 
@@ -329,6 +330,14 @@ export interface FumetoSettings {
 	 * translating with the model it replaced has been shown.
 	 */
 	encdecReplacementNoticeShown: boolean;
+	/** Whether the Tabs view shows the button that opens the in-app browser (Android only). */
+	browserShowButton: boolean;
+	/** What the browser's address field searches with when what is typed is not a web address. */
+	browserSearchEngine: BrowserSearchEngine;
+	/** Ad blocking in the in-app browser, by the downloaded domain lists. */
+	browserAdBlock: boolean;
+	/** Sites (hosts) the person turned ad blocking off for, because a page broke with it on. */
+	browserAdBlockOffHosts: string[];
 	/**
 	 * The user's imported on-device model, if any. Absent until an import
 	 * succeeds; cleared when it is deleted.
@@ -454,6 +463,10 @@ export const DEFAULT_SETTINGS: FumetoSettings = {
 	hyMT2Variant: 'stock',
 	encdecMode: 'page',
 	encdecReplacementNoticeShown: false,
+	browserShowButton: true,
+	browserSearchEngine: 'duckduckgo',
+	browserAdBlock: true,
+	browserAdBlockOffHosts: [],
 	customModel: undefined,
 	onDeviceTemperature: ON_DEVICE_TEMPERATURE_DEFAULT,
 	onDeviceSourceLang: 'auto',
@@ -629,6 +642,28 @@ export function migratePersistedSettings(rawValue: unknown): SettingsMigrationRe
 	if (typeof parsed.encdecReplacementNoticeShown !== 'boolean') {
 		parsed.encdecReplacementNoticeShown = DEFAULT_SETTINGS.encdecReplacementNoticeShown;
 		needsSave = needsSave || raw.encdecReplacementNoticeShown !== undefined;
+	}
+	if (typeof parsed.browserShowButton !== 'boolean') {
+		parsed.browserShowButton = DEFAULT_SETTINGS.browserShowButton;
+		needsSave = needsSave || raw.browserShowButton !== undefined;
+	}
+	if (!isBrowserSearchEngine(parsed.browserSearchEngine)) {
+		parsed.browserSearchEngine = DEFAULT_SETTINGS.browserSearchEngine;
+		needsSave = needsSave || raw.browserSearchEngine !== undefined;
+	}
+	if (typeof parsed.browserAdBlock !== 'boolean') {
+		parsed.browserAdBlock = DEFAULT_SETTINGS.browserAdBlock;
+		needsSave = needsSave || raw.browserAdBlock !== undefined;
+	}
+	{
+		const stored: unknown = parsed.browserAdBlockOffHosts;
+		const hosts = Array.isArray(stored)
+			? [...new Set(stored.filter((h): h is string => typeof h === 'string' && /^[a-z0-9.-]{1,253}$/.test(h)))]
+			: [];
+		if (!Array.isArray(stored) || hosts.length !== stored.length) {
+			parsed.browserAdBlockOffHosts = hosts;
+			needsSave = needsSave || raw.browserAdBlockOffHosts !== undefined;
+		}
 	}
 
 	// The filter strength indexes a calibration table; anything outside 0..1

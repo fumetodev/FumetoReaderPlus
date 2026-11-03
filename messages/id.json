@@ -29,6 +29,76 @@
 	"bridge_ppocr_unavailable": "Diagnostik ini hanya tersedia pada build debug.",
 	"bridge_translation_failed": "Penerjemahan di perangkat gagal.",
 	"bridge_unload_failed": "Model di perangkat tidak dapat dilepas muat.",
+	"browser_address_label": "Alamat web atau penelusuran",
+	"browser_address_placeholder": "Telusuri atau ketik alamat web",
+	"browser_back": "Kembali",
+	"browser_challenge": "Situs ingin memastikan Anda manusia sebelum menampilkan halaman lain.",
+	"browser_challenge_open": "Buka situs",
+	"browser_collect": "Kumpulkan",
+	"browser_collect_hint": "Balik halaman di penampil situs; setiap halaman ditambahkan.",
+	"browser_collected": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=other": "{n} halaman dikumpulkan"
+			}
+		}
+	],
+	"browser_data_cleared": "Data penjelajahan dihapus",
+	"browser_forward": "Maju",
+	"browser_found_pages": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=other": "{n} halaman ditemukan"
+			}
+		}
+	],
+	"browser_menu_blocked_count": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=other": "{n} permintaan iklan diblokir di halaman ini"
+			}
+		}
+	],
+	"browser_menu_blocking_off": "Matikan pemblokir iklan untuk {host}",
+	"browser_menu_blocking_on": "Nyalakan lagi pemblokir iklan untuk {host}",
+	"browser_menu_close": "Tutup menu",
+	"browser_menu_label": "Menu peramban",
+	"browser_menu_settings": "Pengaturan peramban",
+	"browser_open_button": "Buka peramban web",
+	"browser_page_crashed": "Halaman berhenti berfungsi dan ditutup.",
+	"browser_pager_hint": "Penampil ini menampilkan satu halaman setiap kali. Gunakan tampilan semua halaman situs jika ada, atau Kumpulkan.",
+	"browser_protected": "Penampil ini menggambar halamannya sendiri, jadi halamannya tidak bisa dibaca di aplikasi.",
+	"browser_read": "Baca",
+	"browser_reload": "Muat ulang",
+	"browser_start_body": "Buka halaman yang menampilkan komik. Saat aplikasi menemukan halamannya, bilah muncul di bawah: ketuk Baca untuk membukanya di pembaca dan menerjemahkannya.",
+	"browser_start_note": "Tidak ada yang disimpan dari situs: halamannya hanya disimpan selama Anda membacanya.",
+	"browser_start_title": "Baca komik dari web",
+	"browser_stop": "Hentikan pemuatan",
+	"browser_unavailable_body": "Peramban dalam aplikasi menyimpan cookie dan data situsnya terpisah dari data aplikasi, yang belum bisa dilakukan Android System WebView di ponsel ini. Perbarui di Google Play, lalu coba lagi.",
+	"browser_unavailable_title": "Peramban memerlukan Android System WebView yang lebih baru",
+	"browser_unavailable_update": "Perbarui di Google Play",
+	"browser_view_label": "Peramban web",
 	"catalog_add_to_favorites": "Tambahkan ke favorit",
 	"catalog_added_on": "Ditambahkan {date}",
 	"catalog_all_libraries": "Semua pustaka",
@@ -1019,6 +1089,21 @@
 		}
 	],
 	"libraries_auto_scan": "Pindai otomatis",
+	"libraries_browser_ad_block": "Blokir iklan",
+	"libraries_browser_ad_block_hint": "Memblokir domain iklan dan pop-up dari EasyList dan filter DNS AdGuard, yang diunduh aplikasi dari penerbitnya dan diperbarui setiap minggu.",
+	"libraries_browser_clear": "Hapus data penjelajahan",
+	"libraries_browser_clear_again": "Ketuk lagi untuk menghapus",
+	"libraries_browser_clear_hint": "Mengeluarkan Anda dari situs dan menghapus cookie, penyimpanan, dan cache-nya. Data aplikasi sendiri tidak disentuh.",
+	"libraries_browser_lists_never": "Daftar belum diunduh",
+	"libraries_browser_lists_status": "{domains} domain diblokir · diperbarui {date}",
+	"libraries_browser_lists_update": "Perbarui daftar",
+	"libraries_browser_lists_updating": "Memperbarui…",
+	"libraries_browser_off_site_remove": "Nyalakan lagi pemblokir iklan untuk {host}",
+	"libraries_browser_off_sites": "Pemblokir iklan mati untuk",
+	"libraries_browser_search_engine": "Mesin pencari",
+	"libraries_browser_show_button": "Tombol peramban di Tab",
+	"libraries_browser_show_button_hint": "Menampilkan tombol yang membuka peramban dalam aplikasi.",
+	"libraries_browser_title": "Peramban web",
 	"libraries_computing_authors": "Menghitung penulis...",
 	"libraries_edit_connection": "Edit Koneksi",
 	"libraries_empty": "Belum ada pustaka yang dikonfigurasi. Tambahkan folder lokal atau server jarak jauh.",
@@ -1363,12 +1448,15 @@
 	"reader_this_box_has_no": "Kotak ini belum memiliki geometri untuk diedit.",
 	"reader_tighter_lines": "Baris lebih rapat",
 	"reader_translate": "Terjemahkan",
+	"reader_translate_chapter": "Terjemahkan semua halaman",
+	"reader_translate_chapter_hint": "Tetap berjalan selama Anda membaca",
 	"reader_translate_highlighted": "Terjemahkan {highlighted}",
 	"reader_translate_label": "Terjemahkan{suffix}",
 	"reader_translate_options": "Opsi terjemahan",
 	"reader_translate_this_page": "Terjemahkan halaman ini",
 	"reader_translated_text": "Teks terjemahan",
 	"reader_translating": "Menerjemahkan…",
+	"reader_translating_chapter": "Menerjemahkan halaman… {done} dari {total}",
 	"reader_translation_failed_show_details": "Terjemahan gagal. Tampilkan detail",
 	"reader_translation_help": "Bantuan terjemahan",
 	"reader_translation_in_progress": "Terjemahan sedang berlangsung",
@@ -1569,6 +1657,8 @@
 	"settings_search_ui_language_label": "Bahasa aplikasi",
 	"settings_search_vertical_text_keywords": "teks vertikal|diputar|cjk",
 	"settings_search_vertical_text_label": "Pertahankan orientasi sumber vertikal",
+	"settings_search_web_browser_keywords": "peramban|browser|web|pemblokir iklan|iklan|mesin pencari|cookie|hapus data penjelajahan|situs web",
+	"settings_search_web_browser_label": "Peramban web",
 	"settings_sections_aria": "Bagian pengaturan",
 	"settings_secure_storage_unreadable": "Kunci API dan info masuk server yang tersimpan tidak dapat dibaca saat ini. Jangan masukkan ulang dulu — mulai ulang aplikasi terlebih dahulu.",
 	"settings_select_a_model": "Pilih model",

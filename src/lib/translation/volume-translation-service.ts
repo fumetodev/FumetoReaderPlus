@@ -495,6 +495,8 @@ export function startVolumeTranslation(
 		if (abortControllers.get(volumeUuid) === controller) abortControllers.delete(volumeUuid);
 		// A model handoff waits for the last job to end (encdec-handoff.ts).
 		if (activeRuns.size === 0) void import('./encdec-handoff.js').then((mod) => mod.completeEncDecHandoff()).catch(() => undefined);
+		// A web chapter left while its batch ran is removed when the batch ends (web-chapter.ts).
+		void import('$lib/web-browser/web-chapter.js').then((mod) => mod.onVolumeRunEnded(volumeUuid)).catch(() => undefined);
 	});
 	activeRuns.set(volumeUuid, run);
 	return run;
@@ -889,6 +891,9 @@ export async function resumeInterruptedTranslations(): Promise<void> {
 	const due = selectInterruptedJobs(jobs, { now: Date.now(), isActive: isJobActive });
 	if (due.length === 0 || !(await areOcrModelsReady())) return;
 	for (const job of due) {
+		// A web chapter's pages come from a site through the browser: its batch continues only when the person
+		// opens the chapter there again, never by contacting the site at launch.
+		if ((await db.volumes.get(job.volume_uuid))?.source?.type === 'web') continue;
 		await db.volume_translation_jobs.update(job.id, { auto_resumed_at: resumePosition(job) });
 		console.warn(`[volume-translation] Resuming ${job.volume_uuid} at ${resumePosition(job)} after the app was closed under it`);
 		startVolumeTranslation(job.volume_uuid).catch((error: unknown) => {

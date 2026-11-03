@@ -27,6 +27,7 @@ export interface SettingsSearchEntry {
 }
 
 export const SETTINGS_SEARCH_INDEX: SettingsSearchEntry[] = [
+	{ tab: 'libraries', anchor: 'web-browser', label: () => m.settings_search_web_browser_label(), keywords: () => m.settings_search_web_browser_keywords(), keywordsEn: ['browser', 'web', 'ad block', 'ads', 'search engine', 'cookies', 'clear data', 'website'] },
 	{ tab: 'translation', subTab: 'off-device', anchor: 'providers', label: () => m.settings_search_providers_label(), keywords: () => m.settings_search_providers_keywords(), keywordsEn: ['api key', 'openrouter', 'claude', 'ollama', 'lm studio', 'model', 'connect', 'vision'] },
 	{ tab: 'translation', anchor: 'pipeline', label: () => m.settings_search_pipeline_label(), keywords: () => m.settings_search_pipeline_keywords(), keywordsEn: ['cloud', 'offline', 'local', 'on device', 'off device'] },
 	{ tab: 'translation', subTab: 'off-device', anchor: 'language-pair', label: () => m.settings_search_language_pair_label(), keywords: () => m.settings_search_language_pair_keywords(), keywordsEn: ['japanese', 'english', 'source language', 'target language'] },

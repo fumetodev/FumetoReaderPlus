@@ -7,6 +7,7 @@
 		"common",
 		"shell",
 		"tabs",
+		"browser",
 		"catalog",
 		"reader",
 		"sidebar",
@@ -38,6 +39,12 @@
 		},
 		"tabs": {
 			"hint": "The Tabs screen: comics kept open, sorted by recent/added/series."
+		},
+		"browser": {
+			"hint": "The in-app web browser: its toolbar and menu, the bar that offers to read the comic pages found on a web page, its start page, and the notice shown when the phone's WebView is too old.",
+			"referenceNamespaces": [
+				"common"
+			]
 		},
 		"catalog": {
 			"hint": "The Library (catalog) screen: library toolbar, sort/filter menus, volume cards and their context menus, folder actions, move/delete dialogs, translation dialogs.",

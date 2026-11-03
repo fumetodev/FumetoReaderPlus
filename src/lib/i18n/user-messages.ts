@@ -212,6 +212,8 @@ const RENDERERS = {
 	bridge_ppocr_unavailable: (_p, o) => m.bridge_ppocr_unavailable({}, o),
 	bridge_ppocr_destroyed: (_p, o) => m.bridge_ppocr_destroyed({}, o),
 	bridge_ppocr_failed: (_p, o) => m.bridge_ppocr_failed({}, o),
+	browser_page_crashed: (_p, o) => m.browser_page_crashed({}, o),
+	browser_data_cleared: (_p, o) => m.browser_data_cleared({}, o),
 } satisfies Record<string, Renderer>;
 
 /** The Kotlin bridges reject with `{code, detail}`; these codes have a message a person can act on. */

@@ -20,6 +20,8 @@
 	import { storageDurability, refreshStorageDurability, requestStoragePersistence } from '$lib/storage/durability.js';
 	import OnDeviceModelsCard from './OnDeviceModelsCard.svelte';
 	import SettingsTransferCard from './SettingsTransferCard.svelte';
+	import BrowserSettingsSection from './BrowserSettingsSection.svelte';
+	import { browserBridgePresent } from '$lib/web-browser/browser-bridge.js';
 
 	let visibleManagedLibraries = $derived(draft.libraries.map((lib, i) => ({ lib, i })));
 
@@ -633,6 +635,10 @@
 			{/if}
 		</div>
 	</div>
+
+	{#if browserBridgePresent()}
+		<BrowserSettingsSection />
+	{/if}
 
 	<OnDeviceModelsCard />
 

@@ -22,6 +22,12 @@
 	import { revisePage } from '$lib/translation/revision-service.js';
 	import { createPageSource } from '$lib/reader/page-source-factory.js';
 	import { playReaderHaptic } from '$lib/reader/reader-haptics.js';
+	import { isWebChapter, prefetchWebChapter } from '$lib/web-browser/web-chapter.js';
+	import { activeTranslationJobs } from '$lib/stores/volume-translation-state.js';
+	import { isJobActive, startVolumeTranslation } from '$lib/translation/volume-translation-service.js';
+	import { areOcrModelsReady } from '$lib/detection/ocr-model-manager.js';
+	import { openOcrModelPrompt } from '$lib/detection/ocr-model-gate.js';
+	import { pushToast } from '$lib/stores/toasts.js';
 
 	let open = $derived($mobileReaderUi.disclosure === 'translate-options');
 	let revisionDialogOpen = $state(false);
@@ -67,6 +73,39 @@
 			// The controller reports failures via its snapshot; never let a
 			// menu tap become an unhandled rejection.
 		});
+	}
+
+	// A web chapter is never in the Library, whose menu starts a whole-volume translation; the reader offers it.
+	const chapterJob = $derived($currentVolume ? $activeTranslationJobs.get($currentVolume.volume_uuid) : undefined);
+	const chapterTranslating = $derived(!!chapterJob && (chapterJob.status === 'translating' || chapterJob.status === 'reviewing') && !chapterJob.paused);
+
+	async function translateChapter(): Promise<void> {
+		const volume = get(currentVolume);
+		if (!volume || isJobActive(volume.volume_uuid)) return;
+		playReaderHaptic('control');
+		actionError = null;
+		mobileReaderUi.closeDisclosure();
+		if (!(await areOcrModelsReady())) {
+			openOcrModelPrompt(() => void translateChapter());
+			return;
+		}
+		if (get(settings).overlayEnabled && !get(isOverlayMode)) isOverlayMode.set(true);
+		try {
+			await prefetchWebChapter(volume);
+			const job = await startVolumeTranslation(volume.volume_uuid);
+			const leftover = job.failed_pages?.length ?? 0;
+			pushToast({
+				message: leftover > 0
+					? m.catalog_translation_complete_leftover_page({ leftover, s: leftover === 1 ? '' : 's' })
+					: m.catalog_translation_complete()
+			});
+		} catch (error) {
+			const cancelled = error instanceof Error && (error.name === 'AbortError' || /cancel/i.test(error.message));
+			pushToast({
+				message: cancelled ? m.catalog_translation_cancelled() : error instanceof Error ? error.message : m.job_failed_title(),
+				tone: cancelled ? 'info' : 'error'
+			});
+		}
 	}
 
 	function openRevisionDialog(): void {
@@ -214,6 +253,24 @@
 				<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="9" width="8" height="6" rx="1"/></svg>
 				{m.reader_select_regions()}
 			</button>
+			{#if isWebChapter($currentVolume)}
+				<button
+					type="button"
+					class="mt-1 flex h-[48px] w-full items-center gap-3 rounded-lg px-3 text-sm text-surface-100 active:bg-surface-800 disabled:opacity-50"
+					disabled={chapterTranslating}
+					onclick={() => void translateChapter()}
+					data-translate-option="translate-chapter"
+				>
+					<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="11" height="15" rx="2"/><path d="M9 21h9a2 2 0 0 0 2-2V8"/></svg>
+					<span class="flex min-w-0 flex-col items-start leading-tight">
+						{#if chapterTranslating && chapterJob}
+							<span>{m.reader_translating_chapter({ done: chapterJob.current_page, total: chapterJob.total_pages })}</span>
+						{:else}
+							<span>{m.reader_translate_chapter()}</span><span class="text-[11px] text-surface-400">{m.reader_translate_chapter_hint()}</span>
+						{/if}
+					</span>
+				</button>
+			{/if}
 		</div>
 
 		{#if actionError}

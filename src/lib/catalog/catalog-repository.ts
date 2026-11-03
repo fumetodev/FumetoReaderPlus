@@ -27,7 +27,7 @@ export function catalogLibraryId(volume: Pick<VolumeMetadata, 'library_id'>): st
 
 export function catalogParentKey(volume: VolumeMetadata): CatalogParentKey {
 	const source = volume.source;
-	if (source && source.type !== 'local') {
+	if (source && source.type !== 'local' && source.type !== 'web') {
 		const folderId = source.remoteFolderId;
 		return !folderId || (source.type === 'yacreader' && folderId === '1')
 			? 'root'
@@ -39,7 +39,8 @@ export function catalogParentKey(volume: VolumeMetadata): CatalogParentKey {
 
 export function remoteSourceIdentity(volume: VolumeMetadata): string | undefined {
 	const source = volume.source;
-	if (!source || source.type === 'local') return undefined;
+	// A web chapter is no copy of anything a server lists; it has no identity to deduplicate against.
+	if (!source || source.type === 'local' || source.type === 'web') return undefined;
 	if (source.type === 'yacreader') {
 		return `yacreader:${source.serverUrl.replace(/\/+$/, '').toLowerCase()}:${source.remoteLibraryId}:${source.remoteComicId}`;
 	}

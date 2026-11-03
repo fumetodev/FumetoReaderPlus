@@ -29,6 +29,79 @@
 	"bridge_ppocr_unavailable": "Ce diagnostic n’est disponible que dans les versions de débogage.",
 	"bridge_translation_failed": "La traduction embarquée a échoué.",
 	"bridge_unload_failed": "Le modèle embarqué n’a pas pu être déchargé.",
+	"browser_address_label": "Adresse web ou recherche",
+	"browser_address_placeholder": "Recherchez ou saisissez une adresse web",
+	"browser_back": "Retour",
+	"browser_challenge": "Le site veut vérifier que vous êtes humain avant d’afficher d’autres pages.",
+	"browser_challenge_open": "Ouvrir le site",
+	"browser_collect": "Collecter",
+	"browser_collect_hint": "Tournez les pages dans la visionneuse du site ; chacune est ajoutée.",
+	"browser_collected": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} page collectée",
+				"nPlural=other": "{n} pages collectées"
+			}
+		}
+	],
+	"browser_data_cleared": "Données de navigation effacées",
+	"browser_forward": "Suivant",
+	"browser_found_pages": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} page trouvée",
+				"nPlural=other": "{n} pages trouvées"
+			}
+		}
+	],
+	"browser_menu_blocked_count": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} requête publicitaire bloquée sur cette page",
+				"nPlural=other": "{n} requêtes publicitaires bloquées sur cette page"
+			}
+		}
+	],
+	"browser_menu_blocking_off": "Désactiver le blocage des pubs sur {host}",
+	"browser_menu_blocking_on": "Réactiver le blocage des pubs sur {host}",
+	"browser_menu_close": "Fermer le menu",
+	"browser_menu_label": "Menu du navigateur",
+	"browser_menu_settings": "Réglages du navigateur",
+	"browser_open_button": "Ouvrir le navigateur web",
+	"browser_page_crashed": "La page a cessé de fonctionner et a été fermée.",
+	"browser_pager_hint": "Cette visionneuse affiche une page à la fois. Utilisez la vue de toutes les pages du site s’il en a une, ou Collecter.",
+	"browser_protected": "Cette visionneuse dessine elle-même ses pages : elles ne peuvent pas être lues dans l’app.",
+	"browser_read": "Lire",
+	"browser_reload": "Recharger",
+	"browser_start_body": "Ouvrez une page qui affiche une bande dessinée. Quand l’app trouve ses pages, une barre apparaît en bas : touchez Lire pour les ouvrir dans le lecteur et les traduire.",
+	"browser_start_note": "Rien du site n’est conservé : ses pages ne sont gardées que pendant que vous les lisez.",
+	"browser_start_title": "Lire des bandes dessinées sur le web",
+	"browser_stop": "Arrêter le chargement",
+	"browser_unavailable_body": "Le navigateur de l’app garde ses cookies et ses données de sites à part de celles de l’app, ce que l’Android System WebView de ce téléphone ne sait pas encore faire. Mettez-le à jour dans Google Play, puis réessayez.",
+	"browser_unavailable_title": "Le navigateur a besoin d’un Android System WebView plus récent",
+	"browser_unavailable_update": "Mettre à jour dans Google Play",
+	"browser_view_label": "Navigateur web",
 	"catalog_add_to_favorites": "Ajouter aux favoris",
 	"catalog_added_on": "Ajouté le {date}",
 	"catalog_all_libraries": "Toutes les bibliothèques",
@@ -1035,6 +1108,21 @@
 		}
 	],
 	"libraries_auto_scan": "Analyse automatique",
+	"libraries_browser_ad_block": "Bloquer les pubs",
+	"libraries_browser_ad_block_hint": "Bloque les domaines de pubs et de pop-ups d’EasyList et du filtre DNS d’AdGuard, que l’app télécharge chez leurs éditeurs et met à jour chaque semaine.",
+	"libraries_browser_clear": "Effacer les données de navigation",
+	"libraries_browser_clear_again": "Touchez de nouveau pour effacer",
+	"libraries_browser_clear_hint": "Vous déconnecte des sites et supprime leurs cookies, leur stockage et leur cache. Les données de l’app elle-même ne sont pas touchées.",
+	"libraries_browser_lists_never": "Listes pas encore téléchargées",
+	"libraries_browser_lists_status": "{domains} domaines bloqués · mis à jour le {date}",
+	"libraries_browser_lists_update": "Mettre à jour les listes",
+	"libraries_browser_lists_updating": "Mise à jour…",
+	"libraries_browser_off_site_remove": "Réactiver le blocage des pubs sur {host}",
+	"libraries_browser_off_sites": "Blocage des pubs désactivé pour",
+	"libraries_browser_search_engine": "Moteur de recherche",
+	"libraries_browser_show_button": "Bouton du navigateur dans Onglets",
+	"libraries_browser_show_button_hint": "Affiche le bouton qui ouvre le navigateur de l’app.",
+	"libraries_browser_title": "Navigateur web",
 	"libraries_computing_authors": "Calcul des auteurs…",
 	"libraries_edit_connection": "Modifier la connexion",
 	"libraries_empty": "Aucune bibliothèque configurée. Ajoutez un dossier local ou un serveur distant.",
@@ -1382,12 +1470,15 @@
 	"reader_this_box_has_no": "Ce calque n'a pas encore de géométrie à modifier.",
 	"reader_tighter_lines": "Lignes plus serrées",
 	"reader_translate": "Traduire",
+	"reader_translate_chapter": "Traduire toutes les pages",
+	"reader_translate_chapter_hint": "Continue pendant votre lecture",
 	"reader_translate_highlighted": "Traduire {highlighted}",
 	"reader_translate_label": "Traduire{suffix}",
 	"reader_translate_options": "Options de traduction",
 	"reader_translate_this_page": "Traduire cette page",
 	"reader_translated_text": "Texte traduit",
 	"reader_translating": "Traduction en cours…",
+	"reader_translating_chapter": "Traduction des pages… {done} sur {total}",
 	"reader_translation_failed_show_details": "La traduction a échoué. Afficher les détails",
 	"reader_translation_help": "Aide à la traduction",
 	"reader_translation_in_progress": "Traduction en cours",
@@ -1590,6 +1681,8 @@
 	"settings_search_ui_language_label": "Langue de l’application",
 	"settings_search_vertical_text_keywords": "texte vertical|rotation|cjk",
 	"settings_search_vertical_text_label": "Préserver l’orientation verticale d’origine",
+	"settings_search_web_browser_keywords": "navigateur|web|blocage des pubs|publicités|moteur de recherche|cookies|effacer les données de navigation|site web",
+	"settings_search_web_browser_label": "Navigateur web",
 	"settings_sections_aria": "Sections des réglages",
 	"settings_secure_storage_unreadable": "Les clés API et identifiants serveur enregistrés ne peuvent pas être lus pour le moment. Ne les ressaisissez pas tout de suite — redémarrez d’abord l’application.",
 	"settings_select_a_model": "Sélectionner un modèle",

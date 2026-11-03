@@ -29,6 +29,79 @@
 	"bridge_ppocr_unavailable": "Este diagnóstico está disponível apenas em builds de depuração.",
 	"bridge_translation_failed": "A tradução no dispositivo falhou.",
 	"bridge_unload_failed": "O modelo no dispositivo não pôde ser descarregado.",
+	"browser_address_label": "Endereço web ou pesquisa",
+	"browser_address_placeholder": "Pesquise ou digite um endereço web",
+	"browser_back": "Voltar",
+	"browser_challenge": "O site quer verificar que você é humano antes de mostrar mais páginas.",
+	"browser_challenge_open": "Abrir o site",
+	"browser_collect": "Coletar",
+	"browser_collect_hint": "Vire as páginas no visualizador do site; cada uma é adicionada.",
+	"browser_collected": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} página coletada",
+				"nPlural=other": "{n} páginas coletadas"
+			}
+		}
+	],
+	"browser_data_cleared": "Dados de navegação apagados",
+	"browser_forward": "Avançar",
+	"browser_found_pages": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} página encontrada",
+				"nPlural=other": "{n} páginas encontradas"
+			}
+		}
+	],
+	"browser_menu_blocked_count": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} solicitação de anúncio bloqueada nesta página",
+				"nPlural=other": "{n} solicitações de anúncios bloqueadas nesta página"
+			}
+		}
+	],
+	"browser_menu_blocking_off": "Desativar o bloqueio de anúncios em {host}",
+	"browser_menu_blocking_on": "Reativar o bloqueio de anúncios em {host}",
+	"browser_menu_close": "Fechar o menu",
+	"browser_menu_label": "Menu do navegador",
+	"browser_menu_settings": "Configurações do navegador",
+	"browser_open_button": "Abrir o navegador web",
+	"browser_page_crashed": "A página parou de funcionar e foi fechada.",
+	"browser_pager_hint": "Este visualizador mostra uma página por vez. Use a visualização de todas as páginas do site, se houver, ou Coletar.",
+	"browser_protected": "Este visualizador desenha as próprias páginas, então elas não podem ser lidas no app.",
+	"browser_read": "Ler",
+	"browser_reload": "Recarregar",
+	"browser_start_body": "Abra uma página que mostre um quadrinho. Quando o app encontrar as páginas, uma barra aparece embaixo: toque em Ler para abri-las no leitor e traduzi-las.",
+	"browser_start_note": "Nada do site é guardado: as páginas só ficam enquanto você as lê.",
+	"browser_start_title": "Leia quadrinhos da web",
+	"browser_stop": "Parar de carregar",
+	"browser_unavailable_body": "O navegador do app guarda os cookies e dados de sites separados dos dados do app, algo que o Android System WebView deste celular ainda não consegue fazer. Atualize-o no Google Play e tente de novo.",
+	"browser_unavailable_title": "O navegador precisa de um Android System WebView mais recente",
+	"browser_unavailable_update": "Atualizar no Google Play",
+	"browser_view_label": "Navegador web",
 	"catalog_add_to_favorites": "Adicionar aos favoritos",
 	"catalog_added_on": "Adicionado em {date}",
 	"catalog_all_libraries": "Todas as bibliotecas",
@@ -1035,6 +1108,21 @@
 		}
 	],
 	"libraries_auto_scan": "Escaneamento automático",
+	"libraries_browser_ad_block": "Bloquear anúncios",
+	"libraries_browser_ad_block_hint": "Bloqueia domínios de anúncios e pop-ups do EasyList e do filtro DNS do AdGuard, que o app baixa dos editores e atualiza toda semana.",
+	"libraries_browser_clear": "Apagar dados de navegação",
+	"libraries_browser_clear_again": "Toque de novo para apagar",
+	"libraries_browser_clear_hint": "Sai das suas contas nos sites e remove os cookies, armazenamento e cache deles. Os dados do próprio app não são tocados.",
+	"libraries_browser_lists_never": "Listas ainda não baixadas",
+	"libraries_browser_lists_status": "{domains} domínios bloqueados · atualizado em {date}",
+	"libraries_browser_lists_update": "Atualizar listas",
+	"libraries_browser_lists_updating": "Atualizando…",
+	"libraries_browser_off_site_remove": "Reativar o bloqueio de anúncios em {host}",
+	"libraries_browser_off_sites": "O bloqueio de anúncios está desativado em",
+	"libraries_browser_search_engine": "Mecanismo de pesquisa",
+	"libraries_browser_show_button": "Botão do navegador em Abas",
+	"libraries_browser_show_button_hint": "Mostra o botão que abre o navegador do app.",
+	"libraries_browser_title": "Navegador web",
 	"libraries_computing_authors": "Calculando autores...",
 	"libraries_edit_connection": "Editar conexão",
 	"libraries_empty": "Nenhuma biblioteca configurada. Adicione uma pasta local ou um servidor remoto.",
@@ -1382,12 +1470,15 @@
 	"reader_this_box_has_no": "Esta caixa ainda não tem geometria para editar.",
 	"reader_tighter_lines": "Linhas mais próximas",
 	"reader_translate": "Traduzir",
+	"reader_translate_chapter": "Traduzir todas as páginas",
+	"reader_translate_chapter_hint": "Continua enquanto você lê",
 	"reader_translate_highlighted": "Traduzir {highlighted}",
 	"reader_translate_label": "Traduzir{suffix}",
 	"reader_translate_options": "Opções de tradução",
 	"reader_translate_this_page": "Traduzir esta página",
 	"reader_translated_text": "Texto traduzido",
 	"reader_translating": "Traduzindo…",
+	"reader_translating_chapter": "Traduzindo páginas… {done} de {total}",
 	"reader_translation_failed_show_details": "Falha na tradução. Mostrar detalhes",
 	"reader_translation_help": "Ajuda de tradução",
 	"reader_translation_in_progress": "Tradução em andamento",
@@ -1590,6 +1681,8 @@
 	"settings_search_ui_language_label": "Idioma do aplicativo",
 	"settings_search_vertical_text_keywords": "texto vertical|rotacionado|cjk",
 	"settings_search_vertical_text_label": "Preservar orientação vertical original",
+	"settings_search_web_browser_keywords": "navegador|web|bloqueio de anúncios|anúncios|mecanismo de pesquisa|cookies|apagar dados de navegação|site",
+	"settings_search_web_browser_label": "Navegador web",
 	"settings_sections_aria": "Seções de configurações",
 	"settings_secure_storage_unreadable": "As chaves de API e os logins de servidor salvos não podem ser lidos agora. Não os digite novamente ainda — reinicie o aplicativo primeiro.",
 	"settings_select_a_model": "Selecione um modelo",

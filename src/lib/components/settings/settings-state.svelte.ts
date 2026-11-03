@@ -95,6 +95,12 @@ export class SettingsDraft {
 	// Libraries
 	libraries = $state<Library[]>([]);
 
+	// Web browser
+	browserShowButton = $state(true);
+	browserSearchEngine = $state<FumetoSettings['browserSearchEngine']>('duckduckgo');
+	browserAdBlock = $state(true);
+	browserAdBlockOffHosts = $state<string[]>([]);
+
 	/** Non-null when the most recent apply failed; shown inline by the shell. */
 	applyError = $state<string | null>(null);
 
@@ -162,6 +168,10 @@ export class SettingsDraft {
 		this.readerMode = s.readerMode;
 		this.pageTurnMode = s.pageTurnMode;
 		this.libraries = s.libraries.map((library) => ({ ...library }));
+		this.browserShowButton = s.browserShowButton;
+		this.browserSearchEngine = s.browserSearchEngine;
+		this.browserAdBlock = s.browserAdBlock;
+		this.browserAdBlockOffHosts = [...s.browserAdBlockOffHosts];
 	}
 
 	/**
@@ -218,6 +228,10 @@ export class SettingsDraft {
 			readerMode: this.readerMode,
 			pageTurnMode: this.pageTurnMode,
 			libraries: this.libraries.map((library) => ({ ...library })),
+			browserShowButton: this.browserShowButton,
+			browserSearchEngine: this.browserSearchEngine,
+			browserAdBlock: this.browserAdBlock,
+			browserAdBlockOffHosts: [...this.browserAdBlockOffHosts],
 			providers: this.providers.map((provider) => ({ ...provider })),
 			activeProviderId: this.activeProviderId,
 			// Clear legacy single-library fields

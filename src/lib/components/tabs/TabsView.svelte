@@ -24,6 +24,12 @@
 	import ContinueReadingStrip from '$lib/components/catalog/ContinueReadingStrip.svelte';
 	import { continueReadingVolume } from '$lib/catalog/continue-reading.js';
 	import type { LoadablePhase } from '$lib/controllers/loadable-snapshot.js';
+	import Icon from '$lib/components/ui/Icon.svelte';
+	import { settings } from '$lib/settings/settings.js';
+	import { isMobile } from '$lib/util/platform.js';
+	import { openExternal } from '$lib/util/external-links.js';
+	import { browserAvailable, browserBridgePresent } from '$lib/web-browser/browser-bridge.js';
+	import { openBrowser } from '$lib/web-browser/browser-controller.js';
 
 	/**
 	 * False while this view is mounted but hidden (see the layer stack in
@@ -32,6 +38,15 @@
 	 * pages on the main thread and would compete with the reader.
 	 */
 	let { active = true }: { active?: boolean } = $props();
+
+	// The in-app browser is Android only; on a WebView too old for browser profiles the button explains why.
+	const browserButton = isMobile && browserBridgePresent();
+	let browserUnavailableOpen = $state(false);
+	function openTheBrowser(): void {
+		playReaderHaptic('control');
+		if (browserAvailable()) openBrowser();
+		else browserUnavailableOpen = true;
+	}
 
 	/** Tab previews share the volume-thumbnail cache but are a DIFFERENT image
 	 *  for the same uuid — the prefix keeps the two families of keys apart. */
@@ -620,4 +635,42 @@
 			</div>
 		{/if}
 	</div>
+	{#if browserButton && $settings.browserShowButton}
+		<!-- Same tonal 54px button, in the same place, as the Library's search. -->
+		<button
+			type="button"
+			class="press-morph fixed z-30 flex h-[54px] w-[54px] items-center justify-center rounded-[18px] bg-surface-container-high text-primary-300 shadow-dock active:bg-surface-700"
+			style="right: calc(16px + var(--sar, 0px)); bottom: calc(var(--app-bottom-clearance) + 12px);"
+			aria-label={m.browser_open_button()}
+			onclick={openTheBrowser}
+			data-tabs-browser-fab
+		>
+			<Icon name="globe" size={22} />
+		</button>
+	{/if}
+	{#if browserUnavailableOpen}
+		<div class="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4" role="presentation" onclick={() => (browserUnavailableOpen = false)}>
+			<div
+				class="w-full max-w-md rounded-3xl bg-surface-container-high p-5 shadow-dock"
+				style="margin-bottom: var(--sab, 0px);"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="browser-unavailable-title"
+				tabindex="-1"
+				onclick={(event) => event.stopPropagation()}
+				onkeydown={(event) => { if (event.key === 'Escape') browserUnavailableOpen = false; }}
+			>
+				<h2 id="browser-unavailable-title" class="text-base font-semibold text-surface-100">{m.browser_unavailable_title()}</h2>
+				<p class="mt-2 text-sm text-surface-300">{m.browser_unavailable_body()}</p>
+				<div class="mt-4 flex justify-end gap-2">
+					<button type="button" class="h-11 rounded-full px-4 text-sm font-semibold text-surface-300 active:bg-surface-700" onclick={() => (browserUnavailableOpen = false)}>{m.common_cancel()}</button>
+					<button
+						type="button"
+						class="h-11 rounded-full bg-primary-600 px-4 text-sm font-semibold text-white active:bg-primary-700"
+						onclick={() => { browserUnavailableOpen = false; void openExternal('https://play.google.com/store/apps/details?id=com.google.android.webview'); }}
+					>{m.browser_unavailable_update()}</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 </section>

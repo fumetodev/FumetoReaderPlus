@@ -10,11 +10,14 @@
 	import { toasts, dismissToast, dismissToastByUser } from '$lib/stores/toasts.js';
 	import { renderUserMessage } from '$lib/i18n/user-messages.js';
 	import * as m from '$lib/paraglide/messages.js';
+	import { appView } from '$lib/stores/reader-state.js';
 </script>
 
+<!-- Above the dock, except over the in-app browser: its web page is a native view nothing of the app's can draw
+     over, so there the stack sits over the browser's toolbar instead. -->
 <div
 	class="pointer-events-none fixed inset-x-0 z-[45] flex flex-col items-center gap-1.5 px-6"
-	style="bottom: calc(var(--app-bottom-clearance) + 10px);"
+	style={$appView === 'browser' ? 'top: calc(var(--sat, 0px) + 8px);' : 'bottom: calc(var(--app-bottom-clearance) + 10px);'}
 	aria-live="polite"
 	data-toast-host
 >

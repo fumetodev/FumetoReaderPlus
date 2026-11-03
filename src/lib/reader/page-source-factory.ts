@@ -17,6 +17,7 @@ import { LazyLocalPageSource } from './lazy-local-page-source.js';
 import { RemotePageSource } from './remote-page-source.js';
 import { KomgaPageSource } from './komga-page-source.js';
 import { KavitaPageSource } from './kavita-page-source.js';
+import { WebPageSource } from './web-page-source.js';
 import { getOrCreateClient } from '$lib/yacreader/yac-client-manager.js';
 import { getOrCreateKomgaClient } from '$lib/komga/komga-client-manager.js';
 import { loadKomgaCredentials } from '$lib/komga/komga-credentials.js';
@@ -30,6 +31,7 @@ import { getYacSessionPool } from '$lib/yacreader/yac-session-pool.js';
  * - YACReader volumes: creates a RemotePageSource that fetches pages over HTTP
  * - Komga volumes: creates a KomgaPageSource that fetches pages over HTTP
  * - Kavita volumes: creates a KavitaPageSource that fetches pages over HTTP
+ * - Web chapters (in-app browser): a WebPageSource that fetches pages as the browser would
  */
 export async function createPageSource(
 	volume: VolumeMetadata,
@@ -64,6 +66,10 @@ export async function createPageSource(
 		throwIfPageRequestCancelled(options.signal);
 		const client = getOrCreateKavitaClient(volume.source.serverUrl, apiKey);
 		return new KavitaPageSource(client, volume.source.kavitaChapterId, volume.page_count);
+	}
+
+	if (volume.source?.type === 'web') {
+		return new WebPageSource(volume.volume_uuid, volume.source.pageUrl, volume.source.pageUrls, options.purpose);
 	}
 
 	// Default: local volume. Prefer v17 page-per-row storage (lazy, O(1)

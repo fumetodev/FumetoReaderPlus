@@ -29,6 +29,85 @@
 	"bridge_ppocr_unavailable": "Эта диагностика доступна только в отладочных сборках.",
 	"bridge_translation_failed": "Локальный перевод не удался.",
 	"bridge_unload_failed": "Не удалось выгрузить локальную модель.",
+	"browser_address_label": "Веб-адрес или поиск",
+	"browser_address_placeholder": "Найдите или введите веб-адрес",
+	"browser_back": "Назад",
+	"browser_challenge": "Сайт хочет убедиться, что вы человек, прежде чем показать новые страницы.",
+	"browser_challenge_open": "Открыть сайт",
+	"browser_collect": "Собрать",
+	"browser_collect_hint": "Листайте страницы в просмотрщике сайта — каждая добавляется.",
+	"browser_collected": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "Собрана {n} страница",
+				"nPlural=few": "Собрано {n} страницы",
+				"nPlural=many": "Собрано {n} страниц",
+				"nPlural=other": "Собрано {n} страницы"
+			}
+		}
+	],
+	"browser_data_cleared": "Данные браузера удалены",
+	"browser_forward": "Вперёд",
+	"browser_found_pages": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "Найдена {n} страница",
+				"nPlural=few": "Найдено {n} страницы",
+				"nPlural=many": "Найдено {n} страниц",
+				"nPlural=other": "Найдено {n} страницы"
+			}
+		}
+	],
+	"browser_menu_blocked_count": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} рекламный запрос заблокирован на этой странице",
+				"nPlural=few": "{n} рекламных запроса заблокировано на этой странице",
+				"nPlural=many": "{n} рекламных запросов заблокировано на этой странице",
+				"nPlural=other": "{n} рекламного запроса заблокировано на этой странице"
+			}
+		}
+	],
+	"browser_menu_blocking_off": "Отключить блокировку рекламы для {host}",
+	"browser_menu_blocking_on": "Снова включить блокировку рекламы для {host}",
+	"browser_menu_close": "Закрыть меню",
+	"browser_menu_label": "Меню браузера",
+	"browser_menu_settings": "Настройки браузера",
+	"browser_open_button": "Открыть веб-браузер",
+	"browser_page_crashed": "Страница перестала работать и была закрыта.",
+	"browser_pager_hint": "Этот просмотрщик показывает по одной странице. Включите на сайте показ всех страниц, если он есть, или нажмите «Собрать».",
+	"browser_protected": "Этот просмотрщик сам рисует свои страницы, поэтому их нельзя прочитать в приложении.",
+	"browser_read": "Читать",
+	"browser_reload": "Обновить",
+	"browser_start_body": "Откройте страницу с комиксом. Когда приложение найдёт его страницы, внизу появится панель: нажмите «Читать», чтобы открыть их в читалке и перевести.",
+	"browser_start_note": "С сайта ничего не сохраняется: его страницы хранятся, только пока вы их читаете.",
+	"browser_start_title": "Читайте комиксы из интернета",
+	"browser_stop": "Остановить загрузку",
+	"browser_unavailable_body": "Браузер приложения хранит свои cookie и данные сайтов отдельно от данных приложения, а Android System WebView на этом телефоне пока так не умеет. Обновите его в Google Play и попробуйте снова.",
+	"browser_unavailable_title": "Браузеру нужен более новый Android System WebView",
+	"browser_unavailable_update": "Обновить в Google Play",
+	"browser_view_label": "Веб-браузер",
 	"catalog_add_to_favorites": "Добавить в избранное",
 	"catalog_added_on": "Добавлено {date}",
 	"catalog_all_libraries": "Все библиотеки",
@@ -1067,6 +1146,21 @@
 		}
 	],
 	"libraries_auto_scan": "Автосканирование",
+	"libraries_browser_ad_block": "Блокировать рекламу",
+	"libraries_browser_ad_block_hint": "Блокирует домены рекламы и всплывающих окон из EasyList и DNS-фильтра AdGuard; приложение скачивает их у издателей и обновляет раз в неделю.",
+	"libraries_browser_clear": "Удалить данные браузера",
+	"libraries_browser_clear_again": "Нажмите ещё раз, чтобы удалить",
+	"libraries_browser_clear_hint": "Выходит из аккаунтов на сайтах и удаляет их cookie, хранилище и кэш. Данные самого приложения не затрагиваются.",
+	"libraries_browser_lists_never": "Списки ещё не скачаны",
+	"libraries_browser_lists_status": "Заблокировано доменов: {domains} · обновлено {date}",
+	"libraries_browser_lists_update": "Обновить списки",
+	"libraries_browser_lists_updating": "Обновление…",
+	"libraries_browser_off_site_remove": "Снова включить блокировку рекламы для {host}",
+	"libraries_browser_off_sites": "Блокировка рекламы отключена для",
+	"libraries_browser_search_engine": "Поисковая система",
+	"libraries_browser_show_button": "Кнопка браузера во вкладках",
+	"libraries_browser_show_button_hint": "Показывает кнопку, которая открывает браузер приложения.",
+	"libraries_browser_title": "Веб-браузер",
 	"libraries_computing_authors": "Вычисление авторов...",
 	"libraries_edit_connection": "Изменить подключение",
 	"libraries_empty": "Библиотеки не настроены. Добавьте локальную папку или удалённый сервер.",
@@ -1420,12 +1514,15 @@
 	"reader_this_box_has_no": "У этого наложения пока нет геометрии для редактирования.",
 	"reader_tighter_lines": "Плотнее строки",
 	"reader_translate": "Перевести",
+	"reader_translate_chapter": "Перевести все страницы",
+	"reader_translate_chapter_hint": "Продолжается, пока вы читаете",
 	"reader_translate_highlighted": "Перевести {highlighted}",
 	"reader_translate_label": "Перевести{suffix}",
 	"reader_translate_options": "Параметры перевода",
 	"reader_translate_this_page": "Перевести эту страницу",
 	"reader_translated_text": "Переведённый текст",
 	"reader_translating": "Перевод…",
+	"reader_translating_chapter": "Перевод страниц… {done} из {total}",
 	"reader_translation_failed_show_details": "Перевод не удался. Показать подробности",
 	"reader_translation_help": "Справка по переводу",
 	"reader_translation_in_progress": "Перевод в процессе",
@@ -1632,6 +1729,8 @@
 	"settings_search_ui_language_label": "Язык приложения",
 	"settings_search_vertical_text_keywords": "вертикальный текст|повернутый|cjk",
 	"settings_search_vertical_text_label": "Сохранять вертикальную ориентацию оригинала",
+	"settings_search_web_browser_keywords": "браузер|веб|блокировка рекламы|реклама|поисковая система|cookie|удалить данные браузера|сайт",
+	"settings_search_web_browser_label": "Веб-браузер",
 	"settings_sections_aria": "Разделы настроек",
 	"settings_secure_storage_unreadable": "Сохранённые API-ключи и логины серверов сейчас не читаются. Не вводите их повторно — сначала перезапустите приложение.",
 	"settings_select_a_model": "Выбрать модель",

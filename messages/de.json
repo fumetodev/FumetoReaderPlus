@@ -29,6 +29,79 @@
 	"bridge_ppocr_unavailable": "Diese Diagnose ist nur in Debug-Builds verfügbar.",
 	"bridge_translation_failed": "Die Übersetzung auf dem Gerät ist fehlgeschlagen.",
 	"bridge_unload_failed": "Das Modell auf dem Gerät konnte nicht entladen werden.",
+	"browser_address_label": "Webadresse oder Suche",
+	"browser_address_placeholder": "Suchen oder Webadresse eingeben",
+	"browser_back": "Zurück",
+	"browser_challenge": "Die Website will prüfen, ob du ein Mensch bist, bevor sie weitere Seiten zeigt.",
+	"browser_challenge_open": "Website öffnen",
+	"browser_collect": "Sammeln",
+	"browser_collect_hint": "Blättere im Viewer der Website um; jede Seite wird hinzugefügt.",
+	"browser_collected": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} Seite gesammelt",
+				"nPlural=other": "{n} Seiten gesammelt"
+			}
+		}
+	],
+	"browser_data_cleared": "Browserdaten gelöscht",
+	"browser_forward": "Vorwärts",
+	"browser_found_pages": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} Seite gefunden",
+				"nPlural=other": "{n} Seiten gefunden"
+			}
+		}
+	],
+	"browser_menu_blocked_count": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} Werbeanfrage auf dieser Seite blockiert",
+				"nPlural=other": "{n} Werbeanfragen auf dieser Seite blockiert"
+			}
+		}
+	],
+	"browser_menu_blocking_off": "Werbeblocker für {host} ausschalten",
+	"browser_menu_blocking_on": "Werbeblocker für {host} wieder einschalten",
+	"browser_menu_close": "Menü schließen",
+	"browser_menu_label": "Browsermenü",
+	"browser_menu_settings": "Browser-Einstellungen",
+	"browser_open_button": "Webbrowser öffnen",
+	"browser_page_crashed": "Die Seite funktionierte nicht mehr und wurde geschlossen.",
+	"browser_pager_hint": "Dieser Viewer zeigt eine Seite nach der anderen. Nutze die Ansicht aller Seiten der Website, falls es eine gibt, oder Sammeln.",
+	"browser_protected": "Dieser Viewer zeichnet seine Seiten selbst, deshalb können sie nicht in der App gelesen werden.",
+	"browser_read": "Lesen",
+	"browser_reload": "Neu laden",
+	"browser_start_body": "Öffne eine Seite, die einen Comic zeigt. Findet die App seine Seiten, erscheint unten eine Leiste: Tippe auf Lesen, um sie im Reader zu öffnen und zu übersetzen.",
+	"browser_start_note": "Von der Website wird nichts behalten: Ihre Seiten bleiben nur, solange du sie liest.",
+	"browser_start_title": "Comics aus dem Web lesen",
+	"browser_stop": "Laden stoppen",
+	"browser_unavailable_body": "Der Browser in der App hält seine Cookies und Websitedaten getrennt von den Daten der App, was das Android System WebView auf diesem Gerät noch nicht kann. Aktualisiere es in Google Play und versuche es dann erneut.",
+	"browser_unavailable_title": "Der Browser braucht ein neueres Android System WebView",
+	"browser_unavailable_update": "In Google Play aktualisieren",
+	"browser_view_label": "Webbrowser",
 	"catalog_add_to_favorites": "Zu Favoriten hinzufügen",
 	"catalog_added_on": "Hinzugefügt am {date}",
 	"catalog_all_libraries": "Alle Bibliotheken",
@@ -1035,6 +1108,21 @@
 		}
 	],
 	"libraries_auto_scan": "Automatischer Scan",
+	"libraries_browser_ad_block": "Werbung blockieren",
+	"libraries_browser_ad_block_hint": "Blockiert Werbe- und Pop-up-Domains aus EasyList und dem DNS-Filter von AdGuard, die die App bei ihren Herausgebern herunterlädt und wöchentlich aktualisiert.",
+	"libraries_browser_clear": "Browserdaten löschen",
+	"libraries_browser_clear_again": "Zum Löschen erneut tippen",
+	"libraries_browser_clear_hint": "Meldet dich bei Websites ab und entfernt ihre Cookies, ihren Speicher und Cache. Die Daten der App selbst bleiben unberührt.",
+	"libraries_browser_lists_never": "Listen noch nicht heruntergeladen",
+	"libraries_browser_lists_status": "{domains} Domains blockiert · aktualisiert {date}",
+	"libraries_browser_lists_update": "Listen aktualisieren",
+	"libraries_browser_lists_updating": "Wird aktualisiert…",
+	"libraries_browser_off_site_remove": "Werbeblocker für {host} wieder einschalten",
+	"libraries_browser_off_sites": "Werbeblocker ist aus für",
+	"libraries_browser_search_engine": "Suchmaschine",
+	"libraries_browser_show_button": "Browser-Taste in Tabs",
+	"libraries_browser_show_button_hint": "Zeigt die Taste, die den Browser in der App öffnet.",
+	"libraries_browser_title": "Webbrowser",
 	"libraries_computing_authors": "Autoren werden berechnet…",
 	"libraries_edit_connection": "Verbindung bearbeiten",
 	"libraries_empty": "Keine Bibliotheken konfiguriert. Füge einen lokalen Ordner oder einen Remote-Server hinzu.",
@@ -1382,12 +1470,15 @@
 	"reader_this_box_has_no": "Dieses Feld hat noch keine Geometrie zum Bearbeiten.",
 	"reader_tighter_lines": "Engere Zeilen",
 	"reader_translate": "Übersetzen",
+	"reader_translate_chapter": "Alle Seiten übersetzen",
+	"reader_translate_chapter_hint": "Läuft weiter, während du liest",
 	"reader_translate_highlighted": "{highlighted} übersetzen",
 	"reader_translate_label": "Übersetzen{suffix}",
 	"reader_translate_options": "Übersetzungsoptionen",
 	"reader_translate_this_page": "Diese Seite übersetzen",
 	"reader_translated_text": "Übersetzter Text",
 	"reader_translating": "Übersetze…",
+	"reader_translating_chapter": "Seiten werden übersetzt… {done} von {total}",
 	"reader_translation_failed_show_details": "Übersetzung fehlgeschlagen. Details anzeigen",
 	"reader_translation_help": "Übersetzungshilfe",
 	"reader_translation_in_progress": "Übersetzung läuft",
@@ -1590,6 +1681,8 @@
 	"settings_search_ui_language_label": "App-Sprache",
 	"settings_search_vertical_text_keywords": "vertikaler Text|gedreht|cjk",
 	"settings_search_vertical_text_label": "Vertikale Ausgangsausrichtung beibehalten",
+	"settings_search_web_browser_keywords": "browser|web|werbeblocker|werbung|suchmaschine|cookies|browserdaten löschen|website",
+	"settings_search_web_browser_label": "Webbrowser",
 	"settings_sections_aria": "Einstellungsbereiche",
 	"settings_secure_storage_unreadable": "Gespeicherte API-Schlüssel und Serveranmeldungen können gerade nicht gelesen werden. Gib sie noch nicht erneut ein — starte zuerst die App neu.",
 	"settings_select_a_model": "Modell auswählen",

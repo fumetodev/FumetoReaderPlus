@@ -29,6 +29,18 @@ export type VolumeSource =
 			kavitaVolumeId: number;
 			kavitaChapterId: number;
 			remoteFolderId: string;
+		}
+	| {
+			/**
+			 * A chapter read from a web page in the in-app browser. Its pages are fetched as the browser would and
+			 * held only in a temporary folder while the chapter is open; no page image is ever kept.
+			 */
+			type: 'web';
+			/** The page the chapter was read on. */
+			pageUrl: string;
+			/** Its page images, in reading order, as the page finder reported them. */
+			pageUrls: string[];
+			siteHost: string;
 		};
 
 /** Metadata for an imported manga volume */
@@ -103,7 +115,7 @@ export interface ComicTab {
 	preview_updated_at?: string;
 }
 
-export type CatalogProvider = 'local' | 'yacreader' | 'komga' | 'kavita';
+export type CatalogProvider = 'local' | 'yacreader' | 'komga' | 'kavita' | 'web';
 export type CatalogParentKey = 'root' | `folder:${string}`;
 
 /** Blob-free projection used for catalog sorting, filtering, and cards. */
@@ -396,9 +408,9 @@ export interface WorkContext {
 // UI / State Types
 // ============================================================
 
-export type AppView = 'catalog' | 'tabs' | 'settings' | 'reader';
+export type AppView = 'catalog' | 'tabs' | 'settings' | 'reader' | 'browser';
 
-export type ReaderReturnView = 'catalog' | 'tabs';
+export type ReaderReturnView = 'catalog' | 'tabs' | 'browser';
 
 export type PageViewMode = 'single' | 'dual' | 'auto';
 

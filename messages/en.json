@@ -29,6 +29,79 @@
 	"bridge_ppocr_unavailable": "This diagnostic is available only in debug builds.",
 	"bridge_translation_failed": "On-device translation failed.",
 	"bridge_unload_failed": "The on-device model could not be unloaded.",
+	"browser_address_label": "Web address or search",
+	"browser_address_placeholder": "Search or type a web address",
+	"browser_back": "Back",
+	"browser_challenge": "The site wants to check that you're human before it shows more pages.",
+	"browser_challenge_open": "Open the site",
+	"browser_collect": "Collect",
+	"browser_collect_hint": "Turn the pages in the site's viewer; each one is added.",
+	"browser_collected": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} page collected",
+				"nPlural=other": "{n} pages collected"
+			}
+		}
+	],
+	"browser_data_cleared": "Browsing data cleared",
+	"browser_forward": "Forward",
+	"browser_found_pages": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} page found",
+				"nPlural=other": "{n} pages found"
+			}
+		}
+	],
+	"browser_menu_blocked_count": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} ad request blocked on this page",
+				"nPlural=other": "{n} ad requests blocked on this page"
+			}
+		}
+	],
+	"browser_menu_blocking_off": "Turn off ad blocking for {host}",
+	"browser_menu_blocking_on": "Turn ad blocking back on for {host}",
+	"browser_menu_close": "Close the menu",
+	"browser_menu_label": "Browser menu",
+	"browser_menu_settings": "Browser settings",
+	"browser_open_button": "Open the web browser",
+	"browser_page_crashed": "The page stopped working and was closed.",
+	"browser_pager_hint": "This viewer shows one page at a time. Use the site's all-pages view if it has one, or Collect.",
+	"browser_protected": "This viewer draws its pages itself, so they can't be read in the app.",
+	"browser_read": "Read",
+	"browser_reload": "Reload",
+	"browser_start_body": "Open a page that shows a comic. When the app finds its pages, a bar appears at the bottom: tap Read to open them in the reader and translate them.",
+	"browser_start_note": "Nothing from the site is kept: its pages are held only while you read them.",
+	"browser_start_title": "Read comics from the web",
+	"browser_stop": "Stop loading",
+	"browser_unavailable_body": "The in-app browser keeps its cookies and site data apart from the app's own, which this phone's Android System WebView can't do yet. Update it in Google Play, then try again.",
+	"browser_unavailable_title": "The browser needs a newer Android System WebView",
+	"browser_unavailable_update": "Update in Google Play",
+	"browser_view_label": "Web browser",
 	"catalog_add_to_favorites": "Add to favorites",
 	"catalog_added_on": "Added {date}",
 	"catalog_all_libraries": "All libraries",
@@ -650,8 +723,8 @@
 	"help_overlay_badges_states": "Overlay badges & states:",
 	"help_overlay_box_selected_for": "Overlay box selected for editing with controls",
 	"help_overlay_settings": "Overlay settings:",
-	"help_overlay_text_size_has": "Overlay text size has a remembered global default alongside per-volume adjustment.",
 	"help_overlay_text_now_fills": "Overlay text now fills its own box: a short line in a big balloon is no longer shrunk to match the rest of the page, and the editor's font-size slider works again and reaches the largest size the box holds",
+	"help_overlay_text_size_has": "Overlay text size has a remembered global default alongside per-volume adjustment.",
 	"help_overlays_keep_their_original": "Overlays keep the shape and position of the original text again: text stays clear of balloon outlines and unboxed text no longer spreads wider than what it replaces, while each box still uses the largest font that fits",
 	"help_overview": "Overview",
 	"help_page_navigation": "Page navigation",
@@ -1035,6 +1108,21 @@
 		}
 	],
 	"libraries_auto_scan": "Auto-scan",
+	"libraries_browser_ad_block": "Block ads",
+	"libraries_browser_ad_block_hint": "Blocks ad and pop-up domains from EasyList and AdGuard's DNS filter, which the app downloads from their publishers and updates weekly.",
+	"libraries_browser_clear": "Clear browsing data",
+	"libraries_browser_clear_again": "Tap again to clear",
+	"libraries_browser_clear_hint": "Signs you out of sites and removes their cookies, storage and cache. The app's own data is not touched.",
+	"libraries_browser_lists_never": "Lists not downloaded yet",
+	"libraries_browser_lists_status": "{domains} domains blocked · updated {date}",
+	"libraries_browser_lists_update": "Update lists",
+	"libraries_browser_lists_updating": "Updating…",
+	"libraries_browser_off_site_remove": "Turn ad blocking back on for {host}",
+	"libraries_browser_off_sites": "Ad blocking is off for",
+	"libraries_browser_search_engine": "Search engine",
+	"libraries_browser_show_button": "Browser button in Tabs",
+	"libraries_browser_show_button_hint": "Shows the button that opens the in-app browser.",
+	"libraries_browser_title": "Web browser",
 	"libraries_computing_authors": "Computing authors...",
 	"libraries_edit_connection": "Edit Connection",
 	"libraries_empty": "No libraries configured. Add a local folder or remote server.",
@@ -1382,12 +1470,15 @@
 	"reader_this_box_has_no": "This box has no geometry to edit yet.",
 	"reader_tighter_lines": "Tighter lines",
 	"reader_translate": "Translate",
+	"reader_translate_chapter": "Translate every page",
+	"reader_translate_chapter_hint": "Keeps going while you read",
 	"reader_translate_highlighted": "Translate {highlighted}",
 	"reader_translate_label": "Translate{suffix}",
 	"reader_translate_options": "Translate options",
 	"reader_translate_this_page": "Translate this page",
 	"reader_translated_text": "Translated text",
 	"reader_translating": "Translating…",
+	"reader_translating_chapter": "Translating pages… {done} of {total}",
 	"reader_translation_failed_show_details": "Translation failed. Show details",
 	"reader_translation_help": "Translation help",
 	"reader_translation_in_progress": "Translation in progress",
@@ -1590,6 +1681,8 @@
 	"settings_search_ui_language_label": "App language",
 	"settings_search_vertical_text_keywords": "vertical text|rotated|cjk",
 	"settings_search_vertical_text_label": "Preserve vertical source orientation",
+	"settings_search_web_browser_keywords": "browser|web|ad blocking|ads|search engine|cookies|clear browsing data|website",
+	"settings_search_web_browser_label": "Web browser",
 	"settings_sections_aria": "Settings sections",
 	"settings_secure_storage_unreadable": "Saved API keys and server logins can't be read right now. Don't re-enter them yet — restart the app first.",
 	"settings_select_a_model": "Select a model",
