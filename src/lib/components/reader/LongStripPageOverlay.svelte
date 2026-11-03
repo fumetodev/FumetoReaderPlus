@@ -64,7 +64,7 @@
 		if (!visible) return;
 		const generation = ++fetchGeneration;
 		if (current) return; // live stores drive the current page
-		void storedPageIsCurrent(uuid, index).then((known) => (known ? pageOverlayRepository.load(uuid, index) : null)).then((read) => {
+		void Promise.resolve(storedPageIsCurrent(uuid, index)).then((known) => (known ? pageOverlayRepository.load(uuid, index) : null)).then((read) => {
 			if (generation !== fetchGeneration) return;
 			if (read?.status === 'ready') {
 				persistedDocument = read.overlay as PageOverlayDataV2;

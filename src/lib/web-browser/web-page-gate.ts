@@ -45,12 +45,13 @@ export function webPageUnavailable(volumeUuid: string, index: number): void {
 }
 
 /**
- * Whether what is stored at page `index` belongs to the image there — at once for any volume but a reopened saved
- * chapter, and for one of those once the page is reconciled. False means unknown: show nothing stored for the page.
+ * Whether what is stored at page `index` belongs to the image there — `true` at once (not a promise, so an ordinary
+ * volume's page load keeps its timing) for any volume but a reopened saved chapter, and for one of those once the
+ * page is reconciled. False means unknown: show nothing stored for the page.
  */
-export function storedPageIsCurrent(volumeUuid: string, index: number): Promise<boolean> {
+export function storedPageIsCurrent(volumeUuid: string, index: number): true | Promise<boolean> {
 	const pages = reconciled.get(volumeUuid);
-	if (!pages || pages.has(index)) return Promise.resolve(true);
+	if (!pages || pages.has(index)) return true;
 	const key = pageKey(volumeUuid, index);
 	return new Promise((resolve) => waiting.set(key, [...(waiting.get(key) ?? []), resolve]));
 }

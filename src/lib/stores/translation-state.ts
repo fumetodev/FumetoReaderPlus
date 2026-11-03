@@ -251,7 +251,8 @@ export async function loadPageData(volumeUuid: string, pageIndex: number): Promi
 	resetPageScopedStores(false);
 
 	// A reopened saved web chapter's page holds its own translation only once it has been fetched and reconciled.
-	if (!(await storedPageIsCurrent(volumeUuid, pageIndex)) || gen !== loadGeneration) return;
+	const known = storedPageIsCurrent(volumeUuid, pageIndex);
+	if (known !== true && (!(await known) || gen !== loadGeneration)) return;
 
 	// Run all three independent queries in parallel for faster page loads
 	const [regions, translations, overlayRead] = await Promise.all([
