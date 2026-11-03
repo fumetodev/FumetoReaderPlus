@@ -2044,6 +2044,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:03:42.031Z"
 	},
+	"help_browse_websites_in_the": {
+		"sourceHash": "5ef32cc219ca3ae7",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-03T17:54:27.256Z"
+	},
 	"help_catalog_view_in_grid": {
 		"sourceHash": "36d01beacaf2937a",
 		"model": "anthropic/claude-sonnet-5",
@@ -2429,6 +2434,11 @@
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-10-18T20:56:36.111Z"
 	},
+	"help_fixed_deleting_a_comic_or": {
+		"sourceHash": "518657688f529abf",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-03T17:54:27.256Z"
+	},
 	"help_fixed_nothing_in_the": {
 		"sourceHash": "5430f4f0d5f2c3f0",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
@@ -2674,6 +2684,11 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T00:03:42.031Z"
 	},
+	"help_new_a_built_in_web": {
+		"sourceHash": "5a729638bee3a73c",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-03T17:54:27.256Z"
+	},
 	"help_new_fast_translation_model_for": {
 		"sourceHash": "638991742df5791a",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
@@ -2820,9 +2835,9 @@
 		"draftedAt": "2026-08-28T00:03:42.031Z"
 	},
 	"help_perm_internet_li": {
-		"sourceHash": "ccf6ca5e8a143f6a",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-28T00:03:42.031Z"
+		"sourceHash": "63c2c3081cdff4e1",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-03T17:54:27.256Z"
 	},
 	"help_perm_notifications_li": {
 		"sourceHash": "1926376b81e3fcbe",

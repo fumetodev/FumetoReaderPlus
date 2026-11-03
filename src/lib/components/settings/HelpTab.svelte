@@ -759,6 +759,8 @@
 		<div class="px-4 pb-4 pt-2 text-xs leading-relaxed text-surface-300" transition:slide={{ duration: motionDuration(200) }}>
 			<p class="font-medium text-surface-200">{m.help_version_line({ version: APP_VERSION })}</p>
 			<ul class="mt-1 list-disc space-y-1 pl-4">
+				<li>{m.help_new_a_built_in_web()}</li>
+				<li>{m.help_fixed_deleting_a_comic_or()}</li>
 				<li>{m.help_fixed_a_narration_block_could()}</li>
 				<li>{m.help_japanese_is_read_right()}</li>
 				<li>{m.help_fixed_overlay_text_could()}</li>
@@ -922,6 +924,7 @@
 					<li>{m.help_connect_to_a_self()}</li>
 					<li>{m.help_send_translation_requests_to()}</li>
 				<li>{m.help_download_the_on_device()}</li>
+				<li>{m.help_browse_websites_in_the()}</li>
 			</ul>
 
 			<p class="mt-3 font-medium text-surface-200">{m.help_api_key_security()}</p>
