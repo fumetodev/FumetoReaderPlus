@@ -39,6 +39,12 @@ export function webPageReconciled(volumeUuid: string, index: number): void {
 	wake(pageKey(volumeUuid, index), true);
 }
 
+/** Whether page `index` needs reconciling before what is stored for it can be shown. */
+export function webPageUnreconciled(volumeUuid: string, index: number): boolean {
+	const pages = reconciled.get(volumeUuid);
+	return !!pages && !pages.has(index);
+}
+
 /** The page could not be fetched: what is stored at its position stays unknown. */
 export function webPageUnavailable(volumeUuid: string, index: number): void {
 	if (reconciled.has(volumeUuid)) wake(pageKey(volumeUuid, index), false);

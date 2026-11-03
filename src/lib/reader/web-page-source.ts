@@ -14,7 +14,7 @@ import { writable } from 'svelte/store';
 import { appWorkCoordinator } from '$lib/work-coordination/index.js';
 import { browserNative, PageFetchError } from '$lib/web-browser/browser-bridge.js';
 import { pageFetched } from '$lib/web-browser/web-chapter-store.js';
-import { webPageUnavailable } from '$lib/web-browser/web-page-gate.js';
+import { webPageUnavailable, webPageUnreconciled } from '$lib/web-browser/web-page-gate.js';
 import { sha256Bytes } from '$lib/overlay-layout/canonical.js';
 import {
 	throwIfPageRequestCancelled,
@@ -129,6 +129,10 @@ export class WebPageSource implements PageSource {
 		const cached = cache.get(key);
 		if (cached) {
 			remember(key, cached);
+			// Kept from before the chapter was reopened (its batch went on): reconciled as a fetched page is.
+			if (webPageUnreconciled(this.volumeUuid, index)) {
+				await pageFetched(this.volumeUuid, index, await sha256Bytes(await cached.arrayBuffer()), this.pageUrls.length);
+			}
 			return cached;
 		}
 		let pending = inFlight.get(key);
