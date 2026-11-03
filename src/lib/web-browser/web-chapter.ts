@@ -104,7 +104,6 @@ export async function openWebChapter(
 	pageUrl: string,
 	pageTitle: string,
 	options: {
-		reachedBy?: { fromUrl: string; linkHref: string } | null;
 		/** Open nothing unless the pages are a saved chapter. */
 		onlyIfSaved?: boolean;
 		/** Open nothing unless the pages are this saved chapter (reopening it). */
@@ -119,7 +118,7 @@ export async function openWebChapter(
 		await Promise.allSettled(Array.from({ length: Math.min(PROBE_PAGES, pages.length) }, (_, i) => probe.getPage(i)));
 		const match = await findSavedChapter(fingerprintsSeen(provisional));
 		if (match && (!options.expect || match.volume_uuid === options.expect)) {
-			return { opened: await reopenSaved(match, provisional, pages, pageUrl, options.reachedBy), saved: match };
+			return { opened: await reopenSaved(match, provisional, pages, pageUrl), saved: match };
 		}
 		if (match) {
 			forgetFingerprints(provisional);
@@ -169,8 +168,7 @@ async function reopenSaved(
 	chapter: WebChapterRecord,
 	provisional: string,
 	pages: FinderPage[],
-	pageUrl: string,
-	reachedBy?: { fromUrl: string; linkHref: string } | null
+	pageUrl: string
 ): Promise<boolean> {
 	const volumeUuid = chapter.volume_uuid;
 	const existing = await db.volumes.get(volumeUuid);
@@ -193,10 +191,9 @@ async function reopenSaved(
 			pages: pages.map((p, index) => ({ index, width: p.width, height: p.height, filename: `page_${index + 1}` }))
 		});
 	}
-	await db.web_chapters.update(volumeUuid, {
-		chapterUrl: pageUrl,
-		...(reachedBy && reachedBy.linkHref === pageUrl ? { fromUrl: reachedBy.fromUrl, linkHref: reachedBy.linkHref } : {})
-	});
+	// Where it was saved and how it was reached stay as they were: a site can show a chapter's pages under any
+	// address (one shows whatever chapter it last remembers), and the address it turned up at says nothing about
+	// where the chapter is.
 	await markOpened(volumeUuid);
 	openChapter = volumeUuid;
 	const opened = await openReader(volume, 'browser');

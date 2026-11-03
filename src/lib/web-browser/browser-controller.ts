@@ -208,8 +208,10 @@ export async function readPages(pages: FinderPage[]): Promise<void> {
 	const target = get(reopening);
 	reopening.set(null);
 	clearReopenTimer();
-	const result = await openWebChapter(pages, nav.url, nav.title, { reachedBy: reachedBy(nav.url) });
-	if (target && result.saved && result.saved.volume_uuid !== target.volumeUuid) {
+	const result = await openWebChapter(pages, nav.url, nav.title);
+	// Pages of a saved chapter open that chapter wherever they turn up. Say so when they turned up somewhere else
+	// than where it was saved, or than the chapter asked for: otherwise it looks as if the app chose the chapter.
+	if (result.saved && (target ? result.saved.volume_uuid !== target.volumeUuid : !sameDocumentUrl(result.saved.chapterUrl, nav.url))) {
 		pushToast({ message: { code: 'browser_reopen_other', params: { title: result.saved.title } } });
 	}
 }
@@ -330,7 +332,7 @@ function onReopenReport(report: FinderReport): void {
 	void (async () => {
 		try {
 			const pages = readablePages(report.pages, { sortByPageNumber: false });
-			const result = await openWebChapter(pages, nav.url, nav.title, { reachedBy: reachedBy(nav.url), expect: state.volumeUuid });
+			const result = await openWebChapter(pages, nav.url, nav.title, { expect: state.volumeUuid });
 			if (!get(reopening)) return;
 			if (result.opened) {
 				cancelReopen();
