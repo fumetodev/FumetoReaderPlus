@@ -23,6 +23,7 @@ import com.fumeto.reader.service.TranslationForegroundService
 import com.fumeto.reader.layout.RtmdetLayoutBridge
 import com.fumeto.reader.encdec.EncDecBridge
 import com.fumeto.reader.sfx.SfxFilterBridge
+import com.fumeto.reader.browser.BrowserBridge
 
 class MainActivity : TauriActivity() {
   private lateinit var wv: WebView
@@ -34,6 +35,7 @@ class MainActivity : TauriActivity() {
   private var rtmdetBridge: RtmdetLayoutBridge? = null
   private var sfxBridge: SfxFilterBridge? = null
   private var encdecBridge: EncDecBridge? = null
+  private var browserBridge: BrowserBridge? = null
   private var baseTextZoom = 100
   private var baseFontScale = 1f
   private var stopped = false
@@ -183,6 +185,11 @@ class MainActivity : TauriActivity() {
     encdecBridge = EncDecBridge(this, webView)
     webView.addJavascriptInterface(encdecBridge!!, "__fumeto_encdec_native")
 
+    // The in-app browser: a second WebView with its own profile, laid over this one. This interface is on the app's
+    // WebView only; the browser's WebView has none, because it loads untrusted pages.
+    browserBridge = BrowserBridge(this, webView)
+    webView.addJavascriptInterface(browserBridge!!, "__fumeto_browser")
+
     // Store and push a single authoritative system-bar/display-cutout snapshot.
     // CSS-pixel conversion stays fractional so narrow landscape cutout edges are
     // not rounded away on high-density devices.
@@ -264,6 +271,7 @@ class MainActivity : TauriActivity() {
   override fun onStop() {
     super.onStop()
     stopped = true
+    browserBridge?.onActivityStop()
     if (TranslationForegroundService.running && ::wv.isInitialized) {
       wv.dispatchWindowVisibilityChanged(View.VISIBLE)
     }
@@ -272,6 +280,7 @@ class MainActivity : TauriActivity() {
   override fun onStart() {
     super.onStart()
     stopped = false
+    browserBridge?.onActivityStart()
   }
 
   private fun onTranslationServiceStopped() {
@@ -322,6 +331,9 @@ class MainActivity : TauriActivity() {
     sfxBridge = null
     encdecBridge?.destroy()
     encdecBridge = null
+    // The browser's WebView is a child of this Activity's content view: gone before Tauri tears its own down.
+    browserBridge?.destroy()
+    browserBridge = null
     bgBridge = null
     llamaBridge = null
     ppocrDetectorBridge = null
@@ -333,6 +345,7 @@ class MainActivity : TauriActivity() {
       wv.removeJavascriptInterface("__fumeto_ppocr_native")
       wv.removeJavascriptInterface("__fumeto_rtmdet_native")
       wv.removeJavascriptInterface("__fumeto_service")
+      wv.removeJavascriptInterface("__fumeto_browser")
     }
 
     // LlamaBridge.destroy() conditionally unloads and stops its foreground
