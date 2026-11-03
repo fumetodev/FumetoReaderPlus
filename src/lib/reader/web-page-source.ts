@@ -14,6 +14,7 @@ import { writable } from 'svelte/store';
 import { appWorkCoordinator } from '$lib/work-coordination/index.js';
 import { browserNative, PageFetchError } from '$lib/web-browser/browser-bridge.js';
 import { pageFetched } from '$lib/web-browser/web-chapter-store.js';
+import { webPageUnavailable } from '$lib/web-browser/web-page-gate.js';
 import { sha256Bytes } from '$lib/overlay-layout/canonical.js';
 import {
 	throwIfPageRequestCancelled,
@@ -180,7 +181,10 @@ export class WebPageSource implements PageSource {
 				remember(key, blob);
 				return blob;
 			}
-		}).promise;
+		}).promise.catch((error: unknown) => {
+			webPageUnavailable(this.volumeUuid, index);
+			throw error;
+		});
 	}
 
 	async getPageAsFile(index: number, options: PageRequestOptions = {}): Promise<File> {

@@ -38,6 +38,7 @@ import {
 	pageFetched,
 	savedWebChapterIds
 } from './web-chapter-store.js';
+import { guardWebChapter } from './web-page-gate.js';
 
 /** The library id web chapters sit under. No library has it, so no catalog view, count or scan reaches them. */
 export const WEB_CHAPTER_LIBRARY_ID = '__fumeto_web__';
@@ -176,6 +177,8 @@ async function reopenSaved(
 	// The pages fetched to recognise it are the chapter's now; their fingerprints are checked against its stored
 	// translations as any page of it is (`pageFetched`).
 	const probed = fingerprintsSeen(provisional);
+	// The reader shows what is stored for a page only once the page is reconciled (`web-page-gate.ts`).
+	guardWebChapter(volumeUuid);
 	adoptFingerprints(provisional, volumeUuid);
 	await adoptWebChapterPages(provisional, volumeUuid);
 	for (const [index, print] of probed.entries()) if (print) await pageFetched(volumeUuid, index, print, pages.length);

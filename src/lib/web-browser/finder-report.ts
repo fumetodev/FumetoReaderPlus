@@ -16,6 +16,8 @@ export interface FinderReport {
 	kind: FinderKind;
 	pages: FinderPage[];
 	pager: boolean;
+	/** Images on the page still loading: a gallery's pages are reported as their images arrive. */
+	loading: number;
 	/** The page address the report was made on (single-page apps change it without loading a new page). */
 	at: string;
 }
@@ -62,7 +64,8 @@ export function parseFinderReport(data: unknown, fallbackUrl: string): FinderRep
 	if (kind === 'gallery' && pages.length < 2) kind = pages.length === 1 ? 'single' : 'none';
 	if (kind === 'single' && pages.length !== 1) kind = pages.length >= 2 ? 'gallery' : 'none';
 	if (kind === 'protected' || kind === 'none') pages.length = 0;
-	return { kind, pages, pager: raw.pager === true, at: isWebAddress(raw.at) ? raw.at : fallbackUrl };
+	const loading = typeof raw.loading === 'number' && Number.isFinite(raw.loading) ? Math.min(Math.max(Math.round(raw.loading), 0), 10_000) : 0;
+	return { kind, pages, pager: raw.pager === true, loading, at: isWebAddress(raw.at) ? raw.at : fallbackUrl };
 }
 
 export function parseLinkTap(data: unknown): LinkTap | null {

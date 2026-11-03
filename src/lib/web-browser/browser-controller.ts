@@ -243,13 +243,18 @@ function reachedBy(url: string): { fromUrl: string; linkHref: string } | null {
 
 const SITE_WAIT_MS = 15_000;
 const RETRACE_WAIT_MS = 12_000;
+/** How long a gallery may go on loading its images before a reopen takes the pages it has. */
+const SETTLE_MS = 8_000;
 let reopenTimer: ReturnType<typeof setTimeout> | null = null;
 let reopenTarget: SavedChapterView | null = null;
 let matching = false;
+/** Whether the gallery on the page is being given time to load its images (`onReopenReport`). */
+let settle: 'idle' | 'waiting' | 'over' = 'idle';
 
 function clearReopenTimer(): void {
 	if (reopenTimer) clearTimeout(reopenTimer);
 	reopenTimer = null;
+	settle = 'idle';
 }
 
 export function cancelReopen(): void {
@@ -328,6 +333,17 @@ function onReopenReport(report: FinderReport): void {
 	if (!state || state.phase === 'manual' || matching || report.kind !== 'gallery') return;
 	const nav = get(browserNav);
 	if (!hasPage(nav)) return;
+	// A gallery's pages are reported as their images arrive. Matching the first report opened the chapter with the
+	// pages that happened to have loaded (6 of 14 on a slow connection), so its images get time to finish first.
+	if (report.loading > 0 && settle !== 'over') {
+		if (settle === 'idle') {
+			clearReopenTimer();
+			settle = 'waiting';
+			reopenTimer = setTimeout(settleOver, SETTLE_MS);
+		}
+		return;
+	}
+	clearReopenTimer();
 	matching = true;
 	void (async () => {
 		try {
@@ -346,6 +362,16 @@ function onReopenReport(report: FinderReport): void {
 			matching = false;
 		}
 	})();
+}
+
+/** The gallery's images took too long: it is matched as it is — or, gone from the page, counts as not found. */
+function settleOver(): void {
+	reopenTimer = null;
+	settle = 'over';
+	const report = get(finderReport);
+	if (report?.kind === 'gallery' && hasPage(get(browserNav))) return onReopenReport(report);
+	if (get(reopening)?.phase === 'site') void retrace();
+	else giveUpReopen();
 }
 
 export function startCollecting(): void {

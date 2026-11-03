@@ -26,6 +26,7 @@
 		overlayLayoutSettingsFromApp,
 		pageOverlayRepository
 	} from '$lib/overlay-layout/index.js';
+	import { storedPageIsCurrent } from '$lib/web-browser/web-page-gate.js';
 
 	interface Props {
 		volumeUuid: string;
@@ -63,9 +64,9 @@
 		if (!visible) return;
 		const generation = ++fetchGeneration;
 		if (current) return; // live stores drive the current page
-		void pageOverlayRepository.load(uuid, index).then((read) => {
+		void storedPageIsCurrent(uuid, index).then((known) => (known ? pageOverlayRepository.load(uuid, index) : null)).then((read) => {
 			if (generation !== fetchGeneration) return;
-			if (read.status === 'ready') {
+			if (read?.status === 'ready') {
 				persistedDocument = read.overlay as PageOverlayDataV2;
 				persistedEntries = read.pageTranslation?.entries ?? [];
 			} else {

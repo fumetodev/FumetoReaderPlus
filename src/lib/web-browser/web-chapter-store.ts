@@ -13,6 +13,7 @@ import { db } from '$lib/db/index.js';
 import { deleteVolume } from '$lib/import/import-service.js';
 import { randomUUID } from '$lib/util/uuid.js';
 import type { PageTranslation, VolumeMetadata, WebChapterRecord, WebSeriesRecord } from '$lib/types/index.js';
+import { releaseWebChapter, webPageReconciled } from './web-page-gate.js';
 
 /** Fingerprints of the pages fetched so far, per open chapter (saved or not). */
 const seen = new Map<string, string[]>();
@@ -45,6 +46,7 @@ export function adoptFingerprints(from: string, to: string): void {
 
 export function forgetFingerprints(volumeUuid: string): void {
 	seen.delete(volumeUuid);
+	releaseWebChapter(volumeUuid);
 }
 
 /**
@@ -59,7 +61,7 @@ export async function pageFetched(volumeUuid: string, index: number, fingerprint
 	const prints = seen.get(volumeUuid) ?? [];
 	prints[index] = fingerprint;
 	seen.set(volumeUuid, prints);
-	if (!(await saved()).has(volumeUuid)) return;
+	if (!(await saved()).has(volumeUuid)) return webPageReconciled(volumeUuid, index);
 	await db.transaction('rw', db.web_chapters, db.page_translations, async () => {
 		const chapter = await db.web_chapters.get(volumeUuid);
 		if (!chapter) return;
@@ -90,6 +92,7 @@ export async function pageFetched(volumeUuid: string, index: number, fingerprint
 		stored[index] = fingerprint;
 		await db.web_chapters.update(volumeUuid, { pageFingerprints: stored });
 	});
+	webPageReconciled(volumeUuid, index);
 }
 
 /**

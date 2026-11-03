@@ -113,6 +113,14 @@
 		return false;
 	};
 
+	// Images still loading: a page counts only once its image has, so a gallery grows as they arrive. Lazy ones wait
+	// to be scrolled to and are not counted.
+	const loadingImages = () => {
+		let n = 0;
+		for (const img of document.querySelectorAll('img')) if (!img.complete && img.loading !== 'lazy') n++;
+		return n;
+	};
+
 	const find = () => {
 		const snapshot = collect();
 		const group = pick(snapshot);
@@ -129,7 +137,7 @@
 		// One image is a comic page only when the viewer gives it the column: an article's photo is not a page.
 		const lone = pages.length === 1 && group.some((it) => it.src === pages[0].u && it.w >= snapshot.vw * 0.85);
 		const kind = pages.length >= 2 ? 'gallery' : lone ? 'single' : 'none';
-		return { kind, pages: kind === 'none' ? [] : pages, pager: hasPager() };
+		return { kind, pages: kind === 'none' ? [] : pages, pager: hasPager(), loading: loadingImages() };
 	};
 
 	let timer = 0;

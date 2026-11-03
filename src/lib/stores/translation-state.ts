@@ -9,6 +9,7 @@ import { db } from '$lib/db/index.js';
 import { isPageBenchmarkPersistenceSuppressed } from '$lib/benchmark/page-benchmark-mode.js';
 import { isPageTranslating } from '$lib/translation/page-translation-activity.js';
 import { pageOverlayRepository } from '$lib/overlay-layout/index.js';
+import { storedPageIsCurrent } from '$lib/web-browser/web-page-gate.js';
 
 export { isPageTranslating } from '$lib/translation/page-translation-activity.js';
 
@@ -248,6 +249,9 @@ export async function loadPageData(volumeUuid: string, pageIndex: number): Promi
 	// owns its lifecycle flag until its AbortSignal has actually settled. Clearing
 	// it here could allow the next page to start a concurrent OCR/LLM job.
 	resetPageScopedStores(false);
+
+	// A reopened saved web chapter's page holds its own translation only once it has been fetched and reconciled.
+	if (!(await storedPageIsCurrent(volumeUuid, pageIndex)) || gen !== loadGeneration) return;
 
 	// Run all three independent queries in parallel for faster page loads
 	const [regions, translations, overlayRead] = await Promise.all([
