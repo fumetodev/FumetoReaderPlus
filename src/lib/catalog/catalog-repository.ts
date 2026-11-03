@@ -540,7 +540,8 @@ export function volumeScopedTables(database: FumetoDB = db) {
 		database.library_imports,
 		database.comic_tabs,
 		database.catalog_rows,
-		database.media_assets
+		database.media_assets,
+		database.web_chapters
 	];
 }
 
@@ -581,6 +582,8 @@ export async function deleteVolumeRowsInTransaction(
 	await database.inpainted_pages.where('volume_uuid').equals(volumeUuid).delete();
 	// Removing the import record is what lets a rescan re-import the file.
 	await database.library_imports.where('volume_uuid').equals(volumeUuid).delete();
+	// A saved web chapter's record; its series goes when its last chapter does (web-chapter-store.ts).
+	await database.web_chapters.delete(volumeUuid);
 }
 
 function normalizeRemoteFolder(folder: RemoteFolder): RemoteFolder {

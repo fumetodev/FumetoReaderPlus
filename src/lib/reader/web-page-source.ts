@@ -9,10 +9,12 @@
  */
 
 import { appDataDir, join } from '@tauri-apps/api/path';
-import { readFile, remove } from '@tauri-apps/plugin-fs';
+import { readFile, remove, rename } from '@tauri-apps/plugin-fs';
 import { writable } from 'svelte/store';
 import { appWorkCoordinator } from '$lib/work-coordination/index.js';
 import { browserNative, PageFetchError } from '$lib/web-browser/browser-bridge.js';
+import { pageFetched } from '$lib/web-browser/web-chapter-store.js';
+import { sha256Bytes } from '$lib/overlay-layout/canonical.js';
 import {
 	throwIfPageRequestCancelled,
 	type PageRequestOptions,
@@ -69,6 +71,28 @@ export async function discardWebChapterPages(volumeUuid: string): Promise<void> 
 		await remove(await pagesFolder(volumeUuid), { recursive: true });
 	} catch {
 		// Nothing was fetched, or the folder is already gone.
+	}
+}
+
+/**
+ * A chapter opened under a provisional id turned out to be a saved one: its pages already fetched move with it, so
+ * nothing is fetched twice.
+ */
+export async function adoptWebChapterPages(from: string, to: string): Promise<void> {
+	for (const [key, blob] of [...cache.entries()]) {
+		if (!key.startsWith(`${from}:`)) continue;
+		cache.delete(key);
+		cache.set(`${to}:${key.slice(from.length + 1)}`, blob);
+	}
+	try {
+		await remove(await pagesFolder(to), { recursive: true });
+	} catch {
+		// Nothing of the saved chapter was on disk.
+	}
+	try {
+		await rename(await pagesFolder(from), await pagesFolder(to));
+	} catch {
+		// Nothing was fetched under the provisional id.
 	}
 }
 
@@ -138,6 +162,7 @@ export class WebPageSource implements PageSource {
 			operation: async ({ signal }) => {
 				const kept = await this.fromDisk(index);
 				if (kept) {
+					await pageFetched(this.volumeUuid, index, await sha256Bytes(await kept.arrayBuffer()));
 					remember(key, kept);
 					return kept;
 				}
@@ -149,6 +174,8 @@ export class WebPageSource implements PageSource {
 					throw error;
 				}
 				const bytes = await readFile(await join(await pagesFolder(this.volumeUuid), String(index)));
+				// The page's fingerprint, as the overlay pipeline takes it: how a saved chapter knows its pages.
+				await pageFetched(this.volumeUuid, index, await sha256Bytes(bytes));
 				const blob = new Blob([bytes], { type: fetched.mime });
 				remember(key, blob);
 				return blob;

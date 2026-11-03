@@ -4,6 +4,8 @@ import type {
 	VolumeFiles,
 	VolumePageRecord,
 	BookFileRecord,
+	WebChapterRecord,
+	WebSeriesRecord,
 	PageDimensions,
 	TranslationRegion,
 	Translation,
@@ -173,7 +175,7 @@ async function migrateRetiredOnlineSourceData(tx: import('dexie').Transaction): 
  * The final `this.version(...)` call below uses this constant, and migration
  * tests import it, so adding a version means bumping this in the same change.
  */
-export const CATALOG_DB_VERSION = 20;
+export const CATALOG_DB_VERSION = 21;
 
 /**
  * Renamed from the pre-release codename at 0.7.0. The rename deliberately
@@ -204,6 +206,9 @@ export class FumetoDB extends Dexie {
 	catalog_index_state!: Table<CatalogIndexState>;
 	/** v20: whole .epub blobs for media_kind:'book' volumes. */
 	book_files!: Table<BookFileRecord>;
+	/** v21: saved web chapters (in-app browser) and the series they group under. */
+	web_series!: Table<WebSeriesRecord>;
+	web_chapters!: Table<WebChapterRecord>;
 
 	constructor() {
 		super(DB_NAME);
@@ -550,8 +555,16 @@ export class FumetoDB extends Dexie {
 		// volume_pages. Store creation only (v17 pattern); no backfill. The
 		// media_kind/book_locator/book_progress_fraction fields on volumes and
 		// catalog_rows are unindexed and need no schema entry.
-		this.version(CATALOG_DB_VERSION).stores({
+		this.version(20).stores({
 			book_files: 'volume_uuid'
+		});
+
+		// v21: saved web chapters from the in-app browser. A chapter is recognised by the fingerprints of its pages
+		// (multiEntry), whatever address the site shows it under; its translations live on its volume as usual.
+		// Store creation only; no backfill.
+		this.version(CATALOG_DB_VERSION).stores({
+			web_series: 'id, siteHost',
+			web_chapters: 'volume_uuid, seriesId, *pageFingerprints'
 		});
 
 		// ── Hooks: enforce lowercase tag names ──────────────────────────

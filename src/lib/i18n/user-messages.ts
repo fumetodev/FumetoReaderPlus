@@ -214,6 +214,8 @@ const RENDERERS = {
 	bridge_ppocr_failed: (_p, o) => m.bridge_ppocr_failed({}, o),
 	browser_page_crashed: (_p, o) => m.browser_page_crashed({}, o),
 	browser_data_cleared: (_p, o) => m.browser_data_cleared({}, o),
+	browser_reopen_other: (p, o) => m.browser_reopen_other({ title: String(p.title ?? '') }, o),
+	browser_chapter_saved: (_p, o) => m.browser_chapter_saved({}, o),
 } satisfies Record<string, Renderer>;
 
 /** The Kotlin bridges reject with `{code, detail}`; these codes have a message a person can act on. */

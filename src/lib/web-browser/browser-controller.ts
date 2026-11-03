@@ -11,6 +11,8 @@ import { pushToast } from '$lib/stores/toasts.js';
 import { browserAvailable, browserNative, onBrowserEvent, type BrowserNavState } from './browser-bridge.js';
 import { addCollected, parseFinderReport, parseLinkTap, readablePages, type FinderPage, type FinderReport, type LinkTap } from './finder-report.js';
 import { openWebChapter } from './web-chapter.js';
+import type { SaveDetails, SavedChapterView } from './web-chapter-store.js';
+import type { VolumeMetadata } from '$lib/types/index.js';
 import finderSource from './page-finder.inject.js?raw';
 
 const EMPTY_NAV: BrowserNavState = { created: false, visible: false, url: '', title: '', canGoBack: false, canGoForward: false };
@@ -29,6 +31,30 @@ export const lastLinkTap = writable<LinkTap | null>(null);
 /** True while the browser's page is replaced by a still image so the app can draw over its rectangle. */
 export const browserCovered = writable(false);
 export const browserSnapshot = writable<string | null>(null);
+/** The start page (saved chapters) shown over a loaded page, from the menu. */
+export const showStartPage = writable(false);
+/** Titles of recently shown pages, so a saved chapter's series can be named after the page it was reached from. */
+const pageTitles = new Map<string, string>();
+/** The latest favicon per site (small PNG, base64): a saved series' icon. */
+const siteIcons = new Map<string, string>();
+
+export function titleOfPage(url: string): string | undefined {
+	return pageTitles.get(url);
+}
+
+export function iconOfSite(host: string): string | undefined {
+	return siteIcons.get(host);
+}
+
+/** A saved chapter being opened again through its site. */
+export interface ReopenState {
+	volumeUuid: string;
+	title: string;
+	/** 'site': its address is loading; 'retrace': the link that led to it is being followed again; 'manual': over to the person. */
+	phase: 'site' | 'retrace' | 'manual';
+}
+export const reopening = writable<ReopenState | null>(null);
+
 /** Closes whatever of the browser screen's own is open over the page (its menu); Back asks it first. */
 export const browserTransientClose = writable<(() => void) | null>(null);
 
@@ -62,6 +88,10 @@ export function installBrowserController(): () => void {
 			case 'nav': {
 				const previous = get(browserNav).url;
 				browserNav.set({ created: event.created, visible: event.visible, url: event.url, title: event.title, canGoBack: event.canGoBack, canGoForward: event.canGoForward });
+				if (event.url && event.title) {
+					pageTitles.set(event.url, event.title);
+					if (pageTitles.size > 100) pageTitles.delete(pageTitles.keys().next().value as string);
+				}
 				// A different document: what the finder found belonged to the last one. Single-page apps keep the
 				// document and report again on their own.
 				if (event.url !== previous && !sameDocument(previous, event.url)) finderReport.set(null);
@@ -75,6 +105,7 @@ export function installBrowserController(): () => void {
 				if (!report) break;
 				finderReport.set(report);
 				collectedPages.update((pages) => (pages ? addCollected(pages, report) : pages));
+				onReopenReport(report);
 				break;
 			}
 			case 'link': {
@@ -84,6 +115,9 @@ export function installBrowserController(): () => void {
 			}
 			case 'blocked':
 				blockedOnPage.set(event.count);
+				break;
+			case 'icon':
+				if (event.host && event.png && event.png.length < 64_000) siteIcons.set(event.host, event.png);
 				break;
 			case 'crashed':
 				browserNav.set(EMPTY_NAV);
@@ -136,6 +170,14 @@ export function browserBack(): void {
 		close();
 		return;
 	}
+	if (get(showStartPage) && hasPage(get(browserNav))) {
+		showStartPage.set(false);
+		return;
+	}
+	if (get(reopening)) {
+		cancelReopen();
+		return;
+	}
 	if (get(collectedPages)) {
 		collectedPages.set(null);
 		return;
@@ -163,7 +205,145 @@ export async function readPages(pages: FinderPage[]): Promise<void> {
 	const nav = get(browserNav);
 	if (pages.length === 0 || !hasPage(nav)) return;
 	collectedPages.set(null);
-	await openWebChapter(pages, nav.url, nav.title);
+	const target = get(reopening);
+	reopening.set(null);
+	clearReopenTimer();
+	const result = await openWebChapter(pages, nav.url, nav.title, { reachedBy: reachedBy(nav.url) });
+	if (target && result.saved && result.saved.volume_uuid !== target.volumeUuid) {
+		pushToast({ message: { code: 'browser_reopen_other', params: { title: result.saved.title } } });
+	}
+}
+
+/** What the save dialog starts from, for the web chapter `volume`: its title, its series, how it was reached. */
+export function saveDefaults(volume: VolumeMetadata): SaveDetails | null {
+	if (volume.source?.type !== 'web') return null;
+	const { pageUrl, siteHost } = volume.source;
+	const via = reachedBy(pageUrl);
+	return {
+		chapterTitle: volume.title,
+		seriesTitle: (via && titleOfPage(via.fromUrl)) || siteHost,
+		siteHost,
+		chapterUrl: pageUrl,
+		seriesUrl: via?.fromUrl ?? pageUrl,
+		fromUrl: via?.fromUrl,
+		linkHref: via?.linkHref,
+		icon: iconOfSite(siteHost)
+	};
+}
+
+/** The link tap that led to `url`, if the last one did. */
+function reachedBy(url: string): { fromUrl: string; linkHref: string } | null {
+	const tap = get(lastLinkTap);
+	return tap && tap.href === url ? { fromUrl: tap.from, linkHref: tap.href } : null;
+}
+
+// ---- reopening a saved chapter through its site ---------------------------------------------------------------
+
+const SITE_WAIT_MS = 15_000;
+const RETRACE_WAIT_MS = 12_000;
+let reopenTimer: ReturnType<typeof setTimeout> | null = null;
+let reopenTarget: SavedChapterView | null = null;
+let matching = false;
+
+function clearReopenTimer(): void {
+	if (reopenTimer) clearTimeout(reopenTimer);
+	reopenTimer = null;
+}
+
+export function cancelReopen(): void {
+	clearReopenTimer();
+	reopenTarget = null;
+	reopening.set(null);
+}
+
+/**
+ * Opens a saved chapter again the way it was read: through its site. Its address is loaded first; if the pages that
+ * appear are not the chapter (or none appear), the page it was reached from is loaded and the same link tapped; if
+ * that fails too, the person is asked to find it — reading its pages from anywhere opens it, by their fingerprints.
+ */
+export function reopenSavedChapter(view: SavedChapterView): void {
+	cancelReopen();
+	reopenTarget = view;
+	reopening.set({ volumeUuid: view.chapter.volume_uuid, title: view.chapter.title, phase: 'site' });
+	showStartPage.set(false);
+	openBrowser();
+	navigate(view.chapter.chapterUrl);
+	reopenTimer = setTimeout(() => void retrace(), SITE_WAIT_MS);
+}
+
+async function retrace(): Promise<void> {
+	clearReopenTimer();
+	const target = reopenTarget;
+	const state = get(reopening);
+	if (!target || !state) return;
+	const { fromUrl, linkHref } = target.chapter;
+	if (state.phase !== 'site' || !fromUrl || !linkHref) {
+		reopening.set({ ...state, phase: 'manual' });
+		return;
+	}
+	reopening.set({ ...state, phase: 'retrace' });
+	navigate(fromUrl);
+	// Give the page time to load and draw its links, then tap the one that led to the chapter.
+	const started = Date.now();
+	const tryTap = async (): Promise<void> => {
+		if (get(reopening)?.phase !== 'retrace') return;
+		const nav = get(browserNav);
+		const ready = nav.url && sameDocumentUrl(nav.url, fromUrl) && get(browserProgress) >= 100;
+		if (ready) {
+			const tapped = await browserNative.evaluate(
+				`(() => { const a = [...document.querySelectorAll('a[href]')].find((x) => x.href === ${JSON.stringify(linkHref)}); if (!a) return false; a.scrollIntoView({ block: 'center' }); a.click(); return true; })()`
+			);
+			if (tapped === true) {
+				reopenTimer = setTimeout(() => giveUpReopen(), RETRACE_WAIT_MS);
+				return;
+			}
+		}
+		if (Date.now() - started > RETRACE_WAIT_MS) return giveUpReopen();
+		reopenTimer = setTimeout(() => void tryTap(), 1000);
+	};
+	reopenTimer = setTimeout(() => void tryTap(), 1500);
+}
+
+function giveUpReopen(): void {
+	clearReopenTimer();
+	const state = get(reopening);
+	if (state) reopening.set({ ...state, phase: 'manual' });
+}
+
+function sameDocumentUrl(a: string, b: string): boolean {
+	try {
+		const x = new URL(a);
+		const y = new URL(b);
+		return x.origin === y.origin && x.pathname === y.pathname && x.search === y.search;
+	} catch {
+		return a === b;
+	}
+}
+
+/** While reopening, a gallery that appears is checked against the saved chapters; the chapter opens if it is one. */
+function onReopenReport(report: FinderReport): void {
+	const state = get(reopening);
+	if (!state || state.phase === 'manual' || matching || report.kind !== 'gallery') return;
+	const nav = get(browserNav);
+	if (!hasPage(nav)) return;
+	matching = true;
+	void (async () => {
+		try {
+			const pages = readablePages(report.pages, { sortByPageNumber: false });
+			const result = await openWebChapter(pages, nav.url, nav.title, { reachedBy: reachedBy(nav.url), expect: state.volumeUuid });
+			if (!get(reopening)) return;
+			if (result.opened) {
+				cancelReopen();
+				return;
+			}
+			// Not the chapter: the site shows something else under its address — say so when it is another saved one.
+			if (result.saved) pushToast({ message: { code: 'browser_reopen_other', params: { title: result.saved.title } } });
+			if (state.phase === 'site') void retrace();
+			else giveUpReopen();
+		} finally {
+			matching = false;
+		}
+	})();
 }
 
 export function startCollecting(): void {

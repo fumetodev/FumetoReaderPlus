@@ -7,6 +7,7 @@
 	 */
 	import * as m from '$lib/paraglide/messages.js';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import BrowserStartPage from './BrowserStartPage.svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import { appView } from '$lib/stores/reader-state.js';
@@ -28,6 +29,9 @@
 		navigate,
 		pagesToRead,
 		browserTransientClose,
+		cancelReopen,
+		reopening,
+		showStartPage,
 		readPages,
 		startCollecting,
 		stopCollecting,
@@ -48,7 +52,7 @@
 	let opening = $state(false);
 
 	const loaded = $derived(hasPage($browserNav));
-	const showNative = $derived(active && loaded && !$browserCovered);
+	const showNative = $derived(active && loaded && !$browserCovered && !$showStartPage);
 	const host = $derived(hostOf($browserNav.url));
 	const blockingOff = $derived(!!host && $settings.browserAdBlockOffHosts.includes(host));
 	const report = $derived($finderReport);
@@ -212,13 +216,8 @@
 
 	<!-- The page. The native browser sits exactly over this element. -->
 	<div bind:this={pageEl} class="relative min-h-0 flex-1 overflow-hidden" data-browser-page>
-		{#if !loaded}
-			<div class="flex h-full flex-col justify-center gap-3 px-8 text-center" data-browser-start>
-				<span class="mx-auto text-primary-300" aria-hidden="true"><Icon name="globe" size={40} strokeWidth={1.5} /></span>
-				<h2 class="text-lg font-semibold text-surface-100">{m.browser_start_title()}</h2>
-				<p class="text-sm text-surface-300">{m.browser_start_body()}</p>
-				<p class="text-xs text-surface-500">{m.browser_start_note()}</p>
-			</div>
+		{#if !loaded || $showStartPage}
+			<BrowserStartPage />
 		{:else if $browserCovered && $browserSnapshot}
 			<img src={$browserSnapshot} alt="" class="h-full w-full object-cover object-top" draggable="false" />
 		{/if}
@@ -234,6 +233,9 @@
 						<p class="px-4 pb-2 text-[11px] text-surface-500">{m.browser_menu_blocked_count({ n: $blockedOnPage })}</p>
 					{/if}
 				{/if}
+				<button type="button" role="menuitem" class="block w-full border-t border-surface-700 px-4 py-3 text-left text-sm text-surface-100 active:bg-surface-700" onclick={() => { showStartPage.set(true); void setMenu(false); }} data-browser-menu-saved>
+					{m.browser_saved_chapters()}
+				</button>
 				{#if $browserNav.canGoForward}
 					<button type="button" role="menuitem" class="block w-full border-t border-surface-700 px-4 py-3 text-left text-sm text-surface-100 active:bg-surface-700" onclick={() => { browserNative.forward(); void setMenu(false); }}>
 						{m.browser_forward()}
@@ -246,8 +248,25 @@
 		{/if}
 	</div>
 
+	<!-- A saved chapter being opened again through its site -->
+	{#if $reopening}
+		<div class="flex min-h-14 shrink-0 items-center gap-2 border-t border-surface-800 px-3 py-2" role="status" data-browser-reopen-bar>
+			<span class="shrink-0 text-primary-300" aria-hidden="true"><Icon name="clock" size={20} /></span>
+			<p class="min-w-0 flex-1 text-xs text-surface-200">
+				{#if $reopening.phase === 'site'}
+					{m.browser_reopening({ title: $reopening.title })}
+				{:else if $reopening.phase === 'retrace'}
+					{m.browser_reopen_retrace({ title: $reopening.title })}
+				{:else}
+					{m.browser_reopen_manual({ title: $reopening.title })}
+				{/if}
+			</p>
+			<button type="button" class="h-10 shrink-0 rounded-full px-3 text-xs font-semibold text-surface-300 active:bg-surface-800" onclick={cancelReopen}>{m.common_cancel()}</button>
+		</div>
+	{/if}
+
 	<!-- What the page finder found -->
-	{#if loaded && (collecting || (report && report.kind !== 'none'))}
+	{#if loaded && !$showStartPage && (collecting || (report && report.kind !== 'none'))}
 		<div class="flex min-h-14 shrink-0 items-center gap-2 border-t border-surface-800 px-3 py-2" data-browser-found-bar>
 			<span class="shrink-0 text-primary-300" aria-hidden="true"><Icon name="library" size={20} /></span>
 			{#if collecting}

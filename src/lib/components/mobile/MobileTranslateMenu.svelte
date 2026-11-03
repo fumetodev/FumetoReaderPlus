@@ -28,6 +28,10 @@
 	import { areOcrModelsReady } from '$lib/detection/ocr-model-manager.js';
 	import { openOcrModelPrompt } from '$lib/detection/ocr-model-gate.js';
 	import { pushToast } from '$lib/stores/toasts.js';
+	import Icon from '$lib/components/ui/Icon.svelte';
+	import SaveChapterDialog from '$lib/components/web-browser/SaveChapterDialog.svelte';
+	import { saveDefaults } from '$lib/web-browser/browser-controller.js';
+	import { isSavedWebChapter, saveWebChapter } from '$lib/web-browser/web-chapter-store.js';
 
 	let open = $derived($mobileReaderUi.disclosure === 'translate-options');
 	let revisionDialogOpen = $state(false);
@@ -78,6 +82,43 @@
 	// A web chapter is never in the Library, whose menu starts a whole-volume translation; the reader offers it.
 	const chapterJob = $derived($currentVolume ? $activeTranslationJobs.get($currentVolume.volume_uuid) : undefined);
 	const chapterTranslating = $derived(!!chapterJob && (chapterJob.status === 'translating' || chapterJob.status === 'reviewing') && !chapterJob.paused);
+
+	// Saving a web chapter keeps its translations for when it is read on the site again.
+	let chapterSaved = $state(false);
+	let saveDialog = $state<{ chapterTitle: string; seriesTitle: string } | null>(null);
+	$effect(() => {
+		const volume = $currentVolume;
+		if (!open || !volume || !isWebChapter(volume)) return;
+		void isSavedWebChapter(volume.volume_uuid).then((saved) => (chapterSaved = saved));
+	});
+
+	function openSaveDialog(): void {
+		const volume = get(currentVolume);
+		const defaults = volume ? saveDefaults(volume) : null;
+		if (!defaults) return;
+		playReaderHaptic('control');
+		mobileReaderUi.closeDisclosure();
+		saveDialog = { chapterTitle: defaults.chapterTitle, seriesTitle: defaults.seriesTitle };
+	}
+
+	async function saveChapter(chapterTitle: string, seriesTitle: string): Promise<void> {
+		const volume = get(currentVolume);
+		const defaults = volume ? saveDefaults(volume) : null;
+		saveDialog = null;
+		if (!volume || !defaults) return;
+		await saveWebChapter(volume, { ...defaults, chapterTitle, seriesTitle });
+		chapterSaved = true;
+		pushToast({ message: { code: 'browser_chapter_saved' } });
+	}
+
+	$effect(() => {
+		if (!saveDialog) return;
+		const close = () => (saveDialog = null);
+		readerTransientCloseHandler.set(close);
+		return () => {
+			if (get(readerTransientCloseHandler) === close) readerTransientCloseHandler.set(null);
+		};
+	});
 
 	async function translateChapter(): Promise<void> {
 		const volume = get(currentVolume);
@@ -270,6 +311,21 @@
 						{/if}
 					</span>
 				</button>
+				<button
+					type="button"
+					class="mt-1 flex h-[48px] w-full items-center gap-3 rounded-lg px-3 text-sm text-surface-100 active:bg-surface-800 disabled:opacity-60"
+					disabled={chapterSaved}
+					onclick={openSaveDialog}
+					data-translate-option="save-chapter"
+				>
+					{#if chapterSaved}
+						<span class="text-primary-300" aria-hidden="true"><Icon name="check" size={20} /></span>
+						<span>{m.reader_chapter_saved()}</span>
+					{:else}
+						<span aria-hidden="true"><Icon name="download" size={20} /></span>
+						<span class="flex min-w-0 flex-col items-start leading-tight"><span>{m.reader_save_chapter()}</span><span class="text-[11px] text-surface-400">{m.reader_save_chapter_hint()}</span></span>
+					{/if}
+				</button>
 			{/if}
 		</div>
 
@@ -287,6 +343,15 @@
 			{m.reader_translation_help()}
 		</button>
 	</div>
+{/if}
+
+{#if saveDialog}
+	<SaveChapterDialog
+		chapterTitle={saveDialog.chapterTitle}
+		seriesTitle={saveDialog.seriesTitle}
+		onsave={(chapter, series) => void saveChapter(chapter, series)}
+		onclose={() => (saveDialog = null)}
+	/>
 {/if}
 
 {#if revisionDialogOpen}

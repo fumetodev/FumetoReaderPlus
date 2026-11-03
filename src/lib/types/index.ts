@@ -43,6 +43,39 @@ export type VolumeSource =
 			siteHost: string;
 		};
 
+/**
+ * A series of saved web chapters: the page the person came to a chapter from, on one site. Its icon is the site's
+ * favicon (small PNG, base64) — never an image from a page.
+ */
+export interface WebSeriesRecord {
+	id: string;
+	siteHost: string;
+	title: string;
+	/** The page the first saved chapter was reached from (often the series' own page). */
+	seriesUrl: string;
+	icon?: string;
+	createdAt: string;
+}
+
+/**
+ * A saved web chapter. Its volume (same `volume_uuid`) keeps the translations; nothing of its pages is kept but
+ * their fingerprints (sha256 of each image, '' until it has been fetched), by which the chapter is recognised when
+ * the person reads it on the site again, whatever address the site shows it under.
+ */
+export interface WebChapterRecord {
+	volume_uuid: string;
+	seriesId: string;
+	title: string;
+	/** Where the chapter was read. */
+	chapterUrl: string;
+	/** The page and the link tapped on it that led to the chapter: retraced when the address alone fails. */
+	fromUrl?: string;
+	linkHref?: string;
+	pageFingerprints: string[];
+	savedAt: string;
+	lastOpenedAt: string;
+}
+
 /** Metadata for an imported manga volume */
 export interface VolumeMetadata {
 	volume_uuid: string;
