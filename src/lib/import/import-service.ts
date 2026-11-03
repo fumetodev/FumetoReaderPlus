@@ -23,6 +23,7 @@ import { isMobile } from '$lib/util/platform.js';
 import { copyFileToLibrary, libraryDestinationPath, resolveDisplayName, tryDeleteFile } from '$lib/util/file-utils.js';
 import { scanLibrary, type ScanResult } from '$lib/library/library-scanner.js';
 import { revokeThumbnailUrl } from '$lib/stores/thumbnail-cache.js';
+import { removeJob } from '$lib/stores/volume-translation-state.js';
 import { naturalCompare } from '$lib/util/natural-sort.js';
 
 export const IMPORT_THUMBNAIL_MAX_SIZE = 512;
@@ -584,6 +585,10 @@ export async function deleteVolume(
 	volumeUuid: string,
 	options: { deletePhysicalFile?: boolean } = {},
 ): Promise<void> {
+	// A batch still running on the volume would write its job and pages back after the delete.
+	const { endVolumeTranslation } = await import('$lib/translation/volume-translation-service.js');
+	await endVolumeTranslation(volumeUuid);
+
 	// Check if this is a remote volume (no local files to delete)
 	const volume = await db.volumes.get(volumeUuid);
 	const volumeTags = volume?.tags || [];
@@ -600,6 +605,7 @@ export async function deleteVolume(
 		await deleteVolumeRowsInTransaction(volumeUuid, db);
 	});
 	revokeThumbnailUrl(volumeUuid);
+	removeJob(volumeUuid);
 
 	// Clean up tags no longer referenced by any volume
 	if (volumeTags.length > 0) {
@@ -616,6 +622,9 @@ export async function deleteVolume(
  * Preserves: volumes, volume_files, page_dimensions, library_imports, tags
  */
 export async function deleteVolumeTranslations(volumeUuid: string): Promise<void> {
+	// A batch still running on the volume would write its job and the pages it translates next straight back.
+	const { endVolumeTranslation } = await import('$lib/translation/volume-translation-service.js');
+	await endVolumeTranslation(volumeUuid);
 	await db.transaction(
 		'rw',
 		[db.regions, db.translations, db.work_context, db.page_translations, db.volume_translation_jobs, db.inpainted_pages],

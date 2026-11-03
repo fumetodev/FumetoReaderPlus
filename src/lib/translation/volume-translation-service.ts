@@ -871,6 +871,30 @@ export async function cancelVolumeTranslation(volumeUuid: string, reason?: UserM
 	}
 }
 
+/**
+ * Ends whatever runs on a volume — its batch, a revision or an export — and waits for it to settle, its last write
+ * made (at most `waitMs`). A volume being deleted must not outlive its run: a batch went on fetching and translating
+ * every remaining page — on a cloud provider, paying for them — and wrote its job and pages back under an id no
+ * volume has.
+ */
+export async function endVolumeTranslation(volumeUuid: string, waitMs = 10_000): Promise<void> {
+	const run = activeRuns.get(volumeUuid);
+	const external = externalCancelHandles.get(volumeUuid);
+	if (!run && !external) return;
+	abortControllers.get(volumeUuid)?.abort();
+	external?.abort();
+	const deadline = Date.now() + waitMs;
+	if (run) {
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		await Promise.race([run.catch(() => undefined), new Promise<void>((resolve) => { timer = setTimeout(resolve, waitMs); })]);
+		clearTimeout(timer);
+	}
+	// A revision or an export holds its handle until its last write.
+	while (external && externalCancelHandles.get(volumeUuid) === external && Date.now() < deadline) {
+		await new Promise<void>((resolve) => setTimeout(resolve, 50));
+	}
+}
+
 /** Check whether a translation job is actively running (has an AbortController). */
 export function isJobActive(volumeUuid: string): boolean {
 	return abortControllers.has(volumeUuid);
