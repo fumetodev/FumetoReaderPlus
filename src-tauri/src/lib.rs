@@ -1,7 +1,40 @@
+#[cfg(mobile)]
+mod atomic_copy;
 #[cfg(not(mobile))]
 mod llama;
 #[cfg(not(mobile))]
 mod manga_guidance;
+
+/// Copies a file the Android picker handed over to a path in the app's storage, without its bytes
+/// crossing the IPC. There a written file reaches Rust as a JSON array, one value per byte: about
+/// 86 MB of memory per MB written, enough to get the app killed on an ordinary 74 MB volume. The
+/// fs plugin's `copy_file` takes real paths only, and refuses what the picker returns.
+///
+/// No fs scope to check: Android's sandbox holds the app to the storage that scope allows, and a
+/// content:// address is readable only because the person picked it. Not on desktop, where the
+/// scope is narrower than what the process can reach and the IPC carries bytes as bytes.
+#[cfg(mobile)]
+#[tauri::command]
+async fn copy_content_uri<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    uri: String,
+    destination: std::path::PathBuf,
+) -> Result<u64, String> {
+    use tauri_plugin_fs::{FilePath, FsExt, OpenOptions};
+
+    if !uri.starts_with("content://") {
+        return Err(format!("not a content address: {uri}"));
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let source: FilePath = uri.parse().map_err(|e| format!("{e:?}"))?;
+        let mut options = OpenOptions::new();
+        options.read(true);
+        let mut input = app.fs().open(source, options).map_err(|e| e.to_string())?;
+        atomic_copy::copy_atomically(&mut input, &destination).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -22,6 +55,8 @@ pub fn run() {
         llama::llama_is_loaded,
         llama::llama_cancel,
     ]);
+    #[cfg(mobile)]
+    let builder = builder.invoke_handler(tauri::generate_handler![copy_content_uri]);
 
     builder
         .setup(|app| {

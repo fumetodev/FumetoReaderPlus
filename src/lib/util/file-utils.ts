@@ -107,6 +107,13 @@ export async function copyFileToLibrary(
 ): Promise<string> {
 	const filename = extractArchiveFilename(sourcePath);
 	const destPath = await buildDestPath(libraryPath, filename, author, series);
+	if (sourcePath.startsWith('content://')) {
+		// What the Android picker returns. Native, because a writeFile there costs about
+		// 86 MB of memory per MB written, which got the app killed on a 74 MB volume.
+		const { invoke } = await import('@tauri-apps/api/core');
+		await invoke('copy_content_uri', { uri: sourcePath, destination: destPath });
+		return destPath;
+	}
 	const data = await readFile(sourcePath);
 	await writeFile(destPath, data);
 	return destPath;
