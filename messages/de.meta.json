@@ -2439,6 +2439,11 @@
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-03T17:54:27.256Z"
 	},
+	"help_fixed_importing_a_large_comic": {
+		"sourceHash": "e50ba11a60177e5c",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-04T01:32:57.273Z"
+	},
 	"help_fixed_nothing_in_the": {
 		"sourceHash": "5430f4f0d5f2c3f0",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",

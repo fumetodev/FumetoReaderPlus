@@ -670,6 +670,7 @@
 	"help_fixed_an_api_key_typed": "Fixed: an API key typed into a provider row and left open was not saved when leaving Settings, and a stale failure marker could stay on a page that had since been translated",
 	"help_fixed_crashes_and_freezes_on": "Fixed crashes and freezes: on-device translation no longer closes the app on some phones and tablets, batch translation uses far less memory, and changing the system font or display size no longer restarts the app",
 	"help_fixed_deleting_a_comic_or": "Fixed: deleting a comic, or clearing its translations, while it was being translated let the translation run on through the remaining pages and save them again. Both now stop it first",
+	"help_fixed_importing_a_large_comic": "Fixed: importing a large comic could fail or close the app, and a file of around 500 MB or more in your library could crash the app at every launch. Large files now import normally, and an app stuck this way recovers on its own after updating.",
 	"help_fixed_nothing_in_the": "Fixed: nothing in the reader's \"Boxes on this page\" list responded to taps, and Settings → Translation opened on Off-Device even while on-device translation was running",
 	"help_fixed_overlay_text_could": "Fixed: overlay text could shrink to a tiny size in a large balloon. A sentence spread over a two-part balloon now uses both parts, split where the sentence breaks, and lettering already in English is left as drawn",
 	"help_folder_context_menu_and": "Folder context menu and folder creation",
