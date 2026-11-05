@@ -38,6 +38,13 @@ class BrowserBridge(activity: Activity, private val appView: WebView) {
     @JavascriptInterface
     fun hide() = ui { host.hide() }
 
+    /** Everything else here goes to the tab selected last; everything reported names its tab (`tab`). */
+    @JavascriptInterface
+    fun selectTab(id: String) = ui { host.selectTab(id) }
+
+    @JavascriptInterface
+    fun closeTab(id: String) = ui { host.closeTab(id) }
+
     @JavascriptInterface
     fun load(url: String) = ui { host.load(url) }
 

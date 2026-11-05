@@ -29,7 +29,8 @@
 	import { isMobile } from '$lib/util/platform.js';
 	import { openExternal } from '$lib/util/external-links.js';
 	import { browserAvailable, browserBridgePresent } from '$lib/web-browser/browser-bridge.js';
-	import { openBrowser } from '$lib/web-browser/browser-controller.js';
+	import { browserTabs, closeBrowserTab, openBrowserTab, openNewBrowserTab } from '$lib/web-browser/browser-controller.js';
+	import type { BrowserTabRecord, VolumeMetadata } from '$lib/types/index.js';
 
 	/**
 	 * False while this view is mounted but hidden (see the layer stack in
@@ -41,11 +42,25 @@
 
 	// The in-app browser is Android only; on a WebView too old for browser profiles the button explains why.
 	const browserButton = isMobile && browserBridgePresent();
+	/** The grid scrolls 66px further under this button (54px and a 12px gap), or
+	 *  it sits on the last card's close button at the end of the list. */
+	const browserFabShown = $derived(browserButton && $settings.browserShowButton);
 	let browserUnavailableOpen = $state(false);
 	function openTheBrowser(): void {
 		playReaderHaptic('control');
-		if (browserAvailable()) openBrowser();
+		if (browserAvailable()) openNewBrowserTab();
 		else browserUnavailableOpen = true;
+	}
+
+	/**
+	 * A browser tab takes a place in the grid like any other. It wears a comic tab's shape, so the window, the sorts and
+	 * the card measuring work on one list; `web` is what tells them apart, and nothing about pages or previews applies.
+	 */
+	type TabItem = LiveComicTab & { web?: BrowserTabRecord };
+	function webTabItem(record: BrowserTabRecord): TabItem {
+		const uuid = `web:${record.id}`;
+		const volume: VolumeMetadata = { volume_uuid: uuid, title: record.title || record.siteHost || m.browser_new_tab(), filename: '', page_count: 0, created_at: record.openedAt, current_page: 0 };
+		return { web: record, tab: { volume_uuid: uuid, position: record.position, opened_at: record.openedAt, last_active_at: record.lastActiveAt }, volume };
 	}
 
 	/** Tab previews share the volume-thumbnail cache but are a DIFFERENT image
@@ -88,17 +103,19 @@
 			scrollTop = 0;
 		}
 	}
+	let allTabs = $derived<TabItem[]>([...tabs, ...$browserTabs.map(webTabItem)]);
 	let sortedTabs = $derived.by(() => {
 		const ordered =
 			tabsSort === 'recent'
 				// Finally consuming last_active_at's index semantics: most recently
 				// touched first.
-				? [...tabs].sort((a, b) => b.tab.last_active_at.localeCompare(a.tab.last_active_at))
+				? [...allTabs].sort((a, b) => b.tab.last_active_at.localeCompare(a.tab.last_active_at))
 				: tabsSort === 'series'
-					? [...tabs].sort((a, b) => a.volume.title.localeCompare(b.volume.title))
-					// The copy keeps every branch the same shape, and keeps the
-					// controller's own array out of the caller's hands.
-					: [...tabs];
+					? [...allTabs].sort((a, b) => a.volume.title.localeCompare(b.volume.title))
+					// Comic tabs hold their positions among themselves; the browser's join them in the order they were opened.
+					: $browserTabs.length > 0
+						? [...allTabs].sort((a, b) => a.tab.opened_at.localeCompare(b.tab.opened_at))
+						: [...allTabs];
 		return ordered;
 	});
 
@@ -197,11 +214,11 @@
 
 	/** Pin the retention range's cache keys so catalog scrolling can never evict
 	 *  a URL this (possibly hidden) grid still has mounted. */
-	function syncPreviewPins(list: LiveComicTab[], start: number, end: number): void {
+	function syncPreviewPins(list: TabItem[], start: number, end: number): void {
 		const retention = tabRetentionRange(start, end, list.length, RETENTION_MARGIN_ITEMS);
 		const wanted = new Set<string>();
 		for (let index = retention.min; index <= retention.max; index += 1) {
-			const uuid = list[index]?.volume.volume_uuid;
+			const uuid = list[index]?.web ? undefined : list[index]?.volume.volume_uuid;
 			if (uuid) wanted.add(uuid);
 		}
 		for (const [uuid, release] of previewPins) {
@@ -223,7 +240,7 @@
 		const list = sortedTabs;
 		const start = windowStartIndex;
 		const end = windowEndIndex;
-		const visible = list.slice(start, end);
+		const visible = list.slice(start, end).filter((item) => !item.web);
 		// Synchronous carry-forward: a window advance must never blank a card
 		// that is still visible while the IndexedDB read is in flight.
 		const carried = new Map<string, string>();
@@ -274,7 +291,7 @@
 		const end = windowEndIndex;
 		const retention = tabRetentionRange(start, end, list.length, RETENTION_MARGIN_ITEMS);
 		const indexByUuid = new Map(list.map((item, index) => [item.volume.volume_uuid, index]));
-		const candidates = list.slice(start, end).map((item) => ({
+		const candidates = list.slice(start, end).filter((item) => !item.web).map((item) => ({
 			uuid: item.volume.volume_uuid,
 			page: item.volume.current_page || 0,
 			revision: `${item.volume.volume_uuid}:${item.volume.current_page ?? 0}`,
@@ -388,6 +405,16 @@
 	 *  callbacks at trigger time, never during template render. */
 	const closingTabIds = new Set<string>();
 
+	function closeWebTab(event: MouseEvent, item: TabItem): void {
+		event.stopPropagation();
+		playReaderHaptic('control');
+		if (!item.web) return;
+		const uuid = item.volume.volume_uuid;
+		closingTabIds.add(uuid);
+		closeBrowserTab(item.web.id);
+		setTimeout(() => closingTabIds.delete(uuid), motionDuration(150) + 250);
+	}
+
 	async function close(event: MouseEvent, volumeUuid: string) {
 		event.stopPropagation();
 		playReaderHaptic('control');
@@ -426,7 +453,8 @@
 				const volumeUuid = item.volume.volume_uuid;
 				closingTabIds.add(volumeUuid);
 				try {
-					await closeTab(volumeUuid);
+					if (item.web) closeBrowserTab(item.web.id);
+					else await closeTab(volumeUuid);
 				} catch {
 					closingTabIds.delete(volumeUuid);
 					continue;
@@ -498,6 +526,20 @@
 	}
 </script>
 
+<!-- The whole target shows, and it holds the panel's bottom-right corner: the
+     panel's px-2 and pb-2 are the same inset. -->
+{#snippet closeTabButton(title: string, onclick: (event: MouseEvent) => void)}
+	<button
+		type="button"
+		class="press-morph flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-surface-600 text-surface-100 active:bg-surface-500"
+		aria-label={m.tabs_close_volume({ title })}
+		{onclick}
+		data-close-tab
+	>
+		<Icon name="x" size={24} strokeWidth={2.2} />
+	</button>
+{/snippet}
+
 <section class="flex h-full min-h-0 flex-col bg-surface-950" style="padding-top: var(--sat, 0px); padding-left: var(--sal, 0px); padding-right: var(--sar, 0px);" aria-label={m.tabs_comic_tabs()}>
 	<!-- Same app-bar contract as both Library headers: 12px top gap + a 60px
 	     bar, so the bar's bottom edge lines up pixel-for-pixel across Tabs,
@@ -510,11 +552,11 @@
 	>
 		<div class="min-w-0">
 			<p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-400" data-tabs-count>
-				{tabs.length} open
+				{m.tabs_open_count({ n: allTabs.length })}
 			</p>
 			<h2 class="truncate text-2xl font-bold tracking-tight text-surface-100">{m.tabs_reading_now()}</h2>
 		</div>
-		{#if tabs.length > 0}
+		{#if allTabs.length > 0}
 			<button
 				type="button"
 				class="h-11 shrink-0 self-center rounded-full bg-surface-container-high px-4 text-xs font-semibold text-surface-200 transition-colors active:bg-surface-700 disabled:opacity-50"
@@ -526,7 +568,7 @@
 			</button>
 		{/if}
 	</header>
-	{#if tabs.length > 1}
+	{#if allTabs.length > 1}
 		<!-- Mirrors the Library filter row's metrics (mt-2, 44px pills in a
 		     4px-padded track) so the secondary rows match across views. -->
 		<div class="relative mx-3 mb-1 mt-2 grid grid-cols-3 gap-1 rounded-full bg-surface-container-high p-1" role="radiogroup" aria-label={m.tabs_sort_tabs()} data-tabs-sort use:slidingSelection>
@@ -557,7 +599,7 @@
 	<div
 		bind:this={container}
 		class="min-h-0 flex-1 overflow-y-auto px-3 py-3"
-		style="touch-action: pan-y; overscroll-behavior: contain; overflow-anchor: none; padding-bottom: calc(var(--app-bottom-clearance) + 12px);"
+		style="touch-action: pan-y; overscroll-behavior: contain; overflow-anchor: none; padding-bottom: calc(var(--app-bottom-clearance) + {browserFabShown ? 78 : 12}px);"
 		onscroll={(event) => { scrollTop = event.currentTarget.scrollTop; tabsController.setScrollTop(scrollTop); }}
 		data-tabs-scroll
 		aria-busy={tabsPhase === 'loading' || tabsPhase === 'refreshing'}
@@ -569,7 +611,7 @@
 				<p class="text-sm text-red-300">{m.tabs_unable_to_load({ message: tabsError?.message ?? m.tabs_unknown_error() })}</p>
 				<button type="button" class="rounded-lg border border-surface-600 px-4 py-2 text-sm text-surface-200" onclick={() => tabsController.refresh()}>{m.reader_retry()}</button>
 			</div>
-		{:else if tabsPhase === 'ready' && tabs.length === 0}
+		{:else if tabsPhase === 'ready' && allTabs.length === 0}
 			<div class="flex h-full flex-col items-center justify-center px-8 text-center">
 				<span class="mb-3 select-none text-2xl tracking-wide text-surface-500" aria-hidden="true">{m.tabs_o_zzz()}</span>
 				<p class="text-base font-medium text-surface-300">{m.tabs_no_open_tabs()}</p>
@@ -594,6 +636,25 @@
 						out:tabCloseOut={item.volume.volume_uuid}
 						animate:tabReflow
 					>
+						{#if item.web}
+							{@const web = item.web}
+							<button type="button" class="block w-full text-left" onclick={() => openBrowserTab(web.id)} aria-label={m.browser_open_page({ title: item.volume.title })} data-browser-tab-card>
+								<div class="relative flex aspect-[2/3] w-full items-center justify-center overflow-hidden bg-surface-800 text-surface-500">
+									{#if web.icon}
+										<img src={`data:image/png;base64,${web.icon}`} alt="" class="h-12 w-12 rounded-xl" />
+									{:else}
+										<Icon name="globe" size={40} strokeWidth={1.5} />
+									{/if}
+								</div>
+							</button>
+							<div class="px-2 pb-2 pt-1.5" style="background-color: {tabTint(item.volume.volume_uuid)}">
+								<p class="truncate text-xs font-medium leading-tight text-surface-100" data-tab-title-strip>{item.volume.title}</p>
+								<div class="flex items-end gap-1.5">
+									<p class="min-w-0 flex-1 truncate text-[10px] text-surface-400">{web.siteHost || m.browser_view_label()}</p>
+									{@render closeTabButton(item.volume.title, (event) => closeWebTab(event, item))}
+								</div>
+							</div>
+						{:else}
 						<button type="button" class="block w-full text-left" onclick={() => { void openTab(item.volume); }} aria-label={m.tabs_read_volume({ title: item.volume.title })}>
 							<div class="relative aspect-[2/3] w-full overflow-hidden bg-surface-800">
 								{#if previewUrls.get(item.volume.volume_uuid)}
@@ -606,9 +667,9 @@
 						<!-- Tinted meta panel: static per-volume tint (hash palette, not
 						     content-derived), title + position + progress with the 44px
 						     close target inside the row. -->
-						<div class="px-2 pb-1 pt-1.5" style="background-color: {tabTint(item.volume.volume_uuid)}">
+						<div class="px-2 pb-2 pt-1.5" style="background-color: {tabTint(item.volume.volume_uuid)}">
 							<p class="truncate text-xs font-medium leading-tight text-surface-100" data-tab-title-strip>{item.volume.title}</p>
-							<div class="flex items-center gap-1.5">
+							<div class="flex items-end gap-1.5">
 								<div class="min-w-0 flex-1">
 									<p class="truncate text-[10px] text-surface-400">
 										{m.catalog_page_x_of_y({ page: (item.volume.current_page ?? 0) + 1, total: item.volume.page_count })}
@@ -619,15 +680,10 @@
 										</div>
 									{/if}
 								</div>
-								<button
-									type="button"
-									class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg leading-none text-surface-300 transition-colors active:bg-surface-950/40 active:text-white"
-									aria-label={m.tabs_close_volume({ title: item.volume.title })}
-									onclick={(event) => { void close(event, item.volume.volume_uuid); }}
-									data-close-tab
-								>×</button>
+								{@render closeTabButton(item.volume.title, (event) => { void close(event, item.volume.volume_uuid); })}
 							</div>
 						</div>
+						{/if}
 					</div>
 				{/each}
 			</div>
@@ -635,7 +691,7 @@
 			</div>
 		{/if}
 	</div>
-	{#if browserButton && $settings.browserShowButton}
+	{#if browserFabShown}
 		<!-- Same tonal 54px button, in the same place, as the Library's search. -->
 		<button
 			type="button"

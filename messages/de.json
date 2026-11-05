@@ -31,29 +31,16 @@
 	"bridge_unload_failed": "Das Modell auf dem Gerät konnte nicht entladen werden.",
 	"browser_address_label": "Webadresse oder Suche",
 	"browser_address_placeholder": "Suchen oder Webadresse eingeben",
+	"browser_already_saved": "Bereits gespeichert als {title}.",
 	"browser_back": "Zurück",
+	"browser_back_to_chapter": "Zurück zum Kapitel",
 	"browser_back_to_page": "Zurück zur Seite",
+	"browser_bookmarked": "Lesezeichen gesetzt",
 	"browser_challenge": "Die Website will prüfen, ob du ein Mensch bist, bevor sie weitere Seiten zeigt.",
 	"browser_challenge_open": "Website öffnen",
 	"browser_chapter_options": "Optionen für {title}",
 	"browser_chapter_saved": "Kapitel gespeichert",
-	"browser_collect": "Sammeln",
-	"browser_collect_hint": "Blättere im Viewer der Website um; jede Seite wird hinzugefügt.",
-	"browser_collected": [
-		{
-			"declarations": [
-				"input n",
-				"local nPlural = n: plural"
-			],
-			"selectors": [
-				"nPlural"
-			],
-			"match": {
-				"nPlural=one": "{n} Seite gesammelt",
-				"nPlural=other": "{n} Seiten gesammelt"
-			}
-		}
-	],
+	"browser_check_hint": "Bestehe hier die Prüfung der Website und geh dann zurück: Dein Kapitel wartet.",
 	"browser_data_cleared": "Browserdaten gelöscht",
 	"browser_delete_chapter": "Kapitel löschen",
 	"browser_delete_chapter_again": "Zum Löschen samt Übersetzungen erneut tippen",
@@ -62,6 +49,7 @@
 	"browser_edit_save": "Speichern",
 	"browser_edit_series_label": "Serie",
 	"browser_forward": "Vorwärts",
+	"browser_found_more": "Diese Seite hat mehr Seiten, als die App auf einmal öffnen kann. Das sind die ersten.",
 	"browser_found_pages": [
 		{
 			"declarations": [
@@ -77,6 +65,7 @@
 			}
 		}
 	],
+	"browser_menu_add_bookmark": "Lesezeichen für diese Seite",
 	"browser_menu_blocked_count": [
 		{
 			"declarations": [
@@ -95,11 +84,31 @@
 	"browser_menu_blocking_off": "Werbeblocker für {host} ausschalten",
 	"browser_menu_blocking_on": "Werbeblocker für {host} wieder einschalten",
 	"browser_menu_close": "Menü schließen",
+	"browser_menu_home": "Lesezeichen und gespeicherte Kapitel",
 	"browser_menu_label": "Browsermenü",
+	"browser_menu_new_tab": "Neuer Tab",
+	"browser_menu_remove_bookmark": "Lesezeichen entfernen",
 	"browser_menu_settings": "Browser-Einstellungen",
-	"browser_open_button": "Webbrowser öffnen",
+	"browser_new_tab": "Neuer Tab",
+	"browser_open_button": "Neuen Web-Tab öffnen",
+	"browser_open_page": "{title} öffnen",
 	"browser_page_crashed": "Die Seite funktionierte nicht mehr und wurde geschlossen.",
-	"browser_pager_hint": "Dieser Viewer zeigt eine Seite nach der anderen. Nutze die Ansicht aller Seiten der Website, falls es eine gibt, oder Sammeln.",
+	"browser_pages_so_far": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "Bisher {n} Seite",
+				"nPlural=other": "Bisher {n} Seiten"
+			}
+		}
+	],
+	"browser_pages_so_far_hint": "Blättere auf der Website um, jede Seite wird hinzugefügt. Lesen öffnet alle.",
 	"browser_protected": "Dieser Viewer zeichnet seine Seiten selbst, deshalb können sie nicht in der App gelesen werden.",
 	"browser_read": "Lesen",
 	"browser_reload": "Neu laden",
@@ -107,11 +116,12 @@
 	"browser_reopen_other": "Das sind die Seiten deines gespeicherten Kapitels {title}.",
 	"browser_reopen_retrace": "Folge dem Link, über den du {title} erreicht hast…",
 	"browser_reopening": "{title} wird geöffnet…",
-	"browser_saved_chapters": "Gespeicherte Kapitel",
-	"browser_saved_empty": "Kapitel, die du im Reader speicherst, erscheinen hier und öffnen sich wieder mit ihren Übersetzungen.",
+	"browser_save": "Speichern",
+	"browser_saved_empty": "Lesezeichen und gespeicherte Kapitel erscheinen hier. Ein gespeichertes Kapitel öffnet sich wieder mit seinen Übersetzungen.",
 	"browser_saved_progress": "Seite {page} von {total}",
 	"browser_start_body": "Öffne eine Seite, die einen Comic zeigt. Findet die App seine Seiten, erscheint unten eine Leiste: Tippe auf Lesen, um sie im Reader zu öffnen und zu übersetzen.",
 	"browser_start_note": "Von der Website wird nichts behalten: Ihre Seiten bleiben nur, solange du sie liest.",
+	"browser_start_over": "Neu beginnen",
 	"browser_start_title": "Comics aus dem Web lesen",
 	"browser_stop": "Laden stoppen",
 	"browser_unavailable_body": "Der Browser in der App hält seine Cookies und Websitedaten getrennt von den Daten der App, was das Android System WebView auf diesem Gerät noch nicht kann. Aktualisiere es in Google Play und versuche es dann erneut.",
@@ -246,7 +256,7 @@
 	"catalog_hide_search_bar": "Suchleiste ausblenden",
 	"catalog_hide_search_button": "Suchschaltfläche ausblenden",
 	"catalog_import": "+ Importieren",
-	"catalog_import_a_zip_cbz": "Importiere eine .zip-, .cbz-, .cbr- oder .pdf-Datei, um zu starten",
+	"catalog_import_a_zip_cbz": "Importiere eine .zip-, .cbz-, .epub- oder .pdf-Datei, um zu starten",
 	"catalog_imported_totalimported_new_volume": "{totalImported} neue{s} Band{s} importiert",
 	"catalog_initial_story_summary": "Anfängliche Story-Zusammenfassung",
 	"catalog_inside_folder": "In: {folder}",
@@ -1108,7 +1118,7 @@
 	"lang_auto_detect": "Automatisch erkennen",
 	"libraries_add_local": "+ Lokal",
 	"libraries_add_remote": "+ Remote",
-	"libraries_android_hint": "📂 Kopiere Comic-Dateien (.cbz, .zip, .pdf) mit einem Dateimanager oder per USB in den unten angegebenen Ordner deines Geräts und tippe dann auf „Scan“, um sie zu importieren.",
+	"libraries_android_hint": "📂 Kopiere Comic-Dateien (.cbz, .zip, .pdf, .epub) mit einem Dateimanager oder per USB in den unten angegebenen Ordner deines Geräts und tippe dann auf „Scan“, um sie zu importieren.",
 	"libraries_assign_failed": "Autoren konnten nicht zugewiesen werden.",
 	"libraries_assigning": "Wird zugewiesen…",
 	"libraries_authors_done": [
@@ -1132,7 +1142,7 @@
 	"libraries_browser_ad_block_hint": "Blockiert Werbe- und Pop-up-Domains aus EasyList und dem DNS-Filter von AdGuard, die die App bei ihren Herausgebern herunterlädt und wöchentlich aktualisiert.",
 	"libraries_browser_clear": "Browserdaten löschen",
 	"libraries_browser_clear_again": "Zum Löschen erneut tippen",
-	"libraries_browser_clear_hint": "Meldet dich bei Websites ab und entfernt ihre Cookies, ihren Speicher und Cache. Die Daten der App selbst bleiben unberührt.",
+	"libraries_browser_clear_hint": "Meldet dich bei Websites ab, entfernt ihre Cookies, ihren Speicher und Cache und schließt alle Tabs. Lesezeichen, gespeicherte Kapitel und die Daten der App selbst bleiben unberührt.",
 	"libraries_browser_lists_never": "Listen noch nicht heruntergeladen",
 	"libraries_browser_lists_status": "{domains} Domains blockiert · aktualisiert {date}",
 	"libraries_browser_lists_update": "Listen aktualisieren",
@@ -1228,7 +1238,7 @@
 	"model_variant_stock_title": "Standard-Übersetzungsmodell",
 	"notif_cancel": "Abbrechen",
 	"notif_model_active_title": "Lokaler Übersetzer aktiv",
-	"notif_model_channel_description": "Aktiv, während das lokale Hy-MT2-Übersetzungsmodell im Speicher geladen ist",
+	"notif_model_channel_description": "Aktiv, während ein lokales Übersetzungsmodell im Speicher geladen ist",
 	"notif_model_channel_name": "Lokales Übersetzungsmodell",
 	"notif_model_loaded_text": "{model}-Modell geladen",
 	"notif_stop": "Stopp",
@@ -1247,7 +1257,7 @@
 	"onboarding_import_cbz_files_with": "Importiere CBZ-Dateien mit „+ Importieren“, oder kopiere sie in den Comics-Ordner des Geräts und tippe auf „Scannen“. Wenn du Komga, Kavita oder YACReader zu Hause betreibst, verbinde deinen Server unter Einstellungen → Bibliotheken und lies über dein eigenes Netzwerk.",
 	"onboarding_intro_aria": "Einführung in {app}",
 	"onboarding_library_in_grid_view": "Bibliothek in der Rasteransicht mit Bandkarten und einem Ordner",
-	"onboarding_manga_turns_right_to": "Manga blättert automatisch von rechts nach links. Tippe auf die Mitte der Seite für die Steuerung, wähle deinen Seitenumblätterstil im ⋮-Menü des Readers, und wechsle dort für Webtoons zu Langer Streifen. Deine Position in jedem Band wird gespeichert.",
+	"onboarding_manga_turns_right_to": "Seiten blättern anfangs von links nach rechts; wähle für Manga „Von rechts nach links“ im ⋮-Menü des Readers. Tippe auf die Mitte der Seite für die Steuerung, wähle deinen Seitenumblätterstil im selben Menü, und wechsle dort für Webtoons zu Langer Streifen. Deine Position in jedem Band wird gespeichert.",
 	"onboarding_next": "Weiter",
 	"onboarding_paste_the_key_under": "Füge den Schlüssel unter Einstellungen → Übersetzung → Extern ein und wähle ein Modell mit Bildverarbeitung. Das war's.",
 	"onboarding_prefer_that_nothing_ever": "Möchtest du, dass nichts dein Gerät verlässt? Lade stattdessen ein lokales Modell unter Einstellungen → Übersetzung → Lokal herunter. Vollständige Anleitungen findest du unter Einstellungen → Hilfe.",
@@ -1458,7 +1468,7 @@
 	"reader_revision_failed": "Überarbeitung fehlgeschlagen",
 	"reader_save_and_close_overlay": "Overlay-Editor speichern und schließen",
 	"reader_save_chapter": "Kapitel speichern",
-	"reader_save_chapter_hint": "Die Übersetzungen kommen zurück, wenn du es auf der Website wieder liest",
+	"reader_save_chapter_hint": "Es bleibt mit seinen Übersetzungen unter Lesezeichen und gespeicherte Kapitel erhalten",
 	"reader_save_dialog_title": "Dieses Kapitel speichern",
 	"reader_saved": "Gespeichert",
 	"reader_saved_vertical_override_is": "Die gespeicherte vertikale Überschreibung ist inaktiv, solange „Vertikale Ausgangsorientierung beibehalten“ deaktiviert ist.",
@@ -1579,7 +1589,7 @@
 	"settings_display_ui_language": "App-Sprache",
 	"settings_display_ui_language_hint": "Menüs, Einstellungen und Hilfe. Mangas werden weiterhin in die unter Übersetzung gewählte Zielsprache übersetzt.",
 	"settings_display_ui_language_system": "Systemstandard",
-	"settings_display_used_for_volumes_without": "Wird für Bände ohne eigene Leserichtung verwendet. Von rechts nach links ist Standard für Manga. Das Reader-Menü kann dies weiterhin pro Band überschreiben.",
+	"settings_display_used_for_volumes_without": "Wird für Bände ohne eigene Leserichtung verwendet. Von rechts nach links ist Standard für Manga. Unter „Details bearbeiten“ bekommt ein Band seine eigene Richtung.",
 	"settings_display_user_interface": "Benutzeroberfläche",
 	"settings_display_volumes_will_always_open": "Bände öffnen sich immer auf der ersten Seite.",
 	"settings_display_volumes_will_open_to": "Bände öffnen sich auf der letzten gelesenen Seite.",
@@ -1634,7 +1644,7 @@
 	"settings_overlay_sfx_model_needed": "Die Soundeffekt-Erkennung bleibt inaktiv, bis das Modell heruntergeladen ist.",
 	"settings_overlay_text_size_label": "Overlay-Textgröße: {percent}",
 	"settings_overlay_when_enabled_get_full": "Wenn aktiviert, verwendet „Komplett übersetzen“ die PP-OCR-Erkennung und erzeugt automatisch Overlay-Daten für jede Seite. Langsamer, erspart dir aber das manuelle Erstellen von Overlays.",
-	"settings_overlay_when_enabled_translated_text": "Wenn aktiviert, kann übersetzter Text direkt auf der Seite über erkannten Textbereichen angezeigt werden. Nutzt die PP-OCR-Texterkennung (in der App enthalten). Umschalten mit der Overlay-Schaltfläche in der Symbolleiste oder mit der Taste T.",
+	"settings_overlay_when_enabled_translated_text": "Wenn aktiviert, kann übersetzter Text direkt auf der Seite über erkannten Textbereichen angezeigt werden. Nutzt die PP-OCR-Texterkennung, die zu den einmalig heruntergeladenen Vision-Modellen gehört. Umschalten mit dem Augen-Symbol in der oberen Leiste des Readers.",
 	"settings_overlay_when_enabled_vertical_source": "Wenn aktiviert, bleibt vertikaler Quelltext vertikal; Englisch und andere Nicht-CJK-Zielsprachen werden als gedrehte horizontale Blöcke dargestellt. Wenn deaktiviert, sind alle übersetzten Felder horizontal, und gespeicherte vertikale Feld-Überschreibungen bleiben inaktiv.",
 	"settings_saving": "Speichern…",
 	"settings_search_advanced_llm_keywords": "temperatur|maximale token|kontextgröße|erweitert",
@@ -1834,7 +1844,7 @@
 	"settings_translation_fumeto_couldn_t_recognise_2": "Fumeto konnte das Chat-Format dieses Modells nicht erkennen. Gib unten sein Promptformat ein, um es erneut zu versuchen.",
 	"settings_translation_gguf_model": "GGUF-Modell",
 	"settings_translation_hy_mt2_1_8b": "Hy-MT2 1.8B",
-	"settings_translation_hy_mt2_intro": "Hy-MT2 1.8B (1,25-Bit) — schnelle mehrsprachige Übersetzung via llama.cpp. {note}",
+	"settings_translation_hy_mt2_intro": "Läuft über llama.cpp auf deinem Gerät. Die Karte jedes Modells unten sagt, wofür es gedacht ist.",
 	"settings_translation_hy_mt2_is_multilingual": "Hy-MT2 ist mehrsprachig; die automatische Erkennung geht von japanischem Ausgangstext aus.",
 	"settings_translation_hy_mt2_requires_the": "Hy-MT2 benötigt die Android-App mit nativer llama.cpp STQ1_0-Unterstützung.",
 	"settings_translation_include_context_from_other": "Kontext aus anderen Übersetzungen dieser Seite einbeziehen",
@@ -1868,7 +1878,7 @@
 	"settings_translation_model_recommended": "Empfohlen",
 	"settings_translation_model_used_by_the": "Modell für die Übersetzung auf dem Gerät",
 	"settings_translation_more_memory_headroom_is": "— mehr Speicherspielraum wird für Hy-MT2 empfohlen",
-	"settings_translation_needs_a_model_downloaded": "- Benötigt ein heruntergeladenes Modell (462 MB bis ~1,27 GB), plus RAM-Spielraum für die Inferenz",
+	"settings_translation_needs_a_model_downloaded": "- Benötigt ein heruntergeladenes Modell (etwa 448 MB bis 1,27 GB), plus RAM-Spielraum für die Inferenz",
 	"settings_translation_no_api_key_required": "Kein API-Schlüssel erforderlich. Klicke auf Verbinden, um verfügbare Modelle abzurufen.",
 	"settings_translation_no_providers_configured_add": "Keine Anbieter konfiguriert. Füge einen LLM-Anbieter hinzu, um mit dem Übersetzen zu beginnen.",
 	"settings_translation_no_review_revision_pass": "- Kein Überprüfungs-/Revisionsdurchgang (dafür ist ein Cloud-LLM erforderlich)",
@@ -1881,7 +1891,6 @@
 	"settings_translation_on_device_limitations": "On-Device-Einschränkungen",
 	"settings_translation_openai_compatible": "OpenAI-kompatibel",
 	"settings_translation_openrouter": "OpenRouter",
-	"settings_translation_optimized_for_low_memory": "Optimiert für speicherarme mobile Inferenz.",
 	"settings_translation_please_enter_an_api": "Bitte gib zuerst einen API-Schlüssel ein.",
 	"settings_translation_pp_ocrv6": "PP-OCRv6",
 	"settings_translation_pp_ocrv6_medium_detection": "PP-OCRv6 mittlere Erkennung + kleine Texterkennung. Android nutzt die native ONNX Runtime mit optimierten ARM-Kerneln; andere Plattformen und nicht unterstützte Android-Geräte greifen auf WASM zurück. Verwendet während der OCR etwa 81 MB an Modellgewichten.",
@@ -1928,7 +1937,6 @@
 	"settings_translation_use_name_for_translations": "{name} für Übersetzungen verwenden",
 	"settings_translation_use_pipeline": "{pipeline} verwenden",
 	"settings_translation_uses_pp_ocr_text": "Verwendet PP-OCR-Texterkennung. Funktioniert mit jedem Modell.",
-	"settings_translation_uses_the_available_llama": "Verwendet das verfügbare llama.cpp-Backend.",
 	"settings_translation_vision_models": "Vision-Modelle",
 	"settings_translation_vision_models_desc": "Texterkennung, Texterfassung und Sprechblasen-Layout. Einmal heruntergeladen, danach vollständig auf deinem Gerät genutzt.",
 	"settings_translation_vision_models_needed": "Erforderlich, bevor eine Seite übersetzt werden kann, ob auf dem Gerät oder über einen Cloud-Anbieter.",
@@ -2180,6 +2188,7 @@
 	"tabs_long_press_a_comic": "Halte einen Comic in deiner Bibliothek gedrückt und wähle „In neuem Tab öffnen“, um ihn hier zu behalten.",
 	"tabs_no_open_tabs": "Keine offenen Tabs",
 	"tabs_o_zzz": "(￣o￣) zzZ",
+	"tabs_open_count": "{n} geöffnet",
 	"tabs_read_volume": "{title} lesen",
 	"tabs_reading_now": "Wird gerade gelesen",
 	"tabs_refresh_failed_message": "Aktualisierung fehlgeschlagen: {message}",

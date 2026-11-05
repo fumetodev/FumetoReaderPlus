@@ -6,6 +6,7 @@ import type {
 	BookFileRecord,
 	WebChapterRecord,
 	WebSeriesRecord,
+	BrowserTabRecord,
 	PageDimensions,
 	TranslationRegion,
 	Translation,
@@ -175,7 +176,7 @@ async function migrateRetiredOnlineSourceData(tx: import('dexie').Transaction): 
  * The final `this.version(...)` call below uses this constant, and migration
  * tests import it, so adding a version means bumping this in the same change.
  */
-export const CATALOG_DB_VERSION = 21;
+export const CATALOG_DB_VERSION = 22;
 
 /**
  * Renamed from the pre-release codename at 0.7.0. The rename deliberately
@@ -209,6 +210,7 @@ export class FumetoDB extends Dexie {
 	/** v21: saved web chapters (in-app browser) and the series they group under. */
 	web_series!: Table<WebSeriesRecord>;
 	web_chapters!: Table<WebChapterRecord>;
+	browser_tabs!: Table<BrowserTabRecord>;
 
 	constructor() {
 		super(DB_NAME);
@@ -562,9 +564,14 @@ export class FumetoDB extends Dexie {
 		// v21: saved web chapters from the in-app browser. A chapter is recognised by the fingerprints of its pages
 		// (multiEntry), whatever address the site shows it under; its translations live on its volume as usual.
 		// Store creation only; no backfill.
-		this.version(CATALOG_DB_VERSION).stores({
+		this.version(21).stores({
 			web_series: 'id, siteHost',
 			web_chapters: 'volume_uuid, seriesId, *pageFingerprints'
+		});
+
+		// v22: the in-app browser's tabs. Store creation only; no backfill.
+		this.version(CATALOG_DB_VERSION).stores({
+			browser_tabs: 'id, position'
 		});
 
 		// ── Hooks: enforce lowercase tag names ──────────────────────────

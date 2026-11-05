@@ -31,29 +31,16 @@
 	"bridge_unload_failed": "The on-device model could not be unloaded.",
 	"browser_address_label": "Web address or search",
 	"browser_address_placeholder": "Search or type a web address",
+	"browser_already_saved": "Already saved as {title}.",
 	"browser_back": "Back",
+	"browser_back_to_chapter": "Back to the chapter",
 	"browser_back_to_page": "Back to the page",
+	"browser_bookmarked": "Bookmarked",
 	"browser_challenge": "The site wants to check that you're human before it shows more pages.",
 	"browser_challenge_open": "Open the site",
 	"browser_chapter_options": "Options for {title}",
 	"browser_chapter_saved": "Chapter saved",
-	"browser_collect": "Collect",
-	"browser_collect_hint": "Turn the pages in the site's viewer; each one is added.",
-	"browser_collected": [
-		{
-			"declarations": [
-				"input n",
-				"local nPlural = n: plural"
-			],
-			"selectors": [
-				"nPlural"
-			],
-			"match": {
-				"nPlural=one": "{n} page collected",
-				"nPlural=other": "{n} pages collected"
-			}
-		}
-	],
+	"browser_check_hint": "Pass the site's check here, then go back: your chapter is waiting.",
 	"browser_data_cleared": "Browsing data cleared",
 	"browser_delete_chapter": "Delete chapter",
 	"browser_delete_chapter_again": "Tap again to delete it and its translations",
@@ -62,6 +49,7 @@
 	"browser_edit_save": "Save",
 	"browser_edit_series_label": "Series",
 	"browser_forward": "Forward",
+	"browser_found_more": "This page has more pages than the app can open at once. These are the first.",
 	"browser_found_pages": [
 		{
 			"declarations": [
@@ -77,6 +65,7 @@
 			}
 		}
 	],
+	"browser_menu_add_bookmark": "Bookmark this page",
 	"browser_menu_blocked_count": [
 		{
 			"declarations": [
@@ -95,11 +84,31 @@
 	"browser_menu_blocking_off": "Turn off ad blocking for {host}",
 	"browser_menu_blocking_on": "Turn ad blocking back on for {host}",
 	"browser_menu_close": "Close the menu",
+	"browser_menu_home": "Bookmarks and saved chapters",
 	"browser_menu_label": "Browser menu",
+	"browser_menu_new_tab": "New tab",
+	"browser_menu_remove_bookmark": "Remove bookmark",
 	"browser_menu_settings": "Browser settings",
-	"browser_open_button": "Open the web browser",
+	"browser_new_tab": "New tab",
+	"browser_open_button": "Open a new web tab",
+	"browser_open_page": "Open {title}",
 	"browser_page_crashed": "The page stopped working and was closed.",
-	"browser_pager_hint": "This viewer shows one page at a time. Use the site's all-pages view if it has one, or Collect.",
+	"browser_pages_so_far": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} page so far",
+				"nPlural=other": "{n} pages so far"
+			}
+		}
+	],
+	"browser_pages_so_far_hint": "Turn the pages on the site and each is added. Read opens them all.",
 	"browser_protected": "This viewer draws its pages itself, so they can't be read in the app.",
 	"browser_read": "Read",
 	"browser_reload": "Reload",
@@ -107,11 +116,12 @@
 	"browser_reopen_other": "These are the pages of your saved chapter {title}.",
 	"browser_reopen_retrace": "Following the link you reached {title} from…",
 	"browser_reopening": "Opening {title}…",
-	"browser_saved_chapters": "Saved chapters",
-	"browser_saved_empty": "Chapters you save in the reader appear here, and open again with their translations.",
+	"browser_save": "Save",
+	"browser_saved_empty": "Pages you bookmark and chapters you save appear here. A saved chapter opens again with its translations.",
 	"browser_saved_progress": "Page {page} of {total}",
 	"browser_start_body": "Open a page that shows a comic. When the app finds its pages, a bar appears at the bottom: tap Read to open them in the reader and translate them.",
 	"browser_start_note": "Nothing from the site is kept: its pages are held only while you read them.",
+	"browser_start_over": "Start over",
 	"browser_start_title": "Read comics from the web",
 	"browser_stop": "Stop loading",
 	"browser_unavailable_body": "The in-app browser keeps its cookies and site data apart from the app's own, which this phone's Android System WebView can't do yet. Update it in Google Play, then try again.",
@@ -246,7 +256,7 @@
 	"catalog_hide_search_bar": "Hide search bar",
 	"catalog_hide_search_button": "Hide search button",
 	"catalog_import": "+ Import",
-	"catalog_import_a_zip_cbz": "Import a .zip, .cbz, .cbr, or .pdf file to get started",
+	"catalog_import_a_zip_cbz": "Import a .zip, .cbz, .epub, or .pdf file to get started",
 	"catalog_imported_totalimported_new_volume": "Imported {totalImported} new volume{s}",
 	"catalog_initial_story_summary": "Initial Story Summary",
 	"catalog_inside_folder": "Inside: {folder}",
@@ -1108,7 +1118,7 @@
 	"lang_auto_detect": "Auto-detect",
 	"libraries_add_local": "+ Local",
 	"libraries_add_remote": "+ Remote",
-	"libraries_android_hint": "📂 Copy comic files (.cbz, .zip, .pdf) to your device's folder below using a file manager or USB, then tap Scan to import them.",
+	"libraries_android_hint": "📂 Copy comic files (.cbz, .zip, .pdf, .epub) to your device's folder below using a file manager or USB, then tap Scan to import them.",
 	"libraries_assign_failed": "Failed to assign authors.",
 	"libraries_assigning": "Assigning...",
 	"libraries_authors_done": [
@@ -1132,7 +1142,7 @@
 	"libraries_browser_ad_block_hint": "Blocks ad and pop-up domains from EasyList and AdGuard's DNS filter, which the app downloads from their publishers and updates weekly.",
 	"libraries_browser_clear": "Clear browsing data",
 	"libraries_browser_clear_again": "Tap again to clear",
-	"libraries_browser_clear_hint": "Signs you out of sites and removes their cookies, storage and cache. The app's own data is not touched.",
+	"libraries_browser_clear_hint": "Signs you out of sites, removes their cookies, storage and cache, and closes every tab. Bookmarks, saved chapters and the app's own data are not touched.",
 	"libraries_browser_lists_never": "Lists not downloaded yet",
 	"libraries_browser_lists_status": "{domains} domains blocked · updated {date}",
 	"libraries_browser_lists_update": "Update lists",
@@ -1228,7 +1238,7 @@
 	"model_variant_stock_title": "Standard Translation Model",
 	"notif_cancel": "Cancel",
 	"notif_model_active_title": "Local translator active",
-	"notif_model_channel_description": "Active while the local Hy-MT2 translation model is loaded in memory",
+	"notif_model_channel_description": "Active while a local translation model is loaded in memory",
 	"notif_model_channel_name": "Local translation model",
 	"notif_model_loaded_text": "{model} model loaded",
 	"notif_stop": "Stop",
@@ -1247,7 +1257,7 @@
 	"onboarding_import_cbz_files_with": "Import CBZ files with “+ Import”, or copy them into the device’s Comics folder and tap “Scan”. If you run Komga, Kavita, or YACReader at home, connect your server under Settings → Libraries and read over your own network.",
 	"onboarding_intro_aria": "Introduction to {app}",
 	"onboarding_library_in_grid_view": "Library in grid view with volume cards and a folder",
-	"onboarding_manga_turns_right_to": "Manga turns right-to-left automatically. Tap the center of the page for controls, pick your page-turn style in the reader’s ⋮ menu, and switch to Long Strip there for webtoons. Your place in every volume is remembered.",
+	"onboarding_manga_turns_right_to": "Pages turn left to right at first; for manga, pick Right to left in the reader’s ⋮ menu. Tap the center of the page for controls, choose your page-turn style in the same menu, and switch to Long Strip there for webtoons. Your place in every volume is remembered.",
 	"onboarding_next": "Next",
 	"onboarding_paste_the_key_under": "Paste the key under Settings → Translation → Off-Device and pick a vision-capable model. That’s it.",
 	"onboarding_prefer_that_nothing_ever": "Prefer that nothing ever leaves your device? Download an on-device model under Settings → Translation → On-Device instead. Full guides live in Settings → Help.",
@@ -1458,7 +1468,7 @@
 	"reader_revision_failed": "Revision failed",
 	"reader_save_and_close_overlay": "Save and close overlay editor",
 	"reader_save_chapter": "Save chapter",
-	"reader_save_chapter_hint": "Its translations come back when you read it on the site again",
+	"reader_save_chapter_hint": "It stays in Bookmarks and saved chapters, with its translations",
 	"reader_save_dialog_title": "Save this chapter",
 	"reader_saved": "Saved",
 	"reader_saved_vertical_override_is": "Saved Vertical override is dormant while Preserve vertical source orientation is off.",
@@ -1579,7 +1589,7 @@
 	"settings_display_ui_language": "App language",
 	"settings_display_ui_language_hint": "Menus, settings and Help. Manga are still translated into the target language chosen under Translation.",
 	"settings_display_ui_language_system": "System default",
-	"settings_display_used_for_volumes_without": "Used for volumes without their own direction. Right-to-left is standard for manga. The reader menu can still override it per volume.",
+	"settings_display_used_for_volumes_without": "Used for volumes without their own direction. Right-to-left is standard for manga. Edit Details gives a volume its own direction.",
 	"settings_display_user_interface": "User Interface",
 	"settings_display_volumes_will_always_open": "Volumes will always open to the first page.",
 	"settings_display_volumes_will_open_to": "Volumes will open to the last page you were reading.",
@@ -1634,7 +1644,7 @@
 	"settings_overlay_sfx_model_needed": "Sound-effect detection stays inactive until the model is downloaded.",
 	"settings_overlay_text_size_label": "Overlay Text Size: {percent}",
 	"settings_overlay_when_enabled_get_full": "When enabled, \"Get Full Translation\" will use PP-OCR detection and produce overlay data for each page automatically. Slower but saves having to generate overlays manually.",
-	"settings_overlay_when_enabled_translated_text": "When enabled, translated text can be displayed directly on the page over detected text regions. Uses PP-OCR text detection (bundled with app). Toggle with the Overlay button in the toolbar or press T.",
+	"settings_overlay_when_enabled_translated_text": "When enabled, translated text can be displayed directly on the page over detected text regions. Uses PP-OCR text detection, part of the vision models the app downloads once. Toggle with the eye button in the reader's top bar.",
 	"settings_overlay_when_enabled_vertical_source": "When enabled, vertical source text stays vertical; English and other non-CJK targets render as rotated horizontal blocks. When off, every translated box is horizontal and saved Vertical box overrides remain dormant.",
 	"settings_saving": "Saving…",
 	"settings_search_advanced_llm_keywords": "temperature|max tokens|context size|advanced",
@@ -1834,7 +1844,7 @@
 	"settings_translation_fumeto_couldn_t_recognise_2": "Fumeto couldn't recognise this model's chat format. Enter its prompt format below to try again.",
 	"settings_translation_gguf_model": "GGUF model",
 	"settings_translation_hy_mt2_1_8b": "Hy-MT2 1.8B",
-	"settings_translation_hy_mt2_intro": "Hy-MT2 1.8B (1.25-bit) — fast multilingual translation via llama.cpp. {note}",
+	"settings_translation_hy_mt2_intro": "Runs on your device through llama.cpp. Each model's card below says what it is for.",
 	"settings_translation_hy_mt2_is_multilingual": "Hy-MT2 is multilingual; Auto-Detect assumes Japanese source text.",
 	"settings_translation_hy_mt2_requires_the": "Hy-MT2 requires the Android app with llama.cpp STQ1_0 native support.",
 	"settings_translation_include_context_from_other": "Include context from other translations on this page",
@@ -1868,7 +1878,7 @@
 	"settings_translation_model_recommended": "Recommended",
 	"settings_translation_model_used_by_the": "Model used for on-device translation",
 	"settings_translation_more_memory_headroom_is": "— more memory headroom is recommended for Hy-MT2",
-	"settings_translation_needs_a_model_downloaded": "- Needs a model downloaded (462 MB to ~1.27 GB), plus RAM headroom for inference",
+	"settings_translation_needs_a_model_downloaded": "- Needs a model downloaded (about 448 MB to 1.27 GB), plus RAM headroom for inference",
 	"settings_translation_no_api_key_required": "No API key required. Click Connect to fetch available models.",
 	"settings_translation_no_providers_configured_add": "No providers configured. Add an LLM provider to start translating.",
 	"settings_translation_no_review_revision_pass": "- No review/revision pass (cloud LLM required for review)",
@@ -1881,7 +1891,6 @@
 	"settings_translation_on_device_limitations": "On-Device Limitations",
 	"settings_translation_openai_compatible": "OpenAI Compatible",
 	"settings_translation_openrouter": "OpenRouter",
-	"settings_translation_optimized_for_low_memory": "Optimized for low-memory mobile inference.",
 	"settings_translation_please_enter_an_api": "Please enter an API key first.",
 	"settings_translation_pp_ocrv6": "PP-OCRv6",
 	"settings_translation_pp_ocrv6_medium_detection": "PP-OCRv6 medium detection + small recognition. Android uses native ONNX Runtime with optimized ARM kernels; other platforms and unsupported Android devices fall back to WASM. Uses about 81 MB of model weights during OCR.",
@@ -1928,7 +1937,6 @@
 	"settings_translation_use_name_for_translations": "Use {name} for translations",
 	"settings_translation_use_pipeline": "Use {pipeline}",
 	"settings_translation_uses_pp_ocr_text": "Uses PP-OCR text extraction. Works with any model.",
-	"settings_translation_uses_the_available_llama": "Uses the available llama.cpp backend.",
 	"settings_translation_vision_models": "Vision models",
 	"settings_translation_vision_models_desc": "Text detection, text recognition and speech-balloon layout. Downloaded once, then used entirely on your device.",
 	"settings_translation_vision_models_needed": "Needed before any page can be translated, on device or through a cloud provider.",
@@ -2180,6 +2188,7 @@
 	"tabs_long_press_a_comic": "Long-press a comic in your Library and choose Open in New Tab to keep it here.",
 	"tabs_no_open_tabs": "No open tabs",
 	"tabs_o_zzz": "(￣o￣) zzZ",
+	"tabs_open_count": "{n} open",
 	"tabs_read_volume": "Read {title}",
 	"tabs_reading_now": "Reading now",
 	"tabs_refresh_failed_message": "Refresh failed: {message}",

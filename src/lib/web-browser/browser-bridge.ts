@@ -8,6 +8,8 @@
 
 interface BrowserNativeBridge {
 	isAvailable(): boolean;
+	selectTab(id: string): void;
+	closeTab(id: string): void;
 	show(rectJson: string): void;
 	setRect(rectJson: string): void;
 	hide(): void;
@@ -58,16 +60,21 @@ export interface BrowserListsStatus {
 	lists: { name: string; url: string; updatedAt: number; bytes: number }[];
 }
 
-/** Everything the browser reports. `finder` and `link` carry page data: validate before use (`finder-report.ts`). */
-export type BrowserEvent =
-	| ({ type: 'nav' } & BrowserNavState)
+/**
+ * Everything the browser reports, each from the tab it names. `finder` and `link` carry page data: validate before use
+ * (`finder-report.ts`). `backExhausted`: a page would not let Back leave it and has nothing before it.
+ */
+export type BrowserEvent = { tab: string } & (
+	| ({ type: 'nav'; newDocument?: boolean } & BrowserNavState)
 	| { type: 'progress'; progress: number }
 	| { type: 'finder'; data: unknown; url: string }
 	| { type: 'link'; data: unknown; url: string }
 	| { type: 'blocked'; count: number }
 	| { type: 'popupDenied' }
 	| { type: 'icon'; host: string; png: string }
-	| { type: 'crashed' };
+	| { type: 'backExhausted' }
+	| { type: 'crashed'; hidden?: boolean; url?: string }
+);
 
 /** Why a page image could not be fetched; `challenge` means the site wants the person to pass a check first. */
 export type PageFetchFailure = 'challenge' | 'not-image' | 'too-large' | 'network' | 'cancelled' | 'bad-path' | 'bad-url' | 'io' | `http:${number}`;
@@ -169,6 +176,13 @@ const rectJson = (rect: BrowserRect) =>
 	JSON.stringify({ x: rect.x, y: rect.y, w: Math.max(0, rect.w), h: Math.max(0, rect.h) });
 
 export const browserNative = {
+	/** Everything below goes to the tab selected last. */
+	selectTab(id: string): void {
+		bridge()?.selectTab(id);
+	},
+	closeTab(id: string): void {
+		bridge()?.closeTab(id);
+	},
 	show(rect: BrowserRect): void {
 		bridge()?.show(rectJson(rect));
 	},

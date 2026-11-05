@@ -31,28 +31,16 @@
 	"bridge_unload_failed": "Model di perangkat tidak dapat dilepas muat.",
 	"browser_address_label": "Alamat web atau penelusuran",
 	"browser_address_placeholder": "Telusuri atau ketik alamat web",
+	"browser_already_saved": "Sudah disimpan sebagai {title}.",
 	"browser_back": "Kembali",
+	"browser_back_to_chapter": "Kembali ke bab",
 	"browser_back_to_page": "Kembali ke halaman",
+	"browser_bookmarked": "Ditandai",
 	"browser_challenge": "Situs ingin memastikan Anda manusia sebelum menampilkan halaman lain.",
 	"browser_challenge_open": "Buka situs",
 	"browser_chapter_options": "Opsi untuk {title}",
 	"browser_chapter_saved": "Bab disimpan",
-	"browser_collect": "Kumpulkan",
-	"browser_collect_hint": "Balik halaman di penampil situs; setiap halaman ditambahkan.",
-	"browser_collected": [
-		{
-			"declarations": [
-				"input n",
-				"local nPlural = n: plural"
-			],
-			"selectors": [
-				"nPlural"
-			],
-			"match": {
-				"nPlural=other": "{n} halaman dikumpulkan"
-			}
-		}
-	],
+	"browser_check_hint": "Lewati pemeriksaan situs di sini, lalu kembali: bab Anda menunggu.",
 	"browser_data_cleared": "Data penjelajahan dihapus",
 	"browser_delete_chapter": "Hapus bab",
 	"browser_delete_chapter_again": "Ketuk lagi untuk menghapusnya beserta terjemahannya",
@@ -61,6 +49,7 @@
 	"browser_edit_save": "Simpan",
 	"browser_edit_series_label": "Seri",
 	"browser_forward": "Maju",
+	"browser_found_more": "Halaman ini punya lebih banyak halaman daripada yang bisa dibuka aplikasi sekaligus. Ini yang pertama.",
 	"browser_found_pages": [
 		{
 			"declarations": [
@@ -75,6 +64,7 @@
 			}
 		}
 	],
+	"browser_menu_add_bookmark": "Tandai halaman ini",
 	"browser_menu_blocked_count": [
 		{
 			"declarations": [
@@ -92,11 +82,30 @@
 	"browser_menu_blocking_off": "Matikan pemblokir iklan untuk {host}",
 	"browser_menu_blocking_on": "Nyalakan lagi pemblokir iklan untuk {host}",
 	"browser_menu_close": "Tutup menu",
+	"browser_menu_home": "Markah dan bab tersimpan",
 	"browser_menu_label": "Menu peramban",
+	"browser_menu_new_tab": "Tab baru",
+	"browser_menu_remove_bookmark": "Hapus markah",
 	"browser_menu_settings": "Pengaturan peramban",
-	"browser_open_button": "Buka peramban web",
+	"browser_new_tab": "Tab baru",
+	"browser_open_button": "Buka tab web baru",
+	"browser_open_page": "Buka {title}",
 	"browser_page_crashed": "Halaman berhenti berfungsi dan ditutup.",
-	"browser_pager_hint": "Penampil ini menampilkan satu halaman setiap kali. Gunakan tampilan semua halaman situs jika ada, atau Kumpulkan.",
+	"browser_pages_so_far": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=other": "{n} halaman sejauh ini"
+			}
+		}
+	],
+	"browser_pages_so_far_hint": "Balik halaman di situs dan masing-masing ditambahkan. Baca membuka semuanya.",
 	"browser_protected": "Penampil ini menggambar halamannya sendiri, jadi halamannya tidak bisa dibaca di aplikasi.",
 	"browser_read": "Baca",
 	"browser_reload": "Muat ulang",
@@ -104,11 +113,12 @@
 	"browser_reopen_other": "Ini halaman-halaman bab tersimpan Anda {title}.",
 	"browser_reopen_retrace": "Mengikuti tautan yang membawa Anda ke {title}…",
 	"browser_reopening": "Membuka {title}…",
-	"browser_saved_chapters": "Bab tersimpan",
-	"browser_saved_empty": "Bab yang Anda simpan di pembaca muncul di sini dan terbuka lagi dengan terjemahannya.",
+	"browser_save": "Simpan",
+	"browser_saved_empty": "Markah dan bab yang Anda simpan muncul di sini. Bab tersimpan terbuka lagi dengan terjemahannya.",
 	"browser_saved_progress": "Halaman {page} dari {total}",
 	"browser_start_body": "Buka halaman yang menampilkan komik. Saat aplikasi menemukan halamannya, bilah muncul di bawah: ketuk Baca untuk membukanya di pembaca dan menerjemahkannya.",
 	"browser_start_note": "Tidak ada yang disimpan dari situs: halamannya hanya disimpan selama Anda membacanya.",
+	"browser_start_over": "Mulai ulang",
 	"browser_start_title": "Baca komik dari web",
 	"browser_stop": "Hentikan pemuatan",
 	"browser_unavailable_body": "Peramban dalam aplikasi menyimpan cookie dan data situsnya terpisah dari data aplikasi, yang belum bisa dilakukan Android System WebView di ponsel ini. Perbarui di Google Play, lalu coba lagi.",
@@ -241,7 +251,7 @@
 	"catalog_hide_search_bar": "Sembunyikan bilah pencarian",
 	"catalog_hide_search_button": "Sembunyikan tombol pencarian",
 	"catalog_import": "+ Impor",
-	"catalog_import_a_zip_cbz": "Impor berkas .zip, .cbz, .cbr, atau .pdf untuk memulai",
+	"catalog_import_a_zip_cbz": "Impor berkas .zip, .cbz, .epub, atau .pdf untuk memulai",
 	"catalog_imported_totalimported_new_volume": "Mengimpor {totalImported} volume baru{s}",
 	"catalog_initial_story_summary": "Ringkasan Awal Cerita",
 	"catalog_inside_folder": "Di dalam: {folder}",
@@ -1090,7 +1100,7 @@
 	"lang_auto_detect": "Deteksi otomatis",
 	"libraries_add_local": "+ Lokal",
 	"libraries_add_remote": "+ Jarak Jauh",
-	"libraries_android_hint": "📂 Salin berkas komik (.cbz, .zip, .pdf) ke folder perangkat Anda di bawah ini menggunakan pengelola berkas atau USB, lalu ketuk Pindai untuk mengimpornya.",
+	"libraries_android_hint": "📂 Salin berkas komik (.cbz, .zip, .pdf, .epub) ke folder perangkat Anda di bawah ini menggunakan pengelola berkas atau USB, lalu ketuk Pindai untuk mengimpornya.",
 	"libraries_assign_failed": "Gagal menetapkan penulis.",
 	"libraries_assigning": "Menetapkan...",
 	"libraries_authors_done": [
@@ -1113,7 +1123,7 @@
 	"libraries_browser_ad_block_hint": "Memblokir domain iklan dan pop-up dari EasyList dan filter DNS AdGuard, yang diunduh aplikasi dari penerbitnya dan diperbarui setiap minggu.",
 	"libraries_browser_clear": "Hapus data penjelajahan",
 	"libraries_browser_clear_again": "Ketuk lagi untuk menghapus",
-	"libraries_browser_clear_hint": "Mengeluarkan Anda dari situs dan menghapus cookie, penyimpanan, dan cache-nya. Data aplikasi sendiri tidak disentuh.",
+	"libraries_browser_clear_hint": "Mengeluarkan Anda dari situs, menghapus cookie, penyimpanan, dan cache-nya, serta menutup semua tab. Markah, bab tersimpan, dan data aplikasi sendiri tidak disentuh.",
 	"libraries_browser_lists_never": "Daftar belum diunduh",
 	"libraries_browser_lists_status": "{domains} domain diblokir · diperbarui {date}",
 	"libraries_browser_lists_update": "Perbarui daftar",
@@ -1207,7 +1217,7 @@
 	"model_variant_stock_title": "Model Terjemahan Standar",
 	"notif_cancel": "Batal",
 	"notif_model_active_title": "Penerjemah lokal aktif",
-	"notif_model_channel_description": "Aktif selagi model terjemahan Hy-MT2 lokal dimuat dalam memori",
+	"notif_model_channel_description": "Aktif selagi model terjemahan lokal dimuat dalam memori",
 	"notif_model_channel_name": "Model terjemahan lokal",
 	"notif_model_loaded_text": "Model {model} dimuat",
 	"notif_stop": "Hentikan",
@@ -1226,7 +1236,7 @@
 	"onboarding_import_cbz_files_with": "Impor berkas CBZ dengan \"+ Impor\", atau salin ke folder Comics perangkat dan ketuk \"Pindai\". Jika Anda menjalankan Komga, Kavita, atau YACReader di rumah, hubungkan server Anda di Pengaturan → Pustaka dan baca melalui jaringan Anda sendiri.",
 	"onboarding_intro_aria": "Pengantar untuk {app}",
 	"onboarding_library_in_grid_view": "Pustaka dalam tampilan kisi dengan kartu volume dan folder",
-	"onboarding_manga_turns_right_to": "Manga berputar dari kanan ke kiri secara otomatis. Ketuk bagian tengah halaman untuk kontrol, pilih gaya pembalikan halaman di menu ⋮ pembaca, dan beralih ke Long Strip di sana untuk webtoon. Posisi Anda di setiap volume akan diingat.",
+	"onboarding_manga_turns_right_to": "Halaman awalnya berganti dari kiri ke kanan; untuk manga, pilih Kanan ke kiri di menu ⋮ pembaca. Ketuk bagian tengah halaman untuk kontrol, pilih gaya pembalikan halaman di menu yang sama, dan beralih ke Long Strip di sana untuk webtoon. Posisi Anda di setiap volume akan diingat.",
 	"onboarding_next": "Lanjut",
 	"onboarding_paste_the_key_under": "Tempel kunci di Pengaturan → Terjemahan → Luar Perangkat dan pilih model yang mendukung visi. Selesai.",
 	"onboarding_prefer_that_nothing_ever": "Lebih suka tidak ada data yang keluar dari perangkat Anda? Unduh model dalam perangkat di Pengaturan → Terjemahan → Dalam Perangkat. Panduan lengkap tersedia di Pengaturan → Bantuan.",
@@ -1436,7 +1446,7 @@
 	"reader_revision_failed": "Revisi gagal",
 	"reader_save_and_close_overlay": "Simpan dan tutup editor lapisan",
 	"reader_save_chapter": "Simpan bab",
-	"reader_save_chapter_hint": "Terjemahannya kembali saat Anda membacanya lagi di situs",
+	"reader_save_chapter_hint": "Bab tetap ada di Markah dan bab tersimpan, beserta terjemahannya",
 	"reader_save_dialog_title": "Simpan bab ini",
 	"reader_saved": "Tersimpan",
 	"reader_saved_vertical_override_is": "Penggantian Vertikal tersimpan tidak aktif selama Pertahankan orientasi sumber vertikal dimatikan.",
@@ -1556,7 +1566,7 @@
 	"settings_display_ui_language": "Bahasa aplikasi",
 	"settings_display_ui_language_hint": "Menu, pengaturan, dan Bantuan. Manga tetap diterjemahkan ke bahasa target yang dipilih di Terjemahan.",
 	"settings_display_ui_language_system": "Default sistem",
-	"settings_display_used_for_volumes_without": "Digunakan untuk volume tanpa arah khusus. Kanan ke kiri adalah standar untuk manga. Menu pembaca tetap dapat mengubahnya per volume.",
+	"settings_display_used_for_volumes_without": "Digunakan untuk volume tanpa arah khusus. Kanan ke kiri adalah standar untuk manga. Edit Detail memberi volume arahnya sendiri.",
 	"settings_display_user_interface": "Antarmuka Pengguna",
 	"settings_display_volumes_will_always_open": "Volume akan selalu terbuka ke halaman pertama.",
 	"settings_display_volumes_will_open_to": "Volume akan terbuka ke halaman terakhir yang Anda baca.",
@@ -1610,7 +1620,7 @@
 	"settings_overlay_sfx_model_needed": "Deteksi efek suara tetap nonaktif sampai modelnya diunduh.",
 	"settings_overlay_text_size_label": "Ukuran Teks Lapisan: {percent}",
 	"settings_overlay_when_enabled_get_full": "Jika diaktifkan, \"Terjemahkan seluruh volume\" akan menggunakan deteksi PP-OCR dan menghasilkan data lapisan untuk setiap halaman secara otomatis. Lebih lambat, tetapi menghemat pembuatan lapisan secara manual.",
-	"settings_overlay_when_enabled_translated_text": "Jika diaktifkan, teks terjemahan dapat ditampilkan langsung di halaman di atas area teks yang terdeteksi. Menggunakan deteksi teks PP-OCR (disertakan dengan aplikasi). Aktifkan/nonaktifkan dengan tombol Lapisan di bilah alat atau tekan T.",
+	"settings_overlay_when_enabled_translated_text": "Jika diaktifkan, teks terjemahan dapat ditampilkan langsung di halaman di atas area teks yang terdeteksi. Menggunakan deteksi teks PP-OCR, bagian dari model visi yang diunduh aplikasi sekali saja. Aktifkan/nonaktifkan dengan tombol mata di bilah atas pembaca.",
 	"settings_overlay_when_enabled_vertical_source": "Jika diaktifkan, teks sumber vertikal tetap vertikal; bahasa Inggris dan target non-CJK lainnya ditampilkan sebagai blok horizontal yang diputar. Jika dinonaktifkan, setiap kotak terjemahan bersifat horizontal dan penggantian kotak Vertikal yang tersimpan tetap tidak aktif.",
 	"settings_saving": "Menyimpan…",
 	"settings_search_advanced_llm_keywords": "suhu|token maksimum|ukuran konteks|lanjutan",
@@ -1809,7 +1819,7 @@
 	"settings_translation_fumeto_couldn_t_recognise_2": "Fumeto tidak dapat mengenali format chat model ini. Masukkan format perintahnya di bawah untuk mencoba lagi.",
 	"settings_translation_gguf_model": "Model GGUF",
 	"settings_translation_hy_mt2_1_8b": "Hy-MT2 1.8B",
-	"settings_translation_hy_mt2_intro": "Hy-MT2 1.8B (1.25-bit) — terjemahan multibahasa cepat melalui llama.cpp. {note}",
+	"settings_translation_hy_mt2_intro": "Berjalan di perangkat Anda melalui llama.cpp. Kartu setiap model di bawah menjelaskan kegunaannya.",
 	"settings_translation_hy_mt2_is_multilingual": "Hy-MT2 bersifat multibahasa; Deteksi Otomatis mengasumsikan teks sumber berbahasa Jepang.",
 	"settings_translation_hy_mt2_requires_the": "Hy-MT2 membutuhkan aplikasi Android dengan dukungan native llama.cpp STQ1_0.",
 	"settings_translation_include_context_from_other": "Sertakan konteks dari terjemahan lain di halaman ini",
@@ -1843,7 +1853,7 @@
 	"settings_translation_model_recommended": "Direkomendasikan",
 	"settings_translation_model_used_by_the": "Model yang digunakan untuk terjemahan di perangkat",
 	"settings_translation_more_memory_headroom_is": "— ruang memori lebih besar direkomendasikan untuk Hy-MT2",
-	"settings_translation_needs_a_model_downloaded": "- Membutuhkan model yang diunduh (462 MB hingga ~1.27 GB), ditambah ruang RAM untuk inferensi",
+	"settings_translation_needs_a_model_downloaded": "- Membutuhkan model yang diunduh (sekitar 448 MB hingga 1.27 GB), ditambah ruang RAM untuk inferensi",
 	"settings_translation_no_api_key_required": "Tidak perlu kunci API. Klik Hubungkan untuk mengambil model yang tersedia.",
 	"settings_translation_no_providers_configured_add": "Tidak ada penyedia yang dikonfigurasi. Tambahkan penyedia LLM untuk mulai menerjemahkan.",
 	"settings_translation_no_review_revision_pass": "- Tidak ada tahap tinjauan/revisi (LLM cloud diperlukan untuk tinjauan)",
@@ -1856,7 +1866,6 @@
 	"settings_translation_on_device_limitations": "Batasan Dalam Perangkat",
 	"settings_translation_openai_compatible": "Kompatibel OpenAI",
 	"settings_translation_openrouter": "OpenRouter",
-	"settings_translation_optimized_for_low_memory": "Dioptimalkan untuk inferensi seluler dengan memori rendah.",
 	"settings_translation_please_enter_an_api": "Masukkan kunci API terlebih dahulu.",
 	"settings_translation_pp_ocrv6": "PP-OCRv6",
 	"settings_translation_pp_ocrv6_medium_detection": "PP-OCRv6 deteksi menengah + pengenalan kecil. Android menggunakan ONNX Runtime native dengan kernel ARM yang dioptimalkan; platform lain dan perangkat Android yang tidak didukung akan menggunakan WASM sebagai cadangan. Menggunakan sekitar 81 MB bobot model selama OCR.",
@@ -1903,7 +1912,6 @@
 	"settings_translation_use_name_for_translations": "Gunakan {name} untuk terjemahan",
 	"settings_translation_use_pipeline": "Gunakan {pipeline}",
 	"settings_translation_uses_pp_ocr_text": "Menggunakan ekstraksi teks PP-OCR. Berfungsi dengan model apa pun.",
-	"settings_translation_uses_the_available_llama": "Menggunakan backend llama.cpp yang tersedia.",
 	"settings_translation_vision_models": "Model visi",
 	"settings_translation_vision_models_desc": "Deteksi teks, pengenalan teks, dan tata letak balon bicara. Diunduh sekali, lalu digunakan sepenuhnya di perangkat Anda.",
 	"settings_translation_vision_models_needed": "Diperlukan sebelum halaman apa pun dapat diterjemahkan, baik di perangkat maupun melalui penyedia cloud.",
@@ -2145,6 +2153,7 @@
 	"tabs_long_press_a_comic": "Tekan lama sebuah komik di Pustaka Anda dan pilih Buka di tab baru untuk menyimpannya di sini.",
 	"tabs_no_open_tabs": "Tidak ada tab yang terbuka",
 	"tabs_o_zzz": "(￣o￣) zzZ",
+	"tabs_open_count": "{n} terbuka",
 	"tabs_read_volume": "Baca {title}",
 	"tabs_reading_now": "Sedang dibaca",
 	"tabs_refresh_failed_message": "Penyegaran gagal: {message}",

@@ -12,6 +12,7 @@
 	import { settingsDraft as draft } from './settings-state.svelte.js';
 	import { BROWSER_SEARCH_ENGINES, isBrowserSearchEngine, searchEngineName } from '$lib/web-browser/address.js';
 	import { browserAvailable, browserNative, type BrowserListsStatus } from '$lib/web-browser/browser-bridge.js';
+	import { closeAllBrowserTabs } from '$lib/web-browser/browser-controller.js';
 
 	let lists = $state<BrowserListsStatus | null>(null);
 	let updating = $state(false);
@@ -46,6 +47,7 @@
 		clearArmed = false;
 		clearing = true;
 		try {
+			await closeAllBrowserTabs();
 			if (await browserNative.clearData()) pushToast({ message: { code: 'browser_data_cleared' } });
 		} finally {
 			clearing = false;

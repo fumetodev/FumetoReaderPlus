@@ -16,6 +16,7 @@ import { browserNative, PageFetchError } from '$lib/web-browser/browser-bridge.j
 import { pageFetched } from '$lib/web-browser/web-chapter-store.js';
 import { webPageUnavailable, webPageUnreconciled } from '$lib/web-browser/web-page-gate.js';
 import { sha256Bytes } from '$lib/overlay-layout/canonical.js';
+import { tooManyPixels } from './image-size.js';
 import {
 	throwIfPageRequestCancelled,
 	type PageRequestOptions,
@@ -27,7 +28,10 @@ const LANE = 'web-page-fetch';
 const MAX_CACHED_PAGES = 40;
 
 const cache = new Map<string, Blob>();
-const inFlight = new Map<string, Promise<Blob>>();
+/** Chapters closed since the last launch: their queued fetches do nothing, and what is under way is stopped. */
+const closed = new Set<string>();
+/** The fetches under way, per chapter, so its close can stop them. */
+const running = new Map<string, Set<AbortController>>();
 
 /**
  * The volume whose page a site refused until the person passes a check in the browser (a Cloudflare challenge).
@@ -67,7 +71,14 @@ async function pagesFolder(volumeUuid: string): Promise<string> {
 
 /** Forgets a chapter's pages and deletes its temporary folder. */
 export async function discardWebChapterPages(volumeUuid: string): Promise<void> {
+	closed.add(volumeUuid);
+	for (const stop of running.get(volumeUuid) ?? []) stop.abort();
 	for (const key of [...cache.keys()]) if (key.startsWith(`${volumeUuid}:`)) cache.delete(key);
+	await removePagesFolder(volumeUuid);
+	webChallenge.update((challenge) => (challenge?.volumeUuid === volumeUuid ? null : challenge));
+}
+
+async function removePagesFolder(volumeUuid: string): Promise<void> {
 	try {
 		await remove(await pagesFolder(volumeUuid), { recursive: true });
 	} catch {
@@ -80,16 +91,13 @@ export async function discardWebChapterPages(volumeUuid: string): Promise<void> 
  * nothing is fetched twice.
  */
 export async function adoptWebChapterPages(from: string, to: string): Promise<void> {
+	closed.delete(to);
 	for (const [key, blob] of [...cache.entries()]) {
 		if (!key.startsWith(`${from}:`)) continue;
 		cache.delete(key);
 		cache.set(`${to}:${key.slice(from.length + 1)}`, blob);
 	}
-	try {
-		await remove(await pagesFolder(to), { recursive: true });
-	} catch {
-		// Nothing of the saved chapter was on disk.
-	}
+	await removePagesFolder(to);
 	try {
 		await rename(await pagesFolder(from), await pagesFolder(to));
 	} catch {
@@ -130,19 +138,25 @@ export class WebPageSource implements PageSource {
 		if (cached) {
 			remember(key, cached);
 			// Kept from before the chapter was reopened (its batch went on): reconciled as a fetched page is.
-			if (webPageUnreconciled(this.volumeUuid, index)) {
-				await pageFetched(this.volumeUuid, index, await sha256Bytes(await cached.arrayBuffer()), this.pageUrls.length);
-			}
+			if (webPageUnreconciled(this.volumeUuid, index)) await this.reconcile(index, await cached.arrayBuffer());
 			return cached;
 		}
-		let pending = inFlight.get(key);
-		if (!pending) {
-			pending = this.fetch(index, url, key).finally(() => inFlight.delete(key));
-			inFlight.set(key, pending);
-		}
-		const blob = await pending;
+		const blob = await this.fetch(index, url, key);
 		throwIfPageRequestCancelled(options.signal);
 		return blob;
+	}
+
+	/**
+	 * Fingerprints a page and squares it with what the chapter has stored. A failure here costs the page its stored
+	 * translation, never the image; whoever waits on the page is told nothing is known about it.
+	 */
+	private async reconcile(index: number, bytes: ArrayBuffer | Uint8Array): Promise<void> {
+		try {
+			await pageFetched(this.volumeUuid, index, await sha256Bytes(bytes), this.pageUrls.length);
+		} catch (error) {
+			console.warn('[web-page-source] Could not reconcile a page with the saved chapter:', error);
+			webPageUnavailable(this.volumeUuid, index);
+		}
 	}
 
 	/** The page's temporary copy, if this chapter fetched it before: a long chapter outgrows the memory cache. */
@@ -165,25 +179,53 @@ export class WebPageSource implements PageSource {
 			priority: this.purpose === 'reader' ? 0 : this.purpose === 'preview' ? 2 : 1,
 			coalescingKey: `web-page:${key}`,
 			operation: async ({ signal }) => {
-				const kept = await this.fromDisk(index);
-				if (kept) {
-					await pageFetched(this.volumeUuid, index, await sha256Bytes(await kept.arrayBuffer()), this.pageUrls.length);
-					remember(key, kept);
-					return kept;
-				}
-				let fetched: { mime: string };
+				if (closed.has(this.volumeUuid)) throw new PageFetchError('cancelled');
+				const stop = new AbortController();
+				const stopOnAbort = () => stop.abort();
+				signal.addEventListener('abort', stopOnAbort, { once: true });
+				const fetches = running.get(this.volumeUuid) ?? new Set<AbortController>();
+				running.set(this.volumeUuid, fetches);
+				fetches.add(stop);
 				try {
-					fetched = await browserNative.fetchPage(url, this.pageUrl, `${this.volumeUuid}/${index}`, signal);
-				} catch (error) {
-					if (error instanceof PageFetchError && error.code === 'challenge') webChallenge.set({ volumeUuid: this.volumeUuid });
-					throw error;
+					const kept = await this.fromDisk(index);
+					if (kept) {
+						if (closed.has(this.volumeUuid)) throw new PageFetchError('cancelled');
+						await this.reconcile(index, await kept.arrayBuffer());
+						if (closed.has(this.volumeUuid)) throw new PageFetchError('cancelled');
+						remember(key, kept);
+						return kept;
+					}
+					let fetched: { mime: string };
+					try {
+						fetched = await browserNative.fetchPage(url, this.pageUrl, `${this.volumeUuid}/${index}`, stop.signal);
+					} catch (error) {
+						if (error instanceof PageFetchError && error.code === 'challenge') webChallenge.set({ volumeUuid: this.volumeUuid });
+						throw error;
+					}
+					if (closed.has(this.volumeUuid)) throw new PageFetchError('cancelled');
+					const file = await join(await pagesFolder(this.volumeUuid), String(index));
+					const bytes = await readFile(file);
+					if (closed.has(this.volumeUuid)) throw new PageFetchError('cancelled');
+					// Refused before anything tries to decode it: that takes the app's own renderer down with it.
+					if (tooManyPixels(bytes)) {
+						await remove(file).catch(() => undefined);
+						throw new PageFetchError('too-large');
+					}
+					// The page's fingerprint, as the overlay pipeline takes it: how a saved chapter knows its pages.
+					await this.reconcile(index, bytes);
+					if (closed.has(this.volumeUuid)) throw new PageFetchError('cancelled');
+					// A page arrived: whatever check the site wanted has been passed.
+					webChallenge.update((challenge) => (challenge?.volumeUuid === this.volumeUuid ? null : challenge));
+					const blob = new Blob([bytes], { type: fetched.mime });
+					remember(key, blob);
+					return blob;
+				} finally {
+					signal.removeEventListener('abort', stopOnAbort);
+					fetches.delete(stop);
+					if (fetches.size === 0) running.delete(this.volumeUuid);
+					// The chapter closed while the page was on its way: what the native fetch wrote since goes too.
+					if (closed.has(this.volumeUuid)) await removePagesFolder(this.volumeUuid);
 				}
-				const bytes = await readFile(await join(await pagesFolder(this.volumeUuid), String(index)));
-				// The page's fingerprint, as the overlay pipeline takes it: how a saved chapter knows its pages.
-				await pageFetched(this.volumeUuid, index, await sha256Bytes(bytes), this.pageUrls.length);
-				const blob = new Blob([bytes], { type: fetched.mime });
-				remember(key, blob);
-				return blob;
 			}
 		}).promise.catch((error: unknown) => {
 			webPageUnavailable(this.volumeUuid, index);

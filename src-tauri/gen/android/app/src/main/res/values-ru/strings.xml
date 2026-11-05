@@ -3,7 +3,7 @@
 <resources>
     <string name="notif_cancel">Отмена</string>
     <string name="notif_model_active_title">Локальный переводчик активен</string>
-    <string name="notif_model_channel_description">Активен, когда локальная модель перевода Hy-MT2 загружена в память</string>
+    <string name="notif_model_channel_description">Активен, когда локальная модель перевода загружена в память</string>
     <string name="notif_model_channel_name">Локальная модель перевода</string>
     <string name="notif_model_loaded_text">Модель %1$s загружена</string>
     <string name="notif_stop">Стоп</string>

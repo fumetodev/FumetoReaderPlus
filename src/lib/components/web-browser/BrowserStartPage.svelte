@@ -1,13 +1,15 @@
 <script lang="ts">
 	/**
-	 * The browser's start page: the chapters the person saved, by series, each opened again through its site
-	 * (`reopenSavedChapter`). No page image is shown or kept — a chapter is a placeholder with its site's icon.
-	 * A long press edits a chapter: its title, the series it is filed under, or deleting it with its translations.
+	 * A tab's start page: the pages the person bookmarked and the chapters they saved, by series, each chapter opened
+	 * again with its translations (`reopenSavedChapter`). No page image is shown or kept — a chapter is a placeholder with
+	 * its site's icon. A long press edits a chapter: its title, the series it is filed under, or deleting it with its
+	 * translations.
 	 */
 	import * as m from '$lib/paraglide/messages.js';
 	import Icon from '$lib/components/ui/Icon.svelte';
-	import { onMount } from 'svelte';
-	import { browserNav, hasPage, reopenSavedChapter, showStartPage } from '$lib/web-browser/browser-controller.js';
+	import { onDestroy, onMount } from 'svelte';
+	import { appView } from '$lib/stores/reader-state.js';
+	import { bookmarks, browserNav, browserPageWaiting, browserTransientClose, closeStartPage, hasPage, navigate, removeBookmark, reopenSavedChapter } from '$lib/web-browser/browser-controller.js';
 	import {
 		deleteSavedChapter,
 		editSavedChapter,
@@ -30,6 +32,29 @@
 
 	onMount(() => {
 		void refresh();
+	});
+
+	// This page stays mounted while the reader is open (the browser's screen is kept alive), so a chapter saved there,
+	// or how far it was read, must be picked up on the way back. A bookmark made on another tab shows up the same way.
+	let wasShown = false;
+	$effect(() => {
+		void $bookmarks;
+		const shown = $appView === 'browser';
+		if (shown && (!wasShown || loadedOnce)) void refresh();
+		wasShown = shown;
+	});
+
+	// Back closes the dialog first, before anything behind it.
+	const closeEditor = () => {
+		editing = null;
+	};
+	$effect(() => {
+		if (!editing) return;
+		browserTransientClose.set(closeEditor);
+		return () => browserTransientClose.set(null);
+	});
+	onDestroy(() => {
+		if (editing) browserTransientClose.set(null);
 	});
 
 	function progress(view: SavedChapterView): string | null {
@@ -77,26 +102,33 @@
 </script>
 
 <div class="h-full overflow-y-auto px-4 pb-6 pt-4" data-browser-start>
-	{#if hasPage($browserNav)}
-		<button type="button" class="mb-3 flex h-10 items-center gap-1 rounded-full px-2 text-sm text-primary-300 active:bg-surface-800" onclick={() => showStartPage.set(false)}>
+	{#if hasPage($browserNav) || $browserPageWaiting}
+		<button type="button" class="mb-3 flex h-10 items-center gap-1 rounded-full px-2 text-sm text-primary-300 active:bg-surface-800" onclick={closeStartPage}>
 			<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
 			{m.browser_back_to_page()}
 		</button>
 	{/if}
 
 	{#if groups.length > 0}
-		<h2 class="mb-3 text-lg font-semibold text-surface-100">{m.browser_saved_chapters()}</h2>
+		<h2 class="mb-3 text-lg font-semibold text-surface-100">{m.browser_menu_home()}</h2>
 		<div class="space-y-5">
 			{#each groups as group (group.series.id)}
 				<section>
-					<div class="mb-1.5 flex items-center gap-2">
-						{#if group.series.icon}
-							<img src={`data:image/png;base64,${group.series.icon}`} alt="" class="h-4 w-4 rounded-sm" />
-						{:else}
-							<span class="text-surface-500" aria-hidden="true"><Icon name="globe" size={16} /></span>
+					<div class="mb-1.5 flex items-center gap-1">
+						<button type="button" class="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl px-1 text-left active:bg-surface-800" aria-label={m.browser_open_page({ title: group.series.title })} onclick={() => navigate(group.series.seriesUrl)} data-browser-series>
+							{#if group.series.icon}
+								<img src={`data:image/png;base64,${group.series.icon}`} alt="" class="h-4 w-4 rounded-sm" />
+							{:else}
+								<span class="text-surface-500" aria-hidden="true"><Icon name="globe" size={16} /></span>
+							{/if}
+							<h3 class="min-w-0 truncate text-sm font-semibold text-surface-200">{group.series.title}</h3>
+							<span class="shrink-0 text-[11px] text-surface-500">{group.series.siteHost}</span>
+						</button>
+						{#if group.series.bookmarked}
+							<button type="button" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-primary-300 active:bg-surface-800" aria-label={m.browser_menu_remove_bookmark()} onclick={() => void removeBookmark(group.series.seriesUrl)} data-browser-remove-bookmark>
+								<Icon name="star" size={18} />
+							</button>
 						{/if}
-						<h3 class="min-w-0 truncate text-sm font-semibold text-surface-200">{group.series.title}</h3>
-						<span class="shrink-0 text-[11px] text-surface-500">{group.series.siteHost}</span>
 					</div>
 					<ul class="space-y-1">
 						{#each group.chapters as view (view.chapter.volume_uuid)}

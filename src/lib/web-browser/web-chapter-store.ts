@@ -62,7 +62,7 @@ export async function pageFetched(volumeUuid: string, index: number, fingerprint
 	prints[index] = fingerprint;
 	seen.set(volumeUuid, prints);
 	if (!(await saved()).has(volumeUuid)) return webPageReconciled(volumeUuid, index);
-	await db.transaction('rw', db.web_chapters, db.page_translations, async () => {
+	await db.transaction('rw', db.web_chapters, db.page_translations, db.regions, db.translations, async () => {
 		const chapter = await db.web_chapters.get(volumeUuid);
 		if (!chapter) return;
 		const stored = [...chapter.pageFingerprints];
@@ -71,23 +71,35 @@ export async function pageFetched(volumeUuid: string, index: number, fingerprint
 		// A translation names its image; one that does not is of the image the chapter knew at its position.
 		const imageOf = (t: PageTranslation) => translationFingerprint(t) ?? stored[t.page_index] ?? '';
 		const here = rows.filter((t) => t.page_index === index);
-		const away = new Map<string, PageTranslation[]>();
+		const spots = new Map<string, number>();
+		const spotFor = (image: string): number => {
+			let spot = spots.get(image);
+			if (spot === undefined) {
+				spot = Math.max(stored.length, pageCount);
+				while (stored.length < spot) stored.push('');
+				stored.push(image);
+				spots.set(image, spot);
+			}
+			return spot;
+		};
 		for (const t of here) {
 			const image = imageOf(t);
-			if (image && image !== fingerprint) away.set(image, [...(away.get(image) ?? []), t]);
+			if (image && image !== fingerprint) await moveTranslation(t, spotFor(image));
 		}
-		for (const [image, list] of away) {
-			const spot = Math.max(stored.length, pageCount);
-			while (stored.length < spot) stored.push('');
-			stored.push(image);
-			for (const t of list) await moveTranslation(t, spot);
-		}
+		// Drawn regions name no image: they are of the image the chapter knew at their position.
+		const previous = stored[index];
+		if (previous && (await pageHasRegions(volumeUuid, index))) await moveRegions(volumeUuid, index, spotFor(previous));
+		const from = stored.findIndex((print, i) => i !== index && print === fingerprint && prints[i] !== fingerprint);
+		if (from >= 0) await moveRegions(volumeUuid, from, index);
 		if (!here.some((t) => imageOf(t) === fingerprint)) {
 			for (const t of rows) {
-				if (t.page_index !== index && imageOf(t) === fingerprint) await moveTranslation(t, index);
+				if (t.page_index === index || imageOf(t) !== fingerprint) continue;
+				// This image is shown there as well, on this very visit (a credits page at both ends): both keep it.
+				if (prints[t.page_index] === fingerprint) await copyTranslation(t, index);
+				else await moveTranslation(t, index);
 			}
 		}
-		for (let i = 0; i < stored.length; i++) if (i !== index && stored[i] === fingerprint) stored[i] = '';
+		for (let i = 0; i < stored.length; i++) if (i !== index && stored[i] === fingerprint && prints[i] !== fingerprint) stored[i] = '';
 		while (stored.length <= index) stored.push('');
 		stored[index] = fingerprint;
 		await db.web_chapters.update(volumeUuid, { pageFingerprints: stored });
@@ -106,6 +118,22 @@ async function moveTranslation(t: PageTranslation, to: number): Promise<void> {
 	t.id = id;
 	t.page_index = to;
 	await db.page_translations.put({ ...t });
+}
+
+async function copyTranslation(t: PageTranslation, to: number): Promise<void> {
+	const batchRow = `vol_trans_${t.volume_uuid}_`;
+	const id = t.id.startsWith(batchRow) ? `${batchRow}${to}` : randomUUID();
+	await db.page_translations.put({ ...t, id, page_index: to });
+}
+
+async function pageHasRegions(volumeUuid: string, index: number): Promise<boolean> {
+	return (await db.regions.where('[volume_uuid+page_index]').equals([volumeUuid, index]).count()) > 0
+		|| (await db.translations.where('[volume_uuid+page_index]').equals([volumeUuid, index]).count()) > 0;
+}
+
+async function moveRegions(volumeUuid: string, from: number, to: number): Promise<void> {
+	await db.regions.where('[volume_uuid+page_index]').equals([volumeUuid, from]).modify({ page_index: to });
+	await db.translations.where('[volume_uuid+page_index]').equals([volumeUuid, from]).modify({ page_index: to });
 }
 
 function translationFingerprint(t: PageTranslation): string | null {
@@ -141,6 +169,13 @@ export async function findSavedChapter(fingerprints: string[], pageCount: number
 	return ranked[0].chapter;
 }
 
+/** Whether what was fetched at these positions is the images the chapter knows there: two of them, or all it knows. */
+export function chapterShows(chapter: WebChapterRecord, fingerprints: string[], positions: number[]): boolean {
+	if (positions.length === 0) return false;
+	const same = positions.filter((index) => !!fingerprints[index] && fingerprints[index] === chapter.pageFingerprints[index]).length;
+	return same >= Math.min(2, positions.length);
+}
+
 export interface SaveDetails {
 	chapterTitle: string;
 	seriesTitle: string;
@@ -171,6 +206,33 @@ export async function saveWebChapter(volume: VolumeMetadata, details: SaveDetail
 	await db.web_chapters.put(record);
 	(await saved()).add(volume.volume_uuid);
 	return record;
+}
+
+/** The addresses of the pages bookmarked. */
+export async function bookmarkedAddresses(): Promise<Set<string>> {
+	return new Set((await db.web_series.toArray()).filter((s) => s.bookmarked).map((s) => s.seriesUrl));
+}
+
+/**
+ * Bookmarks a page, or takes the bookmark off. A bookmark is a series with no need of a saved chapter: a chapter later
+ * saved from a page of the same name files under it. A series with chapters stays when its bookmark goes.
+ */
+export async function setBookmark(on: boolean, page: { url: string; title: string; siteHost: string; icon?: string }): Promise<void> {
+	if (on) {
+		const rows = await db.web_series.where('siteHost').equals(page.siteHost).toArray();
+		if (rows.some((s) => s.bookmarked && s.seriesUrl === page.url)) return;
+		// Pages of one site often share a title, so another bookmark of that name is another page. A series of that name
+		// nobody has bookmarked yet is this page's.
+		const name = page.title.trim() || page.siteHost;
+		const series = rows.find((s) => !s.bookmarked && s.title.toLocaleLowerCase() === name.toLocaleLowerCase());
+		if (series) await db.web_series.update(series.id, { bookmarked: true, seriesUrl: page.url });
+		else await db.web_series.put({ id: randomUUID(), siteHost: page.siteHost, title: name, seriesUrl: page.url, icon: page.icon, createdAt: new Date().toISOString(), bookmarked: true });
+		return;
+	}
+	for (const series of await db.web_series.toArray()) {
+		if (series.bookmarked && series.seriesUrl === page.url) await db.web_series.update(series.id, { bookmarked: false });
+	}
+	await dropEmptySeries();
 }
 
 async function seriesFor(siteHost: string, title: string, seriesUrl: string, icon?: string): Promise<WebSeriesRecord> {
@@ -213,7 +275,7 @@ export async function deleteSavedChapter(volumeUuid: string): Promise<void> {
 
 async function dropEmptySeries(): Promise<void> {
 	const used = new Set(await db.web_chapters.orderBy('seriesId').uniqueKeys());
-	const empty = (await db.web_series.toCollection().primaryKeys()).filter((id) => !used.has(id));
+	const empty = (await db.web_series.toArray()).filter((s) => !used.has(s.id) && !s.bookmarked).map((s) => s.id);
 	if (empty.length) await db.web_series.bulkDelete(empty);
 }
 
@@ -227,7 +289,7 @@ export interface SavedSeriesView {
 	chapters: SavedChapterView[];
 }
 
-/** Every saved chapter, by series, most recently opened first. */
+/** Every saved chapter, by series, most recently opened first; a bookmarked page may have none. */
 export async function listSavedChapters(): Promise<SavedSeriesView[]> {
 	const [series, chapters] = await Promise.all([db.web_series.toArray(), db.web_chapters.toArray()]);
 	const volumes = new Map(
@@ -239,15 +301,15 @@ export async function listSavedChapters(): Promise<SavedSeriesView[]> {
 		list.push({ chapter, volume: volumes.get(chapter.volume_uuid) });
 		bySeries.set(chapter.seriesId, list);
 	}
-	const latest = (list: SavedChapterView[]) => list.reduce((m, c) => (c.chapter.lastOpenedAt > m ? c.chapter.lastOpenedAt : m), '');
+	const latest = (s: SavedSeriesView) => s.chapters.reduce((m, c) => (c.chapter.lastOpenedAt > m ? c.chapter.lastOpenedAt : m), s.series.createdAt);
 	return series
-		.filter((s) => bySeries.has(s.id))
+		.filter((s) => bySeries.has(s.id) || s.bookmarked)
 		.map((s) => ({
 			series: s,
 			chapters: (bySeries.get(s.id) ?? []).sort((a, b) =>
 				a.chapter.title.localeCompare(b.chapter.title, undefined, { numeric: true }))
 		}))
-		.sort((a, b) => latest(b.chapters).localeCompare(latest(a.chapters)));
+		.sort((a, b) => latest(b).localeCompare(latest(a)));
 }
 
 /** A saved chapter's interrupted batch (it resumes when the chapter is opened again, never at launch). */

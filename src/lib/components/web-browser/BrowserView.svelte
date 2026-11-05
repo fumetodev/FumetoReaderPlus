@@ -3,22 +3,29 @@
 	 * The in-app browser's screen. The web page itself is a native WebView laid over the `page` rectangle below
 	 * (`browser/BrowserHost.kt`); everything else here is the app's: the toolbar, the start page, and the bar that
 	 * offers to read the comic pages the page finder found. Nothing of the app's can draw over the native page, so
-	 * the menu swaps it for a still image while it is open (`coverBrowser`).
+	 * the menu swaps it for a still image while it is open (`coverBrowser`). What it shows is the tab selected last.
 	 */
 	import * as m from '$lib/paraglide/messages.js';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import BrowserStartPage from './BrowserStartPage.svelte';
+	import SaveChapterDialog from './SaveChapterDialog.svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import { appView } from '$lib/stores/reader-state.js';
 	import { settings } from '$lib/settings/settings.js';
+	import { pushToast } from '$lib/stores/toasts.js';
 	import { settingsInitialAnchor, settingsInitialTab, settingsLoading, settingsReturnView, settingsViewMounted } from '$lib/stores/ui-state.js';
 	import { browserNative } from '$lib/web-browser/browser-bridge.js';
 	import { displayAddress, resolveBrowserInput } from '$lib/web-browser/address.js';
+	import { chapterAwaitingCheck, returnToChapter } from '$lib/web-browser/web-chapter.js';
+	import type { SaveDetails } from '$lib/web-browser/web-chapter-store.js';
 	import {
 		blockedOnPage,
+		bookmarks,
 		browserCovered,
 		browserNav,
+		browserNavigating,
+		browserPageWaiting,
 		browserProgress,
 		browserSnapshot,
 		collectedPages,
@@ -27,15 +34,21 @@
 		hasPage,
 		hostOf,
 		navigate,
+		openNewBrowserTab,
+		openStartPage,
+		pageBack,
 		pagesToRead,
 		browserTransientClose,
 		cancelReopen,
+		closeStartPage,
 		reopening,
+		saveDefaultsForPage,
+		saveFound,
 		showStartPage,
 		readPages,
-		startCollecting,
-		stopCollecting,
-		toggleBlockingForSite
+		startOverCollecting,
+		toggleBlockingForSite,
+		toggleBookmark
 	} from '$lib/web-browser/browser-controller.js';
 
 	interface Props {
@@ -50,6 +63,9 @@
 	let draft = $state('');
 	let menuOpen = $state(false);
 	let opening = $state(false);
+	let saving = $state(false);
+	let saveDialog = $state<SaveDetails | null>(null);
+	let menuChanging = false;
 
 	const loaded = $derived(hasPage($browserNav));
 	const showNative = $derived(active && loaded && !$browserCovered && !$showStartPage);
@@ -59,6 +75,7 @@
 	const collecting = $derived($collectedPages);
 	const loading = $derived($browserProgress < 100);
 	const toRead = $derived(pagesToRead(collecting, report));
+	const bookmarked = $derived($bookmarks.has($browserNav.url));
 
 	function pageRect() {
 		const r = pageEl?.getBoundingClientRect();
@@ -97,6 +114,12 @@
 		browserNative.hide();
 	});
 
+	// The menu covers the page with a still image of it, which belongs to this screen as it is now.
+	$effect(() => {
+		if (!active && menuOpen) void setMenu(false);
+		if (!active && saveDialog) closeSaveDialog();
+	});
+
 	function beginEditing(): void {
 		draft = $browserNav.url;
 		editing = true;
@@ -108,17 +131,52 @@
 		const url = resolveBrowserInput(draft, $settings.browserSearchEngine);
 		editing = false;
 		inputEl?.blur();
+		void setMenu(false);
 		if (url) navigate(url);
 	}
 
 	const closeMenu = () => void setMenu(false);
 
 	async function setMenu(open: boolean): Promise<void> {
-		if (open === menuOpen) return;
-		if (open) await coverBrowser(true);
-		menuOpen = open;
-		browserTransientClose.set(open ? closeMenu : null);
-		if (!open) await coverBrowser(false);
+		if (open === menuOpen || menuChanging) return;
+		menuChanging = true;
+		try {
+			if (open) await coverBrowser(true);
+			menuOpen = open;
+			browserTransientClose.set(open ? closeMenu : null);
+			if (!open) await coverBrowser(false);
+		} finally {
+			menuChanging = false;
+		}
+	}
+
+	async function openSaveDialog(): Promise<void> {
+		const details = saveDefaultsForPage();
+		if (!details) return;
+		await coverBrowser(true);
+		saveDialog = details;
+		browserTransientClose.set(closeSaveDialog);
+	}
+
+	function closeSaveDialog(): void {
+		saveDialog = null;
+		browserTransientClose.set(null);
+		void coverBrowser(false);
+	}
+
+	async function saveChapter(chapterTitle: string, seriesTitle: string): Promise<void> {
+		const details = saveDialog;
+		closeSaveDialog();
+		if (!details) return;
+		saving = true;
+		try {
+			await saveFound(toRead, { ...details, chapterTitle, seriesTitle });
+		} catch (error) {
+			console.warn('[browser] Could not save the pages found:', error);
+			pushToast({ message: m.reader_failed_to_load_volume(), tone: 'error' });
+		} finally {
+			saving = false;
+		}
 	}
 
 	function openBrowserSettings(): void {
@@ -135,6 +193,9 @@
 		opening = true;
 		try {
 			await readPages(toRead);
+		} catch (error) {
+			console.warn('[browser] Could not open the pages found:', error);
+			pushToast({ message: m.reader_failed_to_load_volume(), tone: 'error' });
 		} finally {
 			opening = false;
 		}
@@ -153,8 +214,8 @@
 			type="button"
 			class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-surface-200 active:bg-surface-800 disabled:text-surface-600"
 			aria-label={m.browser_back()}
-			disabled={!$browserNav.canGoBack}
-			onclick={() => browserNative.back()}
+			disabled={$showStartPage ? !loaded && !$browserPageWaiting : !loaded}
+			onclick={$showStartPage ? closeStartPage : pageBack}
 		>
 			<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
 		</button>
@@ -216,7 +277,7 @@
 
 	<!-- The page. The native browser sits exactly over this element. -->
 	<div bind:this={pageEl} class="relative min-h-0 flex-1 overflow-hidden" data-browser-page>
-		{#if !loaded || $showStartPage}
+		{#if (!loaded && !$browserNavigating) || $showStartPage}
 			<BrowserStartPage />
 		{:else if $browserCovered && $browserSnapshot}
 			<img src={$browserSnapshot} alt="" class="h-full w-full object-cover object-top" draggable="false" />
@@ -225,17 +286,25 @@
 		{#if menuOpen}
 			<button type="button" class="absolute inset-0 bg-black/30" aria-label={m.browser_menu_close()} onclick={() => void setMenu(false)}></button>
 			<div class="absolute right-2 top-1 w-72 max-w-[calc(100%-1rem)] overflow-hidden rounded-2xl bg-surface-container-high shadow-dock" role="menu" data-browser-menu>
+				<button type="button" role="menuitem" class="block w-full px-4 py-3 text-left text-sm text-surface-100 active:bg-surface-700" onclick={() => { void setMenu(false); openNewBrowserTab(); }} data-browser-menu-new-tab>
+					{m.browser_menu_new_tab()}
+				</button>
+				{#if loaded}
+					<button type="button" role="menuitem" class="block w-full border-t border-surface-700 px-4 py-3 text-left text-sm text-surface-100 active:bg-surface-700" onclick={() => { void toggleBookmark(); void setMenu(false); }} data-browser-menu-bookmark>
+						{bookmarked ? m.browser_menu_remove_bookmark() : m.browser_menu_add_bookmark()}
+					</button>
+				{/if}
+				<button type="button" role="menuitem" class="block w-full border-t border-surface-700 px-4 py-3 text-left text-sm text-surface-100 active:bg-surface-700" onclick={() => { openStartPage(); void setMenu(false); }} data-browser-menu-saved>
+					{m.browser_menu_home()}
+				</button>
 				{#if loaded && host}
-					<button type="button" role="menuitem" class="block w-full px-4 py-3 text-left text-sm text-surface-100 active:bg-surface-700" onclick={() => { toggleBlockingForSite(); void setMenu(false); }}>
+					<button type="button" role="menuitem" class="block w-full border-t border-surface-700 px-4 py-3 text-left text-sm text-surface-100 active:bg-surface-700" onclick={() => { toggleBlockingForSite(); void setMenu(false); }}>
 						{blockingOff ? m.browser_menu_blocking_on({ host }) : m.browser_menu_blocking_off({ host })}
 					</button>
 					{#if $settings.browserAdBlock && !blockingOff}
 						<p class="px-4 pb-2 text-[11px] text-surface-500">{m.browser_menu_blocked_count({ n: $blockedOnPage })}</p>
 					{/if}
 				{/if}
-				<button type="button" role="menuitem" class="block w-full border-t border-surface-700 px-4 py-3 text-left text-sm text-surface-100 active:bg-surface-700" onclick={() => { showStartPage.set(true); void setMenu(false); }} data-browser-menu-saved>
-					{m.browser_saved_chapters()}
-				</button>
 				{#if $browserNav.canGoForward}
 					<button type="button" role="menuitem" class="block w-full border-t border-surface-700 px-4 py-3 text-left text-sm text-surface-100 active:bg-surface-700" onclick={() => { browserNative.forward(); void setMenu(false); }}>
 						{m.browser_forward()}
@@ -265,30 +334,50 @@
 		</div>
 	{/if}
 
+	<!-- A chapter waiting in the reader while the person passes the site's check -->
+	{#if $chapterAwaitingCheck}
+		<div class="flex min-h-14 shrink-0 items-center gap-2 border-t border-surface-800 px-3 py-2" role="status" data-browser-check-bar>
+			<p class="min-w-0 flex-1 text-xs text-surface-200">{m.browser_check_hint()}</p>
+			<button type="button" class="h-10 shrink-0 rounded-full bg-primary-600 px-4 text-xs font-semibold text-white active:bg-primary-700" onclick={returnToChapter} data-browser-back-to-chapter>{m.browser_back_to_chapter()}</button>
+		</div>
+	{/if}
+
 	<!-- What the page finder found -->
-	{#if loaded && !$showStartPage && (collecting || (report && report.kind !== 'none'))}
+	{#if loaded && !$showStartPage && !$chapterAwaitingCheck && (collecting || (report && report.kind !== 'none'))}
 		<div class="flex min-h-14 shrink-0 items-center gap-2 border-t border-surface-800 px-3 py-2" data-browser-found-bar>
 			<span class="shrink-0 text-primary-300" aria-hidden="true"><Icon name="library" size={20} /></span>
 			{#if collecting}
+				<!-- A viewer that shows some pages at a time: they are gathered as the person turns them. -->
 				<div class="min-w-0 flex-1">
-					<p class="text-sm font-medium text-surface-100">{m.browser_collected({ n: toRead.length })}</p>
-					<p class="truncate text-[11px] text-surface-500">{m.browser_collect_hint()}</p>
+					<p class="text-sm font-medium text-surface-100">{m.browser_pages_so_far({ n: toRead.length })}</p>
+					<p class="line-clamp-2 text-[11px] text-surface-500">{m.browser_pages_so_far_hint()}</p>
 				</div>
-				<button type="button" class="h-10 shrink-0 rounded-full px-3 text-xs font-semibold text-surface-300 active:bg-surface-800" onclick={stopCollecting}>{m.common_cancel()}</button>
-				<button type="button" class="h-10 shrink-0 rounded-full bg-primary-600 px-4 text-xs font-semibold text-white active:bg-primary-700 disabled:opacity-50" disabled={toRead.length === 0 || opening} onclick={() => void read()}>{m.browser_read()}</button>
+				{#if toRead.length > 1}
+					<button type="button" class="h-10 shrink-0 rounded-full px-3 text-xs font-semibold text-surface-300 active:bg-surface-800" onclick={startOverCollecting} data-browser-start-over>{m.browser_start_over()}</button>
+				{/if}
+				<button type="button" class="h-10 shrink-0 rounded-full bg-primary-600 px-4 text-xs font-semibold text-white active:bg-primary-700 disabled:opacity-50" disabled={toRead.length === 0 || opening} onclick={() => void read()} data-browser-read>{m.browser_read()}</button>
 			{:else if report?.kind === 'protected'}
 				<p class="min-w-0 flex-1 text-xs text-surface-300">{m.browser_protected()}</p>
 			{:else if report}
 				<div class="min-w-0 flex-1">
 					<p class="text-sm font-medium text-surface-100">{m.browser_found_pages({ n: toRead.length })}</p>
-					{#if report.pager || report.kind === 'single'}
-						<p class="line-clamp-2 text-[11px] text-surface-500">{m.browser_pager_hint()}</p>
+					{#if report.more}
+						<p class="line-clamp-2 text-[11px] text-surface-500">{m.browser_found_more()}</p>
 					{/if}
 				</div>
-				<button type="button" class="h-10 shrink-0 rounded-full px-3 text-xs font-semibold text-primary-300 active:bg-surface-800" onclick={startCollecting} data-browser-collect>{m.browser_collect()}</button>
+				<button type="button" class="h-10 shrink-0 rounded-full px-3 text-xs font-semibold text-primary-300 active:bg-surface-800 disabled:opacity-50" disabled={saving} onclick={() => void openSaveDialog()} data-browser-save>{m.browser_save()}</button>
 				<button type="button" class="h-10 shrink-0 rounded-full bg-primary-600 px-4 text-xs font-semibold text-white active:bg-primary-700 disabled:opacity-50" disabled={opening} onclick={() => void read()} data-browser-read>{m.browser_read()}</button>
 			{/if}
 		</div>
+	{/if}
+
+	{#if saveDialog}
+		<SaveChapterDialog
+			chapterTitle={saveDialog.chapterTitle}
+			seriesTitle={saveDialog.seriesTitle}
+			onsave={(chapter, series) => void saveChapter(chapter, series)}
+			onclose={closeSaveDialog}
+		/>
 	{/if}
 
 	<!-- Room for the floating dock: the page ends where the dock begins. -->

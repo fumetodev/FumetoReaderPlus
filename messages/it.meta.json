@@ -154,15 +154,30 @@
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-02T21:04:55.935Z"
 	},
+	"browser_already_saved": {
+		"sourceHash": "ebe7adeef85cc983",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-04T21:38:17.247Z"
+	},
 	"browser_back": {
 		"sourceHash": "7ceade8f25b58fe9",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-02T21:04:55.935Z"
 	},
+	"browser_back_to_chapter": {
+		"sourceHash": "93e7e192f6c3c404",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-04T21:38:17.247Z"
+	},
 	"browser_back_to_page": {
 		"sourceHash": "70050b1de5ea448c",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-03T00:53:58.745Z"
+	},
+	"browser_bookmarked": {
+		"sourceHash": "4c33d12748b27f9f",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-04T21:38:17.247Z"
 	},
 	"browser_challenge": {
 		"sourceHash": "823939de9cdbb1d6",
@@ -184,20 +199,10 @@
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-03T00:53:58.745Z"
 	},
-	"browser_collect": {
-		"sourceHash": "384276591ee5baad",
+	"browser_check_hint": {
+		"sourceHash": "96411b3940321855",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
-		"draftedAt": "2026-11-02T21:04:55.935Z"
-	},
-	"browser_collect_hint": {
-		"sourceHash": "0809766391ee87fa",
-		"model": "claude-opus-5.5 (in-session, hand-drafted)",
-		"draftedAt": "2026-11-02T21:04:55.935Z"
-	},
-	"browser_collected": {
-		"sourceHash": "fd7b1db6feade758",
-		"model": "claude-opus-5.5 (in-session, hand-drafted)",
-		"draftedAt": "2026-11-02T21:04:55.935Z"
+		"draftedAt": "2026-11-04T21:38:17.247Z"
 	},
 	"browser_data_cleared": {
 		"sourceHash": "d8656a7c0ba3f564",
@@ -239,10 +244,20 @@
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-02T21:04:55.935Z"
 	},
+	"browser_found_more": {
+		"sourceHash": "fbe204505839b4bc",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-04T21:38:17.247Z"
+	},
 	"browser_found_pages": {
 		"sourceHash": "85d19f0f70f0db56",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-02T21:04:55.935Z"
+	},
+	"browser_menu_add_bookmark": {
+		"sourceHash": "d7bb07514cf0c59c",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-04T21:38:17.247Z"
 	},
 	"browser_menu_blocked_count": {
 		"sourceHash": "e986a38892c14ea9",
@@ -264,30 +279,60 @@
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-02T21:04:55.935Z"
 	},
+	"browser_menu_home": {
+		"sourceHash": "11b1c31051df4b30",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-04T21:38:17.247Z"
+	},
 	"browser_menu_label": {
 		"sourceHash": "2424236c39f03c7f",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-02T21:04:55.935Z"
+	},
+	"browser_menu_new_tab": {
+		"sourceHash": "5d055b09422598af",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-04T21:38:17.247Z"
+	},
+	"browser_menu_remove_bookmark": {
+		"sourceHash": "5afaf60c9075340e",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-04T21:38:17.247Z"
 	},
 	"browser_menu_settings": {
 		"sourceHash": "02e25d3c4f80d2d2",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-02T21:04:55.935Z"
 	},
-	"browser_open_button": {
-		"sourceHash": "41eb0b065cb6d687",
+	"browser_new_tab": {
+		"sourceHash": "5d055b09422598af",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
-		"draftedAt": "2026-11-02T21:04:55.935Z"
+		"draftedAt": "2026-11-04T21:38:17.247Z"
+	},
+	"browser_open_button": {
+		"sourceHash": "2d0c05aa1e157a68",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-04T21:38:17.247Z"
+	},
+	"browser_open_page": {
+		"sourceHash": "2ff02ed91f54235c",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-04T21:38:17.247Z"
 	},
 	"browser_page_crashed": {
 		"sourceHash": "643f35f497b55adf",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-02T21:04:55.935Z"
 	},
-	"browser_pager_hint": {
-		"sourceHash": "91dc491c04e9b610",
+	"browser_pages_so_far": {
+		"sourceHash": "c8dcd3989d21d436",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
-		"draftedAt": "2026-11-02T21:04:55.935Z"
+		"draftedAt": "2026-11-04T21:38:17.247Z"
+	},
+	"browser_pages_so_far_hint": {
+		"sourceHash": "cc04111eacaea82b",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-04T21:38:17.247Z"
 	},
 	"browser_protected": {
 		"sourceHash": "6d7247f2ca1326ba",
@@ -324,15 +369,15 @@
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-03T00:53:58.745Z"
 	},
-	"browser_saved_chapters": {
-		"sourceHash": "308e7ccd6db71dc7",
+	"browser_save": {
+		"sourceHash": "c1db83d165ed908a",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
-		"draftedAt": "2026-11-03T00:53:58.745Z"
+		"draftedAt": "2026-11-04T21:38:17.247Z"
 	},
 	"browser_saved_empty": {
-		"sourceHash": "d037add1d445f99f",
+		"sourceHash": "0152b806986b238a",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
-		"draftedAt": "2026-11-03T00:53:58.745Z"
+		"draftedAt": "2026-11-04T21:38:17.247Z"
 	},
 	"browser_saved_progress": {
 		"sourceHash": "f18963cb82cfef7a",
@@ -348,6 +393,11 @@
 		"sourceHash": "420018b1e5550475",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-02T21:04:55.935Z"
+	},
+	"browser_start_over": {
+		"sourceHash": "ca7e25a7dce565cf",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-04T21:38:17.247Z"
 	},
 	"browser_start_title": {
 		"sourceHash": "896d11097d325bbf",
@@ -745,9 +795,9 @@
 		"draftedAt": "2026-08-27T23:53:32.692Z"
 	},
 	"catalog_import_a_zip_cbz": {
-		"sourceHash": "10d6a2f398fb5d18",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-27T23:53:32.692Z"
+		"sourceHash": "8a596509508bcb16",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-05T05:10:06.779Z"
 	},
 	"catalog_imported_totalimported_new_volume": {
 		"sourceHash": "e134f634eba537c1",
@@ -3905,9 +3955,9 @@
 		"draftedAt": "2026-08-27T23:57:25.005Z"
 	},
 	"libraries_android_hint": {
-		"sourceHash": "8e8c7e831852a378",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-27T23:57:25.005Z"
+		"sourceHash": "881b678c265c72a0",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-05T05:10:06.779Z"
 	},
 	"libraries_assign_failed": {
 		"sourceHash": "d24ff11c77a4c5c1",
@@ -3950,9 +4000,9 @@
 		"draftedAt": "2026-11-02T21:04:55.935Z"
 	},
 	"libraries_browser_clear_hint": {
-		"sourceHash": "49e1ca3324a2df99",
+		"sourceHash": "c1ac19183b1f0d12",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
-		"draftedAt": "2026-11-02T21:04:55.935Z"
+		"draftedAt": "2026-11-05T05:10:06.779Z"
 	},
 	"libraries_browser_lists_never": {
 		"sourceHash": "bafe0f05181d0f5c",
@@ -4285,9 +4335,9 @@
 		"draftedAt": "2026-08-28T00:00:37.441Z"
 	},
 	"notif_model_channel_description": {
-		"sourceHash": "fcae3ab75e7b49ab",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-28T00:00:37.441Z"
+		"sourceHash": "81336f63cc580430",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-05T05:10:06.779Z"
 	},
 	"notif_model_channel_name": {
 		"sourceHash": "7b3ca68e237ab0da",
@@ -4380,9 +4430,9 @@
 		"draftedAt": "2026-08-28T00:00:08.730Z"
 	},
 	"onboarding_manga_turns_right_to": {
-		"sourceHash": "a29892b08beb9113",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-28T00:00:08.730Z"
+		"sourceHash": "780e09eb26694c2f",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-05T05:10:06.779Z"
 	},
 	"onboarding_next": {
 		"sourceHash": "9a8bb238dc855a1c",
@@ -5365,9 +5415,9 @@
 		"draftedAt": "2026-11-03T00:53:58.745Z"
 	},
 	"reader_save_chapter_hint": {
-		"sourceHash": "8eeae5571571df48",
+		"sourceHash": "767e9ecd3ccaf1cb",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
-		"draftedAt": "2026-11-03T00:53:58.745Z"
+		"draftedAt": "2026-11-05T04:58:39.355Z"
 	},
 	"reader_save_dialog_title": {
 		"sourceHash": "505809010a3ca900",
@@ -5900,9 +5950,9 @@
 		"draftedAt": "2026-08-27T23:56:56.840Z"
 	},
 	"settings_display_used_for_volumes_without": {
-		"sourceHash": "c9944a8b2950f516",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-27T23:56:56.840Z"
+		"sourceHash": "1ea5a682781e1745",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-05T05:10:06.779Z"
 	},
 	"settings_display_user_interface": {
 		"sourceHash": "a171da121858ef53",
@@ -6105,9 +6155,9 @@
 		"draftedAt": "2026-08-27T23:56:56.840Z"
 	},
 	"settings_overlay_when_enabled_translated_text": {
-		"sourceHash": "4af801e3122f78dd",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-27T23:56:56.840Z"
+		"sourceHash": "09052b8113442dc3",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-05T05:10:06.779Z"
 	},
 	"settings_overlay_when_enabled_vertical_source": {
 		"sourceHash": "81c6a9fa07c5e534",
@@ -7035,9 +7085,9 @@
 		"draftedAt": "2026-08-27T23:56:56.840Z"
 	},
 	"settings_translation_hy_mt2_intro": {
-		"sourceHash": "47ee3146c38393c3",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-27T23:56:56.840Z"
+		"sourceHash": "fd03c5ca08cebee1",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-05T05:10:06.779Z"
 	},
 	"settings_translation_hy_mt2_is_multilingual": {
 		"sourceHash": "af1a7ef948318251",
@@ -7205,9 +7255,9 @@
 		"draftedAt": "2026-08-27T23:56:56.840Z"
 	},
 	"settings_translation_needs_a_model_downloaded": {
-		"sourceHash": "5babd0dcb8228458",
-		"model": "claude-opus-5-5",
-		"draftedAt": "2026-10-12T00:51:54.125Z"
+		"sourceHash": "0bf2febc130f3094",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-05T05:10:06.779Z"
 	},
 	"settings_translation_no_api_key_required": {
 		"sourceHash": "398a8e847376b4ce",
@@ -7266,11 +7316,6 @@
 	},
 	"settings_translation_openrouter": {
 		"sourceHash": "6aba5bb9f63e3dcb",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-27T23:56:56.840Z"
-	},
-	"settings_translation_optimized_for_low_memory": {
-		"sourceHash": "6a82b73579178049",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:56:56.840Z"
 	},
@@ -7501,11 +7546,6 @@
 	},
 	"settings_translation_uses_pp_ocr_text": {
 		"sourceHash": "576ed4464516a244",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-27T23:56:56.840Z"
-	},
-	"settings_translation_uses_the_available_llama": {
-		"sourceHash": "efae277d98982387",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:56:56.840Z"
 	},
@@ -8048,6 +8088,11 @@
 		"sourceHash": "e58370e2c5a9d8e5",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:52:40.683Z"
+	},
+	"tabs_open_count": {
+		"sourceHash": "94298ab5a9a18321",
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-05T05:10:06.779Z"
 	},
 	"tabs_read_volume": {
 		"sourceHash": "2a769cde54727f03",

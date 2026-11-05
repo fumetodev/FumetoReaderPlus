@@ -22,7 +22,7 @@
 	import { revisePage } from '$lib/translation/revision-service.js';
 	import { createPageSource } from '$lib/reader/page-source-factory.js';
 	import { playReaderHaptic } from '$lib/reader/reader-haptics.js';
-	import { isWebChapter, prefetchWebChapter } from '$lib/web-browser/web-chapter.js';
+	import { isWebChapter, openWebChapterId, prefetchWebChapter, saveOpenChapter } from '$lib/web-browser/web-chapter.js';
 	import { activeTranslationJobs } from '$lib/stores/volume-translation-state.js';
 	import { isJobActive, startVolumeTranslation } from '$lib/translation/volume-translation-service.js';
 	import { areOcrModelsReady } from '$lib/detection/ocr-model-manager.js';
@@ -31,7 +31,7 @@
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import SaveChapterDialog from '$lib/components/web-browser/SaveChapterDialog.svelte';
 	import { saveDefaults } from '$lib/web-browser/browser-controller.js';
-	import { isSavedWebChapter, saveWebChapter } from '$lib/web-browser/web-chapter-store.js';
+	import { isSavedWebChapter } from '$lib/web-browser/web-chapter-store.js';
 
 	let open = $derived($mobileReaderUi.disclosure === 'translate-options');
 	let revisionDialogOpen = $state(false);
@@ -106,7 +106,7 @@
 		const defaults = volume ? saveDefaults(volume) : null;
 		saveDialog = null;
 		if (!volume || !defaults) return;
-		await saveWebChapter(volume, { ...defaults, chapterTitle, seriesTitle });
+		await saveOpenChapter(volume, { ...defaults, chapterTitle, seriesTitle });
 		chapterSaved = true;
 		pushToast({ message: { code: 'browser_chapter_saved' } });
 	}
@@ -133,6 +133,8 @@
 		if (get(settings).overlayEnabled && !get(isOverlayMode)) isOverlayMode.set(true);
 		try {
 			await prefetchWebChapter(volume);
+			// Left while its pages were being fetched: the chapter was closed, and no batch is wanted on it.
+			if (openWebChapterId() !== volume.volume_uuid) return;
 			const job = await startVolumeTranslation(volume.volume_uuid);
 			const leftover = job.failed_pages?.length ?? 0;
 			pushToast({

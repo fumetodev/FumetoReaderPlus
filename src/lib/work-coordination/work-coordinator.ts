@@ -142,6 +142,9 @@ export class WorkCoordinator {
 			if (coalescingId) this.coalesced.set(coalescingId, task);
 			this.publish(task, 'queued');
 			this.scheduleDrain(submission.lane, this.lane(submission.lane));
+		} else if (task.state === 'queued' && submission.priority < task.submission.priority) {
+			// Someone who needs it sooner joined: the work moves up to them.
+			task.submission = { ...task.submission, priority: submission.priority };
 		}
 
 		return this.addSubscriber(task, submission.signal);

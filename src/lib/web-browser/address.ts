@@ -25,7 +25,9 @@ export function searchEngineName(engine: BrowserSearchEngine): string {
 
 // A host the way people type one: dotted labels ending in a letter TLD, or localhost / an IPv4 address, with an
 // optional port and path.
-const HOSTLIKE = /^(?:localhost|(?:\d{1,3}\.){3}\d{1,3}|(?:[\p{L}\p{N}](?:[\p{L}\p{N}-]*[\p{L}\p{N}])?\.)+\p{L}{2,})(?::\d{1,5})?(?:[/?#]\S*)?$/u;
+const HOSTLIKE = /^(?:localhost|(?:\d{1,3}\.){3}\d{1,3}|(?:[\p{L}\p{N}_](?:[\p{L}\p{N}_-]*[\p{L}\p{N}_])?\.)+\p{L}{2,})(?::\d{1,5})?(?:[/?#]\S*)?$/u;
+// A machine on the person's own network is usually plain http; there is no certificate to be had for it.
+const LOCAL_HOST = /^(?:localhost|(?:\d{1,3}\.){3}\d{1,3})(?:[:/?#]|$)/;
 
 /** The address to load for `input`, or null for an empty field. */
 export function resolveBrowserInput(input: string, engine: BrowserSearchEngine): string | null {
@@ -39,7 +41,7 @@ export function resolveBrowserInput(input: string, engine: BrowserSearchEngine):
 		}
 	} else if (!/\s/.test(text) && HOSTLIKE.test(text)) {
 		try {
-			return new URL(`https://${text}`).href;
+			return new URL(`${LOCAL_HOST.test(text) ? 'http' : 'https'}://${text}`).href;
 		} catch {
 			// Fall through to a search.
 		}

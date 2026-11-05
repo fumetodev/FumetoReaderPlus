@@ -51,10 +51,25 @@ export interface WebSeriesRecord {
 	id: string;
 	siteHost: string;
 	title: string;
-	/** The page the first saved chapter was reached from (often the series' own page). */
+	/** The page the first saved chapter was reached from (often the series' own page), or the page bookmarked. */
 	seriesUrl: string;
 	icon?: string;
 	createdAt: string;
+	/** The person bookmarked its page: it stays on the start page with no chapter saved under it. */
+	bookmarked?: boolean;
+}
+
+/** A browser tab, as it comes back after a restart: its page is loaded again only when the tab is opened. */
+export interface BrowserTabRecord {
+	id: string;
+	position: number;
+	/** The page it shows; empty for a tab still on the start page. */
+	url: string;
+	title: string;
+	siteHost: string;
+	icon?: string;
+	openedAt: string;
+	lastActiveAt: string;
 }
 
 /**

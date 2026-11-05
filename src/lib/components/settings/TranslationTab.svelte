@@ -1032,7 +1032,7 @@
 			{:else if selectedIsIndexTranslate}
 				{m.settings_translation_index_translate_intro()}
 			{:else}
-				{m.settings_translation_hy_mt2_intro({ note: isAndroid ? m.settings_translation_optimized_for_low_memory() : m.settings_translation_uses_the_available_llama() })}
+				{m.settings_translation_hy_mt2_intro()}
 			{/if}
 		</p>
 	</div>

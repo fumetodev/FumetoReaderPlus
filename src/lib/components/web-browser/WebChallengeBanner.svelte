@@ -1,18 +1,19 @@
 <script lang="ts">
 	/**
 	 * Shown in the reader when the site of the web chapter on screen refused a page until the person passes a check
-	 * in the browser (a Cloudflare challenge). The app never answers such checks itself: it sends the person back to
-	 * the site, where the browser shows the check, and the pages fetched after it carry the clearance.
+	 * in the browser (a Cloudflare challenge). The app never answers such checks itself: it shows the person the site,
+	 * where the browser shows the check, and the pages fetched after it carry the clearance. The chapter waits meanwhile.
 	 */
 	import * as m from '$lib/paraglide/messages.js';
-	import { currentVolume, leaveReader } from '$lib/stores/reader-state.js';
+	import { currentVolume } from '$lib/stores/reader-state.js';
+	import { openSiteForCheck } from '$lib/web-browser/browser-controller.js';
 	import { webChallenge } from '$lib/reader/web-page-source.js';
 
 	const shown = $derived(!!$webChallenge && $webChallenge.volumeUuid === $currentVolume?.volume_uuid);
 
 	function openSite(): void {
 		webChallenge.set(null);
-		leaveReader();
+		if ($currentVolume) openSiteForCheck($currentVolume);
 	}
 </script>
 

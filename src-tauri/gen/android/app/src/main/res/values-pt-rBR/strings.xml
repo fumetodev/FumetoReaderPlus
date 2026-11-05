@@ -3,7 +3,7 @@
 <resources>
     <string name="notif_cancel">Cancelar</string>
     <string name="notif_model_active_title">Tradutor local ativo</string>
-    <string name="notif_model_channel_description">Ativo enquanto o modelo de tradução local Hy-MT2 está carregado na memória</string>
+    <string name="notif_model_channel_description">Ativo enquanto um modelo de tradução local está carregado na memória</string>
     <string name="notif_model_channel_name">Modelo de tradução local</string>
     <string name="notif_model_loaded_text">Modelo %1$s carregado</string>
     <string name="notif_stop">Parar</string>

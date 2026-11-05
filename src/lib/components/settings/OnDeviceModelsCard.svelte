@@ -100,6 +100,8 @@
 		variant: BundledHyMT2Variant | EncDecModelId | 'custom';
 		name: string;
 		sizeMB: number;
+		/** What the model picker calls this size; a user's own file has none. */
+		sizeLabel?: string;
 		usedFor: string;
 		state: { status: string; progress?: { downloadedBytes: number; totalBytes: number } | null };
 		ready: boolean;
@@ -118,6 +120,7 @@
 				variant: id,
 				name: HYMT2_VARIANTS[id].label,
 				sizeMB: Math.round(encdecModelTotalBytes(id) / (1024 * 1024)),
+				sizeLabel: HYMT2_VARIANTS[id].sizeLabel,
 				usedFor: m.settings_models_on_device_translation_fast(),
 				state: encdecStates[id],
 				ready: encdecReady[id],
@@ -134,6 +137,7 @@
 				variant,
 				name: spec.label,
 				sizeMB: Math.round(spec.sizeBytes / (1024 * 1024)),
+				sizeLabel: spec.sizeLabel,
 				usedFor: USED_FOR[variant],
 				state: $ggufDownloadState.variant === variant ? $ggufDownloadState : { status: 'idle' },
 				ready: downloaded[variant],
@@ -226,7 +230,7 @@
 			<div class="flex items-center gap-3 px-3 py-2.5 {index > 0 ? 'border-t border-surface-700/50' : ''}" data-model-row={row.variant}>
 				<div class="min-w-0 flex-1">
 					<p class="break-words text-xs leading-snug text-surface-200">{row.name}</p>
-					<p class="break-words text-[11px] leading-snug text-surface-500">{row.usedFor} · {formatMB(row.sizeMB)}</p>
+					<p class="break-words text-[11px] leading-snug text-surface-500">{row.usedFor} · {row.sizeLabel ?? formatMB(row.sizeMB)}</p>
 					{#if adviceFor(row.sizeMB).level === 'tight' || adviceFor(row.sizeMB).level === 'low'}
 						{@const advice = adviceFor(row.sizeMB)}
 						<p

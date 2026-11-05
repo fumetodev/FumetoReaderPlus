@@ -31,31 +31,16 @@
 	"bridge_unload_failed": "Не удалось выгрузить локальную модель.",
 	"browser_address_label": "Веб-адрес или поиск",
 	"browser_address_placeholder": "Найдите или введите веб-адрес",
+	"browser_already_saved": "Уже сохранено как {title}.",
 	"browser_back": "Назад",
+	"browser_back_to_chapter": "Назад к главе",
 	"browser_back_to_page": "Назад к странице",
+	"browser_bookmarked": "Закладка добавлена",
 	"browser_challenge": "Сайт хочет убедиться, что вы человек, прежде чем показать новые страницы.",
 	"browser_challenge_open": "Открыть сайт",
 	"browser_chapter_options": "Параметры для {title}",
 	"browser_chapter_saved": "Глава сохранена",
-	"browser_collect": "Собрать",
-	"browser_collect_hint": "Листайте страницы в просмотрщике сайта — каждая добавляется.",
-	"browser_collected": [
-		{
-			"declarations": [
-				"input n",
-				"local nPlural = n: plural"
-			],
-			"selectors": [
-				"nPlural"
-			],
-			"match": {
-				"nPlural=one": "Собрана {n} страница",
-				"nPlural=few": "Собрано {n} страницы",
-				"nPlural=many": "Собрано {n} страниц",
-				"nPlural=other": "Собрано {n} страницы"
-			}
-		}
-	],
+	"browser_check_hint": "Пройдите здесь проверку сайта и вернитесь: глава вас ждёт.",
 	"browser_data_cleared": "Данные браузера удалены",
 	"browser_delete_chapter": "Удалить главу",
 	"browser_delete_chapter_again": "Нажмите ещё раз, чтобы удалить её вместе с переводами",
@@ -64,6 +49,7 @@
 	"browser_edit_save": "Сохранить",
 	"browser_edit_series_label": "Серия",
 	"browser_forward": "Вперёд",
+	"browser_found_more": "На этой странице больше страниц, чем приложение может открыть за раз. Это первые из них.",
 	"browser_found_pages": [
 		{
 			"declarations": [
@@ -81,6 +67,7 @@
 			}
 		}
 	],
+	"browser_menu_add_bookmark": "Добавить страницу в закладки",
 	"browser_menu_blocked_count": [
 		{
 			"declarations": [
@@ -101,11 +88,33 @@
 	"browser_menu_blocking_off": "Отключить блокировку рекламы для {host}",
 	"browser_menu_blocking_on": "Снова включить блокировку рекламы для {host}",
 	"browser_menu_close": "Закрыть меню",
+	"browser_menu_home": "Закладки и сохранённые главы",
 	"browser_menu_label": "Меню браузера",
+	"browser_menu_new_tab": "Новая вкладка",
+	"browser_menu_remove_bookmark": "Удалить закладку",
 	"browser_menu_settings": "Настройки браузера",
-	"browser_open_button": "Открыть веб-браузер",
+	"browser_new_tab": "Новая вкладка",
+	"browser_open_button": "Открыть новую веб-вкладку",
+	"browser_open_page": "Открыть {title}",
 	"browser_page_crashed": "Страница перестала работать и была закрыта.",
-	"browser_pager_hint": "Этот просмотрщик показывает по одной странице. Включите на сайте показ всех страниц, если он есть, или нажмите «Собрать».",
+	"browser_pages_so_far": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "Пока {n} страница",
+				"nPlural=few": "Пока {n} страницы",
+				"nPlural=many": "Пока {n} страниц",
+				"nPlural=other": "Пока {n} страницы"
+			}
+		}
+	],
+	"browser_pages_so_far_hint": "Листайте страницы на сайте, и каждая добавится. «Читать» откроет все.",
 	"browser_protected": "Этот просмотрщик сам рисует свои страницы, поэтому их нельзя прочитать в приложении.",
 	"browser_read": "Читать",
 	"browser_reload": "Обновить",
@@ -113,11 +122,12 @@
 	"browser_reopen_other": "Это страницы вашей сохранённой главы {title}.",
 	"browser_reopen_retrace": "Переходим по ссылке, по которой вы попали в {title}…",
 	"browser_reopening": "Открываем {title}…",
-	"browser_saved_chapters": "Сохранённые главы",
-	"browser_saved_empty": "Главы, которые вы сохраните в читалке, появятся здесь и откроются снова вместе с переводами.",
+	"browser_save": "Сохранить",
+	"browser_saved_empty": "Здесь появятся закладки и сохранённые главы. Сохранённая глава откроется снова со своими переводами.",
 	"browser_saved_progress": "Страница {page} из {total}",
 	"browser_start_body": "Откройте страницу с комиксом. Когда приложение найдёт его страницы, внизу появится панель: нажмите «Читать», чтобы открыть их в читалке и перевести.",
 	"browser_start_note": "С сайта ничего не сохраняется: его страницы хранятся, только пока вы их читаете.",
+	"browser_start_over": "Начать заново",
 	"browser_start_title": "Читайте комиксы из интернета",
 	"browser_stop": "Остановить загрузку",
 	"browser_unavailable_body": "Браузер приложения хранит свои cookie и данные сайтов отдельно от данных приложения, а Android System WebView на этом телефоне пока так не умеет. Обновите его в Google Play и попробуйте снова.",
@@ -256,7 +266,7 @@
 	"catalog_hide_search_bar": "Скрыть панель поиска",
 	"catalog_hide_search_button": "Скрыть кнопку поиска",
 	"catalog_import": "+ Импорт",
-	"catalog_import_a_zip_cbz": "Импортируйте файл .zip, .cbz, .cbr или .pdf, чтобы начать",
+	"catalog_import_a_zip_cbz": "Импортируйте файл .zip, .cbz, .epub или .pdf, чтобы начать",
 	"catalog_imported_totalimported_new_volume": "Импортировано {totalImported} новых том{s}",
 	"catalog_initial_story_summary": "Первоначальное описание истории",
 	"catalog_inside_folder": "Внутри: {folder}",
@@ -1144,7 +1154,7 @@
 	"lang_auto_detect": "Автоопределение",
 	"libraries_add_local": "+ Локальная",
 	"libraries_add_remote": "+ Удалённая",
-	"libraries_android_hint": "📂 Скопируйте файлы комиксов (.cbz, .zip, .pdf) в папку вашего устройства, указанную ниже, с помощью файлового менеджера или USB, затем нажмите «Сканировать», чтобы импортировать их.",
+	"libraries_android_hint": "📂 Скопируйте файлы комиксов (.cbz, .zip, .pdf, .epub) в папку вашего устройства, указанную ниже, с помощью файлового менеджера или USB, затем нажмите «Сканировать», чтобы импортировать их.",
 	"libraries_assign_failed": "Не удалось назначить авторов.",
 	"libraries_assigning": "Назначение...",
 	"libraries_authors_done": [
@@ -1170,7 +1180,7 @@
 	"libraries_browser_ad_block_hint": "Блокирует домены рекламы и всплывающих окон из EasyList и DNS-фильтра AdGuard; приложение скачивает их у издателей и обновляет раз в неделю.",
 	"libraries_browser_clear": "Удалить данные браузера",
 	"libraries_browser_clear_again": "Нажмите ещё раз, чтобы удалить",
-	"libraries_browser_clear_hint": "Выходит из аккаунтов на сайтах и удаляет их cookie, хранилище и кэш. Данные самого приложения не затрагиваются.",
+	"libraries_browser_clear_hint": "Выходит из аккаунтов на сайтах, удаляет их cookie, хранилище и кэш и закрывает все вкладки. Закладки, сохранённые главы и данные самого приложения не затрагиваются.",
 	"libraries_browser_lists_never": "Списки ещё не скачаны",
 	"libraries_browser_lists_status": "Заблокировано доменов: {domains} · обновлено {date}",
 	"libraries_browser_lists_update": "Обновить списки",
@@ -1270,7 +1280,7 @@
 	"model_variant_stock_title": "Стандартная модель перевода",
 	"notif_cancel": "Отмена",
 	"notif_model_active_title": "Локальный переводчик активен",
-	"notif_model_channel_description": "Активен, когда локальная модель перевода Hy-MT2 загружена в память",
+	"notif_model_channel_description": "Активен, когда локальная модель перевода загружена в память",
 	"notif_model_channel_name": "Локальная модель перевода",
 	"notif_model_loaded_text": "Модель {model} загружена",
 	"notif_stop": "Стоп",
@@ -1289,7 +1299,7 @@
 	"onboarding_import_cbz_files_with": "Импортируйте файлы CBZ через «+ Импорт» или скопируйте их в папку «Comics» устройства и нажмите «Сканировать». Если у вас дома работает Komga, Kavita или YACReader, подключите сервер в «Настройки → Библиотеки» и читайте по своей сети.",
 	"onboarding_intro_aria": "Введение в {app}",
 	"onboarding_library_in_grid_view": "Библиотека в виде сетки с карточками томов и папкой",
-	"onboarding_manga_turns_right_to": "Манга автоматически читается справа налево. Коснитесь центра страницы, чтобы открыть управление, выберите способ перелистывания страниц в меню ⋮ читалки и переключитесь там на «Длинную ленту» для вебтунов. Место, где вы остановились в каждом томе, запоминается.",
+	"onboarding_manga_turns_right_to": "Сначала страницы листаются слева направо; для манги выберите «Справа налево» в меню ⋮ читалки. Коснитесь центра страницы, чтобы открыть управление, выберите способ перелистывания страниц в том же меню и переключитесь там на «Длинную ленту» для вебтунов. Место, где вы остановились в каждом томе, запоминается.",
 	"onboarding_next": "Далее",
 	"onboarding_paste_the_key_under": "Вставьте ключ в «Настройки → Перевод → Внешний перевод» и выберите модель с поддержкой изображений. Готово.",
 	"onboarding_prefer_that_nothing_ever": "Хотите, чтобы ничего не покидало устройство? Скачайте локальную модель в «Настройки → Перевод → На устройстве». Полные инструкции — в «Настройки → Справка».",
@@ -1502,7 +1512,7 @@
 	"reader_revision_failed": "Исправление не удалось",
 	"reader_save_and_close_overlay": "Сохранить и закрыть редактор наложений",
 	"reader_save_chapter": "Сохранить главу",
-	"reader_save_chapter_hint": "Переводы вернутся, когда вы снова прочитаете её на сайте",
+	"reader_save_chapter_hint": "Она останется в разделе «Закладки и сохранённые главы» вместе с переводами",
 	"reader_save_dialog_title": "Сохранить эту главу",
 	"reader_saved": "Сохранено",
 	"reader_saved_vertical_override_is": "Сохранённое переопределение вертикали не действует, пока «Сохранять исходную вертикальную ориентацию» отключено.",
@@ -1625,7 +1635,7 @@
 	"settings_display_ui_language": "Язык приложения",
 	"settings_display_ui_language_hint": "Меню, настройки и справка. Манга переводится на язык, выбранный в разделе «Перевод».",
 	"settings_display_ui_language_system": "Как в системе",
-	"settings_display_used_for_volumes_without": "Используется для томов без собственного направления. Справа налево — стандарт для манги. В меню читалки можно переопределить направление для каждого тома.",
+	"settings_display_used_for_volumes_without": "Используется для томов без собственного направления. Справа налево — стандарт для манги. В «Изменить сведения» можно задать направление для отдельного тома.",
 	"settings_display_user_interface": "Интерфейс",
 	"settings_display_volumes_will_always_open": "Тома всегда открываются с первой страницы.",
 	"settings_display_volumes_will_open_to": "Тома открываются с последней прочитанной страницы.",
@@ -1682,7 +1692,7 @@
 	"settings_overlay_sfx_model_needed": "Распознавание звуковых эффектов не работает, пока модель не загружена.",
 	"settings_overlay_text_size_label": "Размер текста наложения: {percent}",
 	"settings_overlay_when_enabled_get_full": "Если включено, «Перевести весь том» будет использовать распознавание PP-OCR и автоматически создавать данные наложения для каждой страницы. Медленнее, но избавляет от необходимости создавать наложения вручную.",
-	"settings_overlay_when_enabled_translated_text": "Если включено, переведённый текст можно отображать прямо на странице над обнаруженными областями текста. Используется распознавание текста PP-OCR (встроено в приложение). Переключается кнопкой «Наложение» на панели инструментов или клавишей T.",
+	"settings_overlay_when_enabled_translated_text": "Если включено, переведённый текст можно отображать прямо на странице над обнаруженными областями текста. Используется распознавание текста PP-OCR из моделей распознавания, которые приложение скачивает один раз. Переключается кнопкой с глазом на верхней панели читалки.",
 	"settings_overlay_when_enabled_vertical_source": "Если включено, вертикальный исходный текст остаётся вертикальным; английский и другие не-CJK языки перевода отображаются как повёрнутые горизонтальные блоки. Если выключено, каждое переведённое наложение горизонтально, а сохранённые переопределения вертикальных блоков остаются неактивными.",
 	"settings_saving": "Сохранение…",
 	"settings_search_advanced_llm_keywords": "температура|максимум токенов|размер контекста|дополнительно",
@@ -1884,7 +1894,7 @@
 	"settings_translation_fumeto_couldn_t_recognise_2": "Fumeto не удалось распознать формат чата этой модели. Введите ниже формат подсказки, чтобы попробовать снова.",
 	"settings_translation_gguf_model": "Модель GGUF",
 	"settings_translation_hy_mt2_1_8b": "Hy-MT2 1.8B",
-	"settings_translation_hy_mt2_intro": "Hy-MT2 1.8B (1.25-бит) — быстрый многоязычный перевод через llama.cpp. {note}",
+	"settings_translation_hy_mt2_intro": "Работает на вашем устройстве через llama.cpp. На карточке каждой модели ниже указано, для чего она.",
 	"settings_translation_hy_mt2_is_multilingual": "Hy-MT2 многоязычна; автоопределение предполагает японский исходный текст.",
 	"settings_translation_hy_mt2_requires_the": "Hy-MT2 требует приложение Android с нативной поддержкой llama.cpp STQ1_0.",
 	"settings_translation_include_context_from_other": "Учитывать контекст других переводов на этой странице",
@@ -1918,7 +1928,7 @@
 	"settings_translation_model_recommended": "Рекомендуется",
 	"settings_translation_model_used_by_the": "Модель для перевода на устройстве",
 	"settings_translation_more_memory_headroom_is": "— для Hy-MT2 рекомендуется больший запас памяти",
-	"settings_translation_needs_a_model_downloaded": "- Требуется загруженная модель (462 МБ – ~1,27 ГБ), а также запас ОЗУ для вычислений",
+	"settings_translation_needs_a_model_downloaded": "- Требуется загруженная модель (примерно от 448 МБ до 1,27 ГБ), а также запас ОЗУ для вычислений",
 	"settings_translation_no_api_key_required": "API-ключ не требуется. Нажмите «Подключить», чтобы получить список доступных моделей.",
 	"settings_translation_no_providers_configured_add": "Провайдеры не настроены. Добавьте провайдера LLM, чтобы начать перевод.",
 	"settings_translation_no_review_revision_pass": "- Без этапа проверки/правки (для проверки требуется облачный LLM)",
@@ -1931,7 +1941,6 @@
 	"settings_translation_on_device_limitations": "Ограничения работы на устройстве",
 	"settings_translation_openai_compatible": "Совместимый с OpenAI",
 	"settings_translation_openrouter": "OpenRouter",
-	"settings_translation_optimized_for_low_memory": "Оптимизировано для мобильных устройств с малым объёмом памяти.",
 	"settings_translation_please_enter_an_api": "Сначала введите API-ключ.",
 	"settings_translation_pp_ocrv6": "PP-OCRv6",
 	"settings_translation_pp_ocrv6_medium_detection": "PP-OCRv6, среднее обнаружение + малое распознавание. Android использует нативный ONNX Runtime с оптимизированными ARM-ядрами; на других платформах и неподдерживаемых устройствах Android используется WASM. Использует около 81 МБ весов модели во время OCR.",
@@ -1978,7 +1987,6 @@
 	"settings_translation_use_name_for_translations": "Использовать {name} для перевода",
 	"settings_translation_use_pipeline": "Использовать {pipeline}",
 	"settings_translation_uses_pp_ocr_text": "Использует извлечение текста PP-OCR. Работает с любой моделью.",
-	"settings_translation_uses_the_available_llama": "Использует доступный движок llama.cpp.",
 	"settings_translation_vision_models": "Модели распознавания",
 	"settings_translation_vision_models_desc": "Обнаружение текста, распознавание текста и разметка облачков. Загружаются один раз, затем используются полностью на вашем устройстве.",
 	"settings_translation_vision_models_needed": "Требуются перед переводом любой страницы — как на устройстве, так и через облачного провайдера.",
@@ -2250,6 +2258,7 @@
 	"tabs_long_press_a_comic": "Удерживайте комикс в библиотеке и выберите «Открыть в новой вкладке», чтобы закрепить его здесь.",
 	"tabs_no_open_tabs": "Нет открытых вкладок",
 	"tabs_o_zzz": "(￣o￣) zzZ",
+	"tabs_open_count": "Открыто: {n}",
 	"tabs_read_volume": "Читать {title}",
 	"tabs_reading_now": "Читаю сейчас",
 	"tabs_refresh_failed_message": "Не удалось обновить: {message}",

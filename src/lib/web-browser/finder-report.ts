@@ -16,6 +16,8 @@ export interface FinderReport {
 	kind: FinderKind;
 	pages: FinderPage[];
 	pager: boolean;
+	/** The page has more pages than one report may carry: `pages` are the first of them. */
+	more: boolean;
 	/** Images on the page still loading: a gallery's pages are reported as their images arrive. */
 	loading: number;
 	/** The page address the report was made on (single-page apps change it without loading a new page). */
@@ -27,7 +29,7 @@ export interface LinkTap {
 	from: string;
 }
 
-const MAX_PAGES = 500;
+const MAX_PAGES = 2000;
 const MAX_URL = 4096;
 const KINDS = new Set<FinderKind>(['gallery', 'single', 'protected', 'none']);
 
@@ -65,7 +67,8 @@ export function parseFinderReport(data: unknown, fallbackUrl: string): FinderRep
 	if (kind === 'single' && pages.length !== 1) kind = pages.length >= 2 ? 'gallery' : 'none';
 	if (kind === 'protected' || kind === 'none') pages.length = 0;
 	const loading = typeof raw.loading === 'number' && Number.isFinite(raw.loading) ? Math.min(Math.max(Math.round(raw.loading), 0), 10_000) : 0;
-	return { kind, pages, pager: raw.pager === true, loading, at: isWebAddress(raw.at) ? raw.at : fallbackUrl };
+	const more = raw.more === true || (Array.isArray(raw.pages) && raw.pages.length > MAX_PAGES);
+	return { kind, pages, pager: raw.pager === true, more, loading, at: isWebAddress(raw.at) ? raw.at : fallbackUrl };
 }
 
 export function parseLinkTap(data: unknown): LinkTap | null {
@@ -76,8 +79,8 @@ export function parseLinkTap(data: unknown): LinkTap | null {
 }
 
 /**
- * Collecting on a viewer that shows a page at a time (or keeps only the pages near the screen loaded): every report
- * adds the pages it shows that are not collected yet, in the order they were first seen.
+ * Pages gathered as a viewer shows them: every report adds the pages it shows that are not gathered yet, in the order
+ * they were first seen.
  */
 export function addCollected(collected: FinderPage[], report: FinderReport): FinderPage[] {
 	if (report.kind !== 'gallery' && report.kind !== 'single') return collected;
@@ -86,15 +89,37 @@ export function addCollected(collected: FinderPage[], report: FinderReport): Fin
 	return added.length ? [...collected, ...added].slice(0, MAX_PAGES) : collected;
 }
 
-// An address with its numbers folded away: one chapter's page images share it, and differ only in a page number.
+/**
+ * What has been gathered after this report; null when the page's own report says it all. A viewer that shows a page at
+ * a time, or has a page picker, is gathered as the person turns its pages. So is one that keeps only the pages near the
+ * screen: its report loses pages as it gains others. A gallery that has nothing to do with what came before is a new
+ * chapter. Anything else (the spinner between two pages) leaves what was gathered alone.
+ */
+export function collectedAfter(collected: FinderPage[] | null, previous: FinderReport | null, report: FinderReport): FinderPage[] | null {
+	if (report.kind === 'single' || (report.kind === 'gallery' && report.pager)) return addCollected(collected ?? [], report);
+	if (report.kind !== 'gallery') return collected;
+	const now = new Set(report.pages.map((p) => p.url));
+	if (collected) {
+		// The page now lists all of it (a viewer switched to showing every page), or something else altogether.
+		if (collected.every((p) => now.has(p.url)) || !collected.some((p) => now.has(p.url))) return null;
+		return addCollected(collected, report);
+	}
+	const before = previous?.kind === 'gallery' ? previous.pages : [];
+	const moved = before.some((p) => now.has(p.url)) && before.some((p) => !now.has(p.url));
+	return moved ? addCollected(before, report) : null;
+}
+
+// An address's path with its numbers and image type folded away: one chapter's page images share it, and differ only
+// in a page number. The host is left out: a chapter's pages can come from several mirrors, in several formats.
 function addressShape(url: string): string {
 	try {
-		const u = new URL(url);
-		return `${u.host}${u.pathname.replace(/\d+/g, '#')}`;
+		return new URL(url).pathname.replace(/\d+/g, '#').replace(/\.(?:jpe?g|png|webp|avif|gif|bmp)$/i, '.image');
 	} catch {
 		return url;
 	}
 }
+
+const median = (values: number[]): number => [...values].sort((a, b) => a - b)[values.length >> 1] ?? 0;
 
 function pathNumbers(url: string): number[] {
 	try {
@@ -105,8 +130,9 @@ function pathNumbers(url: string): number[] {
 }
 
 /**
- * The pages to read. Whatever does not share the address pattern most pages share is dropped: the loading spinner a
- * viewer shows between pages, an ad in the reader's column. Collected pages are also put in page order when their
+ * The pages to read. Whatever neither shares the address pattern most pages share nor has their size is dropped: the
+ * loading spinner a viewer shows between pages, an ad in the reader's column. A page that merely lives elsewhere (a
+ * cover in another folder) has the size of the others and stays. Collected pages are also put in page order when their
  * addresses differ in exactly one number — a person may flip back and forth while collecting; a gallery's own order
  * is the page's and is kept.
  */
@@ -117,7 +143,15 @@ export function readablePages(pages: FinderPage[], options: { sortByPageNumber: 
 	let dominant = '';
 	let best = 0;
 	for (const [shape, count] of counts) if (count > best) [dominant, best] = [shape, count];
-	const kept = best >= 2 && best >= pages.length * 0.6 ? pages.filter((p) => addressShape(p.url) === dominant) : pages;
+	let kept = pages;
+	if (best >= 2 && best >= pages.length * 0.6) {
+		const main = pages.filter((p) => addressShape(p.url) === dominant);
+		const width = median(main.map((p) => p.width));
+		const height = median(main.map((p) => p.height));
+		const samePageSize = (p: FinderPage) =>
+			width > 0 && height > 0 && Math.abs(p.width - width) <= width * 0.2 && Math.abs(p.height - height) <= height * 0.2;
+		kept = pages.filter((p) => addressShape(p.url) === dominant || samePageSize(p));
+	}
 	if (!options.sortByPageNumber || kept.length < 2) return kept;
 	const numbers = kept.map((p) => pathNumbers(p.url));
 	const width = numbers[0].length;

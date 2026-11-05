@@ -31,29 +31,16 @@
 	"bridge_unload_failed": "O modelo no dispositivo não pôde ser descarregado.",
 	"browser_address_label": "Endereço web ou pesquisa",
 	"browser_address_placeholder": "Pesquise ou digite um endereço web",
+	"browser_already_saved": "Já salvo como {title}.",
 	"browser_back": "Voltar",
+	"browser_back_to_chapter": "Voltar ao capítulo",
 	"browser_back_to_page": "Voltar à página",
+	"browser_bookmarked": "Favorito adicionado",
 	"browser_challenge": "O site quer verificar que você é humano antes de mostrar mais páginas.",
 	"browser_challenge_open": "Abrir o site",
 	"browser_chapter_options": "Opções de {title}",
 	"browser_chapter_saved": "Capítulo salvo",
-	"browser_collect": "Coletar",
-	"browser_collect_hint": "Vire as páginas no visualizador do site; cada uma é adicionada.",
-	"browser_collected": [
-		{
-			"declarations": [
-				"input n",
-				"local nPlural = n: plural"
-			],
-			"selectors": [
-				"nPlural"
-			],
-			"match": {
-				"nPlural=one": "{n} página coletada",
-				"nPlural=other": "{n} páginas coletadas"
-			}
-		}
-	],
+	"browser_check_hint": "Passe aqui pela verificação do site e volte: seu capítulo está esperando.",
 	"browser_data_cleared": "Dados de navegação apagados",
 	"browser_delete_chapter": "Excluir capítulo",
 	"browser_delete_chapter_again": "Toque de novo para excluí-lo com as traduções",
@@ -62,6 +49,7 @@
 	"browser_edit_save": "Salvar",
 	"browser_edit_series_label": "Série",
 	"browser_forward": "Avançar",
+	"browser_found_more": "Esta página tem mais páginas do que o app consegue abrir de uma vez. Estas são as primeiras.",
 	"browser_found_pages": [
 		{
 			"declarations": [
@@ -77,6 +65,7 @@
 			}
 		}
 	],
+	"browser_menu_add_bookmark": "Favoritar esta página",
 	"browser_menu_blocked_count": [
 		{
 			"declarations": [
@@ -95,11 +84,31 @@
 	"browser_menu_blocking_off": "Desativar o bloqueio de anúncios em {host}",
 	"browser_menu_blocking_on": "Reativar o bloqueio de anúncios em {host}",
 	"browser_menu_close": "Fechar o menu",
+	"browser_menu_home": "Favoritos e capítulos salvos",
 	"browser_menu_label": "Menu do navegador",
+	"browser_menu_new_tab": "Nova aba",
+	"browser_menu_remove_bookmark": "Remover favorito",
 	"browser_menu_settings": "Configurações do navegador",
-	"browser_open_button": "Abrir o navegador web",
+	"browser_new_tab": "Nova aba",
+	"browser_open_button": "Abrir uma nova aba da web",
+	"browser_open_page": "Abrir {title}",
 	"browser_page_crashed": "A página parou de funcionar e foi fechada.",
-	"browser_pager_hint": "Este visualizador mostra uma página por vez. Use a visualização de todas as páginas do site, se houver, ou Coletar.",
+	"browser_pages_so_far": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} página até agora",
+				"nPlural=other": "{n} páginas até agora"
+			}
+		}
+	],
+	"browser_pages_so_far_hint": "Vire as páginas no site e cada uma é adicionada. Ler abre todas.",
 	"browser_protected": "Este visualizador desenha as próprias páginas, então elas não podem ser lidas no app.",
 	"browser_read": "Ler",
 	"browser_reload": "Recarregar",
@@ -107,11 +116,12 @@
 	"browser_reopen_other": "Estas são as páginas do seu capítulo salvo {title}.",
 	"browser_reopen_retrace": "Seguindo o link pelo qual você chegou a {title}…",
 	"browser_reopening": "Abrindo {title}…",
-	"browser_saved_chapters": "Capítulos salvos",
-	"browser_saved_empty": "Os capítulos que você salva no leitor aparecem aqui e abrem de novo com as traduções.",
+	"browser_save": "Salvar",
+	"browser_saved_empty": "Seus favoritos e capítulos salvos aparecem aqui. Um capítulo salvo abre de novo com as traduções.",
 	"browser_saved_progress": "Página {page} de {total}",
 	"browser_start_body": "Abra uma página que mostre um quadrinho. Quando o app encontrar as páginas, uma barra aparece embaixo: toque em Ler para abri-las no leitor e traduzi-las.",
 	"browser_start_note": "Nada do site é guardado: as páginas só ficam enquanto você as lê.",
+	"browser_start_over": "Recomeçar",
 	"browser_start_title": "Leia quadrinhos da web",
 	"browser_stop": "Parar de carregar",
 	"browser_unavailable_body": "O navegador do app guarda os cookies e dados de sites separados dos dados do app, algo que o Android System WebView deste celular ainda não consegue fazer. Atualize-o no Google Play e tente de novo.",
@@ -246,7 +256,7 @@
 	"catalog_hide_search_bar": "Ocultar barra de pesquisa",
 	"catalog_hide_search_button": "Ocultar botão de pesquisa",
 	"catalog_import": "+ Importar",
-	"catalog_import_a_zip_cbz": "Importe um arquivo .zip, .cbz, .cbr ou .pdf para começar",
+	"catalog_import_a_zip_cbz": "Importe um arquivo .zip, .cbz, .epub ou .pdf para começar",
 	"catalog_imported_totalimported_new_volume": "Importados {totalImported} novo volume{s}",
 	"catalog_initial_story_summary": "Resumo inicial da história",
 	"catalog_inside_folder": "Dentro de: {folder}",
@@ -1108,7 +1118,7 @@
 	"lang_auto_detect": "Detecção automática",
 	"libraries_add_local": "+ Local",
 	"libraries_add_remote": "+ Remoto",
-	"libraries_android_hint": "📂 Copie os arquivos de quadrinhos (.cbz, .zip, .pdf) para a pasta do seu dispositivo abaixo usando um gerenciador de arquivos ou USB e, depois, toque em Escanear para importá-los.",
+	"libraries_android_hint": "📂 Copie os arquivos de quadrinhos (.cbz, .zip, .pdf, .epub) para a pasta do seu dispositivo abaixo usando um gerenciador de arquivos ou USB e, depois, toque em Escanear para importá-los.",
 	"libraries_assign_failed": "Falha ao atribuir autores.",
 	"libraries_assigning": "Atribuindo...",
 	"libraries_authors_done": [
@@ -1132,7 +1142,7 @@
 	"libraries_browser_ad_block_hint": "Bloqueia domínios de anúncios e pop-ups do EasyList e do filtro DNS do AdGuard, que o app baixa dos editores e atualiza toda semana.",
 	"libraries_browser_clear": "Apagar dados de navegação",
 	"libraries_browser_clear_again": "Toque de novo para apagar",
-	"libraries_browser_clear_hint": "Sai das suas contas nos sites e remove os cookies, armazenamento e cache deles. Os dados do próprio app não são tocados.",
+	"libraries_browser_clear_hint": "Sai das suas contas nos sites, remove os cookies, armazenamento e cache deles e fecha todas as abas. Favoritos, capítulos salvos e os dados do próprio app não são tocados.",
 	"libraries_browser_lists_never": "Listas ainda não baixadas",
 	"libraries_browser_lists_status": "{domains} domínios bloqueados · atualizado em {date}",
 	"libraries_browser_lists_update": "Atualizar listas",
@@ -1228,7 +1238,7 @@
 	"model_variant_stock_title": "Modelo de Tradução Padrão",
 	"notif_cancel": "Cancelar",
 	"notif_model_active_title": "Tradutor local ativo",
-	"notif_model_channel_description": "Ativo enquanto o modelo de tradução local Hy-MT2 está carregado na memória",
+	"notif_model_channel_description": "Ativo enquanto um modelo de tradução local está carregado na memória",
 	"notif_model_channel_name": "Modelo de tradução local",
 	"notif_model_loaded_text": "Modelo {model} carregado",
 	"notif_stop": "Parar",
@@ -1247,7 +1257,7 @@
 	"onboarding_import_cbz_files_with": "Importe arquivos CBZ com \"+ Importar\", ou copie-os para a pasta Comics do dispositivo e toque em \"Escanear\". Se você usa Komga, Kavita ou YACReader em casa, conecte seu servidor em Configurações → Bibliotecas e leia pela sua própria rede.",
 	"onboarding_intro_aria": "Introdução ao {app}",
 	"onboarding_library_in_grid_view": "Biblioteca em visualização de grade com cartões de volume e uma pasta",
-	"onboarding_manga_turns_right_to": "Mangás passam as páginas da direita para a esquerda automaticamente. Toque no centro da página para ver os controles, escolha seu estilo de virada de página no menu ⋮ do leitor e mude para Tira Longa ali para webtoons. Sua posição em cada volume é lembrada.",
+	"onboarding_manga_turns_right_to": "As páginas viram primeiro da esquerda para a direita; para mangás, escolha Da direita para a esquerda no menu ⋮ do leitor. Toque no centro da página para ver os controles, escolha seu estilo de virada de página no mesmo menu e mude para Tira Longa ali para webtoons. Sua posição em cada volume é lembrada.",
 	"onboarding_next": "Próximo",
 	"onboarding_paste_the_key_under": "Cole a chave em Configurações → Tradução → Fora do dispositivo e escolha um modelo com suporte a visão. É só isso.",
 	"onboarding_prefer_that_nothing_ever": "Prefere que nada saia do seu dispositivo? Baixe um modelo local em Configurações → Tradução → No dispositivo. Guias completos estão em Configurações → Ajuda.",
@@ -1458,7 +1468,7 @@
 	"reader_revision_failed": "Falha na revisão",
 	"reader_save_and_close_overlay": "Salvar e fechar o editor de sobreposição",
 	"reader_save_chapter": "Salvar capítulo",
-	"reader_save_chapter_hint": "As traduções voltam quando você o lê de novo no site",
+	"reader_save_chapter_hint": "Ele fica em Favoritos e capítulos salvos, com as suas traduções",
 	"reader_save_dialog_title": "Salvar este capítulo",
 	"reader_saved": "Salvo",
 	"reader_saved_vertical_override_is": "A substituição de Vertical salva fica inativa enquanto Preservar orientação vertical de origem estiver desativado.",
@@ -1579,7 +1589,7 @@
 	"settings_display_ui_language": "Idioma do aplicativo",
 	"settings_display_ui_language_hint": "Menus, configurações e Ajuda. Os mangás continuam sendo traduzidos para o idioma de destino escolhido em Tradução.",
 	"settings_display_ui_language_system": "Padrão do sistema",
-	"settings_display_used_for_volumes_without": "Usado para volumes sem direção própria. Da direita para a esquerda é o padrão para mangás. O menu do leitor ainda pode substituí-lo por volume.",
+	"settings_display_used_for_volumes_without": "Usado para volumes sem direção própria. Da direita para a esquerda é o padrão para mangás. Em Editar detalhes, um volume pode ter a própria direção.",
 	"settings_display_user_interface": "Interface do usuário",
 	"settings_display_volumes_will_always_open": "Os volumes sempre abrirão na primeira página.",
 	"settings_display_volumes_will_open_to": "Os volumes abrirão na última página que você estava lendo.",
@@ -1634,7 +1644,7 @@
 	"settings_overlay_sfx_model_needed": "A detecção de efeitos sonoros fica inativa até o modelo ser baixado.",
 	"settings_overlay_text_size_label": "Tamanho do texto de sobreposição: {percent}",
 	"settings_overlay_when_enabled_get_full": "Quando ativado, \"Traduzir o volume inteiro\" usará a detecção do PP-OCR e produzirá dados de sobreposição para cada página automaticamente. Mais lento, mas evita ter que gerar sobreposições manualmente.",
-	"settings_overlay_when_enabled_translated_text": "Quando ativado, o texto traduzido pode ser exibido diretamente na página sobre as regiões de texto detectadas. Usa a detecção de texto do PP-OCR (incluída no aplicativo). Alterne com o botão Sobreposição na barra de ferramentas ou pressione T.",
+	"settings_overlay_when_enabled_translated_text": "Quando ativado, o texto traduzido pode ser exibido diretamente na página sobre as regiões de texto detectadas. Usa a detecção de texto do PP-OCR, parte dos modelos de visão que o aplicativo baixa uma vez. Alterne com o botão de olho na barra superior do leitor.",
 	"settings_overlay_when_enabled_vertical_source": "Quando ativado, o texto de origem vertical permanece vertical; o inglês e outros idiomas de destino que não sejam CJK são renderizados como blocos horizontais rotacionados. Quando desativado, todas as caixas traduzidas ficam horizontais e as substituições salvas de caixa vertical permanecem inativas.",
 	"settings_saving": "Salvando…",
 	"settings_search_advanced_llm_keywords": "temperatura|tokens máximos|tamanho do contexto|avançado",
@@ -1834,7 +1844,7 @@
 	"settings_translation_fumeto_couldn_t_recognise_2": "O Fumeto não conseguiu reconhecer o formato de chat deste modelo. Digite o formato de prompt dele abaixo para tentar novamente.",
 	"settings_translation_gguf_model": "Modelo GGUF",
 	"settings_translation_hy_mt2_1_8b": "Hy-MT2 1.8B",
-	"settings_translation_hy_mt2_intro": "Hy-MT2 1.8B (1,25 bits) — tradução multilíngue rápida via llama.cpp. {note}",
+	"settings_translation_hy_mt2_intro": "Roda no seu dispositivo via llama.cpp. O cartão de cada modelo, abaixo, diz para que ele serve.",
 	"settings_translation_hy_mt2_is_multilingual": "O Hy-MT2 é multilíngue; a detecção automática presume texto de origem em japonês.",
 	"settings_translation_hy_mt2_requires_the": "O Hy-MT2 requer o aplicativo Android com suporte nativo STQ1_0 do llama.cpp.",
 	"settings_translation_include_context_from_other": "Incluir contexto de outras traduções nesta página",
@@ -1868,7 +1878,7 @@
 	"settings_translation_model_recommended": "Recomendado",
 	"settings_translation_model_used_by_the": "Modelo usado para a tradução no dispositivo",
 	"settings_translation_more_memory_headroom_is": "— recomenda-se mais espaço de memória livre para o Hy-MT2",
-	"settings_translation_needs_a_model_downloaded": "- Requer um modelo baixado (462 MB a ~1,27 GB), além de espaço de RAM livre para inferência",
+	"settings_translation_needs_a_model_downloaded": "- Requer um modelo baixado (de cerca de 448 MB a 1,27 GB), além de espaço de RAM livre para inferência",
 	"settings_translation_no_api_key_required": "Nenhuma chave de API é necessária. Clique em Conectar para buscar os modelos disponíveis.",
 	"settings_translation_no_providers_configured_add": "Nenhum provedor configurado. Adicione um provedor de LLM para começar a traduzir.",
 	"settings_translation_no_review_revision_pass": "- Sem etapa de revisão (é necessário um LLM na nuvem para revisão)",
@@ -1881,7 +1891,6 @@
 	"settings_translation_on_device_limitations": "Limitações no dispositivo",
 	"settings_translation_openai_compatible": "Compatível com OpenAI",
 	"settings_translation_openrouter": "OpenRouter",
-	"settings_translation_optimized_for_low_memory": "Otimizado para inferência móvel com pouca memória.",
 	"settings_translation_please_enter_an_api": "Insira uma chave de API primeiro.",
 	"settings_translation_pp_ocrv6": "PP-OCRv6",
 	"settings_translation_pp_ocrv6_medium_detection": "PP-OCRv6 detecção média + reconhecimento pequeno. O Android usa o ONNX Runtime nativo com kernels ARM otimizados; outras plataformas e dispositivos Android não compatíveis usam o WASM como alternativa. Usa cerca de 81 MB de pesos de modelo durante o OCR.",
@@ -1928,7 +1937,6 @@
 	"settings_translation_use_name_for_translations": "Usar {name} para traduções",
 	"settings_translation_use_pipeline": "Usar {pipeline}",
 	"settings_translation_uses_pp_ocr_text": "Usa a extração de texto do PP-OCR. Funciona com qualquer modelo.",
-	"settings_translation_uses_the_available_llama": "Usa o backend llama.cpp disponível.",
 	"settings_translation_vision_models": "Modelos de visão",
 	"settings_translation_vision_models_desc": "Detecção de texto, reconhecimento de texto e layout de balões de fala. Baixados uma vez e depois usados totalmente no seu dispositivo.",
 	"settings_translation_vision_models_needed": "Necessário antes que qualquer página possa ser traduzida, no dispositivo ou por um provedor na nuvem.",
@@ -2180,6 +2188,7 @@
 	"tabs_long_press_a_comic": "Toque e segure um quadrinho na sua Biblioteca e escolha Abrir em nova aba para mantê-lo aqui.",
 	"tabs_no_open_tabs": "Nenhuma aba aberta",
 	"tabs_o_zzz": "(￣o￣) zzZ",
+	"tabs_open_count": "Abertas: {n}",
 	"tabs_read_volume": "Ler {title}",
 	"tabs_reading_now": "Lendo agora",
 	"tabs_refresh_failed_message": "Falha ao atualizar: {message}",

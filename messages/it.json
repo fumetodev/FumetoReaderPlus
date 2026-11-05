@@ -31,29 +31,16 @@
 	"bridge_unload_failed": "Non è stato possibile scaricare il modello dal dispositivo.",
 	"browser_address_label": "Indirizzo web o ricerca",
 	"browser_address_placeholder": "Cerca o digita un indirizzo web",
+	"browser_already_saved": "Già salvato come {title}.",
 	"browser_back": "Indietro",
+	"browser_back_to_chapter": "Torna al capitolo",
 	"browser_back_to_page": "Torna alla pagina",
+	"browser_bookmarked": "Segnalibro aggiunto",
 	"browser_challenge": "Il sito vuole verificare che tu sia una persona prima di mostrare altre pagine.",
 	"browser_challenge_open": "Apri il sito",
 	"browser_chapter_options": "Opzioni per {title}",
 	"browser_chapter_saved": "Capitolo salvato",
-	"browser_collect": "Raccogli",
-	"browser_collect_hint": "Sfoglia le pagine nel visualizzatore del sito; ognuna viene aggiunta.",
-	"browser_collected": [
-		{
-			"declarations": [
-				"input n",
-				"local nPlural = n: plural"
-			],
-			"selectors": [
-				"nPlural"
-			],
-			"match": {
-				"nPlural=one": "{n} pagina raccolta",
-				"nPlural=other": "{n} pagine raccolte"
-			}
-		}
-	],
+	"browser_check_hint": "Supera qui il controllo del sito, poi torna indietro: il tuo capitolo ti aspetta.",
 	"browser_data_cleared": "Dati di navigazione cancellati",
 	"browser_delete_chapter": "Elimina capitolo",
 	"browser_delete_chapter_again": "Tocca di nuovo per eliminarlo con le traduzioni",
@@ -62,6 +49,7 @@
 	"browser_edit_save": "Salva",
 	"browser_edit_series_label": "Serie",
 	"browser_forward": "Avanti",
+	"browser_found_more": "Questa pagina ha più pagine di quante l'app possa aprirne insieme. Queste sono le prime.",
 	"browser_found_pages": [
 		{
 			"declarations": [
@@ -77,6 +65,7 @@
 			}
 		}
 	],
+	"browser_menu_add_bookmark": "Aggiungi segnalibro a questa pagina",
 	"browser_menu_blocked_count": [
 		{
 			"declarations": [
@@ -95,11 +84,31 @@
 	"browser_menu_blocking_off": "Disattiva il blocco pubblicità per {host}",
 	"browser_menu_blocking_on": "Riattiva il blocco pubblicità per {host}",
 	"browser_menu_close": "Chiudi il menu",
+	"browser_menu_home": "Segnalibri e capitoli salvati",
 	"browser_menu_label": "Menu del browser",
+	"browser_menu_new_tab": "Nuova scheda",
+	"browser_menu_remove_bookmark": "Rimuovi segnalibro",
 	"browser_menu_settings": "Impostazioni del browser",
-	"browser_open_button": "Apri il browser web",
+	"browser_new_tab": "Nuova scheda",
+	"browser_open_button": "Apri una nuova scheda web",
+	"browser_open_page": "Apri {title}",
 	"browser_page_crashed": "La pagina ha smesso di funzionare ed è stata chiusa.",
-	"browser_pager_hint": "Questo visualizzatore mostra una pagina alla volta. Usa la vista con tutte le pagine del sito, se c’è, oppure Raccogli.",
+	"browser_pages_so_far": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} pagina finora",
+				"nPlural=other": "{n} pagine finora"
+			}
+		}
+	],
+	"browser_pages_so_far_hint": "Sfoglia le pagine sul sito e ognuna viene aggiunta. Leggi le apre tutte.",
 	"browser_protected": "Questo visualizzatore disegna da sé le sue pagine, quindi non si possono leggere nell’app.",
 	"browser_read": "Leggi",
 	"browser_reload": "Ricarica",
@@ -107,11 +116,12 @@
 	"browser_reopen_other": "Queste sono le pagine del tuo capitolo salvato {title}.",
 	"browser_reopen_retrace": "Seguo il link da cui hai raggiunto {title}…",
 	"browser_reopening": "Apertura di {title}…",
-	"browser_saved_chapters": "Capitoli salvati",
-	"browser_saved_empty": "I capitoli che salvi nel lettore compaiono qui e si riaprono con le loro traduzioni.",
+	"browser_save": "Salva",
+	"browser_saved_empty": "Qui compaiono i segnalibri e i capitoli salvati. Un capitolo salvato si riapre con le sue traduzioni.",
 	"browser_saved_progress": "Pagina {page} di {total}",
 	"browser_start_body": "Apri una pagina che mostra un fumetto. Quando l’app trova le sue pagine, in basso compare una barra: tocca Leggi per aprirle nel lettore e tradurle.",
 	"browser_start_note": "Del sito non si conserva nulla: le sue pagine restano solo mentre le leggi.",
+	"browser_start_over": "Ricomincia",
 	"browser_start_title": "Leggi fumetti dal web",
 	"browser_stop": "Interrompi il caricamento",
 	"browser_unavailable_body": "Il browser dell’app tiene i suoi cookie e i dati dei siti separati da quelli dell’app, cosa che l’Android System WebView di questo telefono non sa ancora fare. Aggiornalo su Google Play e riprova.",
@@ -246,7 +256,7 @@
 	"catalog_hide_search_bar": "Nascondi barra di ricerca",
 	"catalog_hide_search_button": "Nascondi pulsante di ricerca",
 	"catalog_import": "+ Importa",
-	"catalog_import_a_zip_cbz": "Importa un file .zip, .cbz, .cbr o .pdf per iniziare",
+	"catalog_import_a_zip_cbz": "Importa un file .zip, .cbz, .epub o .pdf per iniziare",
 	"catalog_imported_totalimported_new_volume": "Importati {totalImported} nuovi volume{s}",
 	"catalog_initial_story_summary": "Riepilogo iniziale della storia",
 	"catalog_inside_folder": "Dentro: {folder}",
@@ -1108,7 +1118,7 @@
 	"lang_auto_detect": "Rilevamento automatico",
 	"libraries_add_local": "+ Locale",
 	"libraries_add_remote": "+ Remoto",
-	"libraries_android_hint": "📂 Copia i file dei fumetti (.cbz, .zip, .pdf) nella cartella del dispositivo indicata sotto usando un file manager o USB, poi tocca Scansiona per importarli.",
+	"libraries_android_hint": "📂 Copia i file dei fumetti (.cbz, .zip, .pdf, .epub) nella cartella del dispositivo indicata sotto usando un file manager o USB, poi tocca Scansiona per importarli.",
 	"libraries_assign_failed": "Impossibile assegnare gli autori.",
 	"libraries_assigning": "Assegnazione in corso...",
 	"libraries_authors_done": [
@@ -1132,7 +1142,7 @@
 	"libraries_browser_ad_block_hint": "Blocca i domini di pubblicità e popup di EasyList e del filtro DNS di AdGuard, che l’app scarica dai loro editori e aggiorna ogni settimana.",
 	"libraries_browser_clear": "Cancella dati di navigazione",
 	"libraries_browser_clear_again": "Tocca di nuovo per cancellare",
-	"libraries_browser_clear_hint": "Ti disconnette dai siti e rimuove i loro cookie, archiviazione e cache. I dati dell’app non vengono toccati.",
+	"libraries_browser_clear_hint": "Ti disconnette dai siti, rimuove i loro cookie, archiviazione e cache e chiude tutte le schede. Segnalibri, capitoli salvati e dati dell’app non vengono toccati.",
 	"libraries_browser_lists_never": "Elenchi non ancora scaricati",
 	"libraries_browser_lists_status": "{domains} domini bloccati · aggiornato il {date}",
 	"libraries_browser_lists_update": "Aggiorna elenchi",
@@ -1228,7 +1238,7 @@
 	"model_variant_stock_title": "Modello di traduzione standard",
 	"notif_cancel": "Annulla",
 	"notif_model_active_title": "Traduttore locale attivo",
-	"notif_model_channel_description": "Attivo mentre il modello di traduzione locale Hy-MT2 è caricato in memoria",
+	"notif_model_channel_description": "Attivo mentre un modello di traduzione locale è caricato in memoria",
 	"notif_model_channel_name": "Modello di traduzione locale",
 	"notif_model_loaded_text": "Modello {model} caricato",
 	"notif_stop": "Interrompi",
@@ -1247,7 +1257,7 @@
 	"onboarding_import_cbz_files_with": "Importa file CBZ con «+ Importa», oppure copiali nella cartella Fumetti del dispositivo e tocca «Scansiona». Se usi Komga, Kavita o YACReader a casa, collega il tuo server da Impostazioni → Librerie e leggi sulla tua rete.",
 	"onboarding_intro_aria": "Introduzione a {app}",
 	"onboarding_library_in_grid_view": "Libreria in vista a griglia con schede dei volumi e una cartella",
-	"onboarding_manga_turns_right_to": "I manga si sfogliano automaticamente da destra a sinistra. Tocca il centro della pagina per i comandi, scegli lo stile di scorrimento pagina nel menu ⋮ del lettore, e passa a Striscia lunga per i webtoon. La tua posizione in ogni volume viene ricordata.",
+	"onboarding_manga_turns_right_to": "All'inizio le pagine girano da sinistra a destra; per i manga, scegli Da destra a sinistra nel menu ⋮ del lettore. Tocca il centro della pagina per i comandi, scegli lo stile di scorrimento pagina nello stesso menu, e passa lì a Striscia lunga per i webtoon. La tua posizione in ogni volume viene ricordata.",
 	"onboarding_next": "Avanti",
 	"onboarding_paste_the_key_under": "Incolla la chiave in Impostazioni → Traduzione → Off-Device e scegli un modello con supporto visivo. Fatto.",
 	"onboarding_prefer_that_nothing_ever": "Preferisci che nulla lasci mai il tuo dispositivo? Scarica invece un modello on-device da Impostazioni → Traduzione → On-Device. Le guide complete si trovano in Impostazioni → Aiuto.",
@@ -1458,7 +1468,7 @@
 	"reader_revision_failed": "Revisione non riuscita",
 	"reader_save_and_close_overlay": "Salva e chiudi l'editor dell'overlay",
 	"reader_save_chapter": "Salva capitolo",
-	"reader_save_chapter_hint": "Le traduzioni tornano quando lo rileggi sul sito",
+	"reader_save_chapter_hint": "Resta in Segnalibri e capitoli salvati, con le sue traduzioni",
 	"reader_save_dialog_title": "Salva questo capitolo",
 	"reader_saved": "Salvato",
 	"reader_saved_vertical_override_is": "La sovrascrittura verticale salvata è inattiva mentre l'opzione Mantieni l'orientamento verticale originale è disattivata.",
@@ -1579,7 +1589,7 @@
 	"settings_display_ui_language": "Lingua dell'app",
 	"settings_display_ui_language_hint": "Menu, impostazioni e Guida. I manga vengono comunque tradotti nella lingua di destinazione scelta in Traduzione.",
 	"settings_display_ui_language_system": "Predefinita di sistema",
-	"settings_display_used_for_volumes_without": "Usata per i volumi senza una propria direzione. Destra verso sinistra è lo standard per i manga. Il menu del lettore può comunque sovrascriverla per singolo volume.",
+	"settings_display_used_for_volumes_without": "Usata per i volumi senza una propria direzione. Destra verso sinistra è lo standard per i manga. In Modifica dettagli un volume può avere la propria direzione.",
 	"settings_display_user_interface": "Interfaccia utente",
 	"settings_display_volumes_will_always_open": "I volumi si apriranno sempre sulla prima pagina.",
 	"settings_display_volumes_will_open_to": "I volumi si apriranno sull'ultima pagina che stavi leggendo.",
@@ -1634,7 +1644,7 @@
 	"settings_overlay_sfx_model_needed": "Il rilevamento effetti sonori resta inattivo finché il modello non viene scaricato.",
 	"settings_overlay_text_size_label": "Dimensione testo overlay: {percent}",
 	"settings_overlay_when_enabled_get_full": "Se attivata, «Traduci tutto il volume» userà il rilevamento PP-OCR e produrrà automaticamente i dati di overlay per ogni pagina. Più lento, ma evita di dover generare gli overlay manualmente.",
-	"settings_overlay_when_enabled_translated_text": "Se attivata, il testo tradotto può essere mostrato direttamente sulla pagina sopra le aree di testo rilevate. Usa il rilevamento testo PP-OCR (incluso nell'app). Attiva o disattiva con il pulsante Overlay nella barra degli strumenti o premendo T.",
+	"settings_overlay_when_enabled_translated_text": "Se attivata, il testo tradotto può essere mostrato direttamente sulla pagina sopra le aree di testo rilevate. Usa il rilevamento testo PP-OCR, parte dei modelli di visione che l'app scarica una sola volta. Attiva o disattiva con il pulsante a forma di occhio nella barra superiore del lettore.",
 	"settings_overlay_when_enabled_vertical_source": "Se attivata, il testo di origine verticale resta verticale; l'inglese e le altre lingue non-CJK vengono resi come blocchi orizzontali ruotati. Se disattivata, ogni riquadro tradotto è orizzontale e le sovrascritture salvate per i riquadri verticali restano inattive.",
 	"settings_saving": "Salvataggio…",
 	"settings_search_advanced_llm_keywords": "temperatura|token massimi|dimensione contesto|avanzate",
@@ -1834,7 +1844,7 @@
 	"settings_translation_fumeto_couldn_t_recognise_2": "Fumeto non è riuscito a riconoscere il formato di chat di questo modello. Inserisci qui sotto il suo formato di prompt per riprovare.",
 	"settings_translation_gguf_model": "Modello GGUF",
 	"settings_translation_hy_mt2_1_8b": "Hy-MT2 1.8B",
-	"settings_translation_hy_mt2_intro": "Hy-MT2 1.8B (1,25 bit) — traduzione multilingue veloce tramite llama.cpp. {note}",
+	"settings_translation_hy_mt2_intro": "Funziona sul tuo dispositivo tramite llama.cpp. La scheda di ogni modello, qui sotto, indica a cosa serve.",
 	"settings_translation_hy_mt2_is_multilingual": "Hy-MT2 è multilingue; il rilevamento automatico presuppone un testo di partenza in giapponese.",
 	"settings_translation_hy_mt2_requires_the": "Hy-MT2 richiede l'app Android con supporto nativo llama.cpp STQ1_0.",
 	"settings_translation_include_context_from_other": "Includi il contesto dalle altre traduzioni in questa pagina",
@@ -1868,7 +1878,7 @@
 	"settings_translation_model_recommended": "Consigliato",
 	"settings_translation_model_used_by_the": "Modello usato per la traduzione sul dispositivo",
 	"settings_translation_more_memory_headroom_is": "— si consiglia più margine di memoria per Hy-MT2",
-	"settings_translation_needs_a_model_downloaded": "- Richiede un modello scaricato (da 462 MB a ~1.27 GB), più margine di RAM per l'inferenza",
+	"settings_translation_needs_a_model_downloaded": "- Richiede un modello scaricato (da circa 448 MB a 1.27 GB), più margine di RAM per l'inferenza",
 	"settings_translation_no_api_key_required": "Non è richiesta alcuna chiave API. Clicca su Connetti per recuperare i modelli disponibili.",
 	"settings_translation_no_providers_configured_add": "Nessun provider configurato. Aggiungi un provider LLM per iniziare a tradurre.",
 	"settings_translation_no_review_revision_pass": "- Nessuna fase di revisione (è richiesto un LLM cloud per la revisione)",
@@ -1881,7 +1891,6 @@
 	"settings_translation_on_device_limitations": "Limiti sul dispositivo",
 	"settings_translation_openai_compatible": "Compatibile con OpenAI",
 	"settings_translation_openrouter": "OpenRouter",
-	"settings_translation_optimized_for_low_memory": "Ottimizzato per l'inferenza mobile a basso consumo di memoria.",
 	"settings_translation_please_enter_an_api": "Inserisci prima una chiave API.",
 	"settings_translation_pp_ocrv6": "PP-OCRv6",
 	"settings_translation_pp_ocrv6_medium_detection": "PP-OCRv6 rilevamento medio + riconoscimento piccolo. Android usa ONNX Runtime nativo con kernel ARM ottimizzati; altre piattaforme e dispositivi Android non supportati ricorrono a WASM. Usa circa 81 MB di pesi del modello durante l'OCR.",
@@ -1928,7 +1937,6 @@
 	"settings_translation_use_name_for_translations": "Usa {name} per le traduzioni",
 	"settings_translation_use_pipeline": "Usa {pipeline}",
 	"settings_translation_uses_pp_ocr_text": "Usa l'estrazione del testo PP-OCR. Funziona con qualsiasi modello.",
-	"settings_translation_uses_the_available_llama": "Usa il backend llama.cpp disponibile.",
 	"settings_translation_vision_models": "Modelli di visione",
 	"settings_translation_vision_models_desc": "Rilevamento del testo, riconoscimento del testo e disposizione delle nuvolette. Scaricati una sola volta, poi usati interamente sul tuo dispositivo.",
 	"settings_translation_vision_models_needed": "Necessari prima di poter tradurre qualsiasi pagina, sul dispositivo o tramite un provider cloud.",
@@ -2180,6 +2188,7 @@
 	"tabs_long_press_a_comic": "Tieni premuto un fumetto nella tua libreria e scegli Apri in una nuova scheda per mantenerlo qui.",
 	"tabs_no_open_tabs": "Nessuna scheda aperta",
 	"tabs_o_zzz": "(￣o￣) zzZ",
+	"tabs_open_count": "Aperte: {n}",
 	"tabs_read_volume": "Leggi {title}",
 	"tabs_reading_now": "In lettura",
 	"tabs_refresh_failed_message": "Aggiornamento non riuscito: {message}",
