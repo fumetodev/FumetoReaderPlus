@@ -20,6 +20,11 @@
 			description: m.help_fig_shows_or_hides_overlay()
 		},
 		{
+			id: 'boxes',
+			label: m.reader_boxes_on_this_page_menu(),
+			description: m.help_fig_boxes_on_this_page()
+		},
+		{
 			id: 'retranslate',
 			label: m.reader_re_translate_page(),
 			description: m.help_fig_discards_the_current_page()
@@ -54,13 +59,17 @@
 				<span class="truncate">{m.reader_auto_translate_pages()}</span><span class="shrink-0 text-teal-300">{m.settings_server_off()}</span>
 			</button>
 			<button type="button" class={rowClass(selected === 'vertical-text')} aria-pressed={selected === 'vertical-text'} onclick={() => select('vertical-text')}>
-				<span class="truncate">{m.settings_search_vertical_text_label()}</span><span class="shrink-0 text-teal-300">{m.settings_server_on()}</span>
+				<span class="truncate">{m.settings_search_vertical_text_label()}</span><span class="shrink-0 text-teal-300">{m.settings_server_off()}</span>
 			</button>
 			<button type="button" class={rowClass(selected === 'sfx-overlays')} aria-pressed={selected === 'sfx-overlays'} onclick={() => select('sfx-overlays')}>
 				<span class="truncate">{m.reader_sound_effect_overlays()}</span><span class="shrink-0 text-teal-300">{m.settings_server_off()}</span>
 			</button>
 			<div class="border-t border-surface-700 pt-1.5">
-				<button type="button" class={actionClass(selected === 'retranslate')} aria-pressed={selected === 'retranslate'} onclick={() => select('retranslate')}>
+				<button type="button" class={actionClass(selected === 'boxes')} aria-pressed={selected === 'boxes'} onclick={() => select('boxes')}>
+					<svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+					{m.reader_boxes_on_this_page_menu()}
+				</button>
+				<button type="button" class="mt-1 {actionClass(selected === 'retranslate')}" aria-pressed={selected === 'retranslate'} onclick={() => select('retranslate')}>
 					<svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
 					{m.reader_re_translate_page()}
 				</button>

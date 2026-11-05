@@ -11,6 +11,11 @@
 			description: m.help_fig_auto_fits_the_whole()
 		},
 		{
+			id: 'rotate',
+			label: m.header_rotate_page(),
+			description: m.help_fig_rotate_page()
+		},
+		{
 			id: 'direction',
 			label: m.reader_reading_direction(),
 			description: m.help_fig_right_to_left_manga()
@@ -59,8 +64,11 @@
 					<span class="text-[8px] leading-none text-surface-300">{m.header_actual()}</span>
 				</span>
 			</button>
+			<button type="button" class={rowClass(selected === 'rotate')} aria-pressed={selected === 'rotate'} onclick={() => select('rotate')}>
+				<span class="truncate">{m.header_rotate_page()}</span><span class="shrink-0 tabular-nums">0°</span>
+			</button>
 			<button type="button" class={rowClass(selected === 'direction')} aria-pressed={selected === 'direction'} onclick={() => select('direction')}>
-				<span class="truncate">{m.reader_reading_direction()}</span><span class="shrink-0">{m.reader_direction_rtl()}</span>
+				<span class="truncate">{m.reader_reading_direction()}</span><span class="shrink-0">{m.reader_direction_ltr()}</span>
 			</button>
 			<button type="button" class={rowClass(selected === 'reader-mode')} aria-pressed={selected === 'reader-mode'} onclick={() => select('reader-mode')}>
 				<span class="truncate">{m.header_reader_mode()}</span><span class="shrink-0">{m.settings_display_paged()}</span>

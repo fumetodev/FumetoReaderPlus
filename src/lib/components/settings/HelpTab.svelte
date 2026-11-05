@@ -53,8 +53,10 @@
 	const HELP_SECTIONS: Array<{ id: string; title: () => string; keywords: () => string; keywordsEn: string[] }> = [
 		{ id: 'overview', title: () => m.help_overview(), keywords: () => m.help_keywords_overview(), keywordsEn: ['about', 'features', 'what is'] },
 		{ id: 'getting-started', title: () => m.help_getting_started(), keywords: () => m.help_keywords_getting_started(), keywordsEn: ['setup', 'first', 'import', 'add library', 'remote'] },
-		{ id: 'library-view', title: () => m.settings_display_library_view(), keywords: () => m.help_keywords_library_view(), keywordsEn: ['catalog', 'search', 'sort', 'folders', 'tags', 'move'] },
-		{ id: 'reader-view', title: () => m.help_reader_view(), keywords: () => m.help_keywords_reader_view(), keywordsEn: ['pages', 'zoom', 'navigation', 'regions', 'draw', 'controls', 'filmstrip', 'go to page', 'long-press', 'info'] },
+		{ id: 'library-view', title: () => m.settings_display_library_view(), keywords: () => m.help_keywords_library_view(), keywordsEn: ['catalog', 'search', 'sort', 'folders', 'filters', 'favorites', 'move'] },
+		{ id: 'reader-view', title: () => m.help_reader_view(), keywords: () => m.help_keywords_reader_view(), keywordsEn: ['pages', 'zoom', 'navigation', 'regions', 'draw', 'controls', 'filmstrip', 'go to page', 'long-press', 'info', 'rotate', 'landscape'] },
+		{ id: 'tabs', title: () => m.help_tabs_view(), keywords: () => m.help_keywords_tabs(), keywordsEn: ['open', 'close', 'sort', 'continue reading', 'web tabs'] },
+		{ id: 'web-browser', title: () => m.help_web_browser(), keywords: () => m.help_keywords_web_browser(), keywordsEn: ['web', 'site', 'website', 'tabs', 'saved chapters', 'bookmarks', 'ads', 'cookies', 'human check'] },
 		{ id: 'translations', title: () => m.sidebar_translations(), keywords: () => m.help_keywords_translations(), keywordsEn: ['openrouter', 'api key', 'provider', 'on-device', 'modes', 'overlay', 'revisions', 'cost', 'price'] },
 		{ id: 'whats-new', title: () => m.help_what_s_new(), keywords: () => m.help_keywords_whats_new(), keywordsEn: ['changelog', 'release', 'version', 'updates'] },
 		{ id: 'tips', title: () => m.help_tips_troubleshooting(), keywords: () => m.help_keywords_tips(), keywordsEn: ['problem', 'error', 'connection', 'slow', 'faq', 'fix'] },
@@ -144,18 +146,19 @@
 				<ul class="mt-1 list-disc space-y-1 pl-4">
 					<li>{m.help_local_device_storage_zip()}</li>
 					<li>{m.help_self_hosted_servers_yacreader()}</li>
+					<li>{m.help_websites_li()}</li>
 				</ul>
 			<p class="mt-2 font-medium text-surface-200">{m.help_translate_comics()}</p>
 			<ul class="mt-1 list-disc space-y-1 pl-4">
 				<li>{m.help_off_device_cloud_llms()}</li>
-				<li>{m.help_on_device_models_hy()}</li>
+				<li>{m.help_on_device_models()}</li>
 			</ul>
 			<p class="mt-2">
 				{m.help_best_results_come_from()}
 			</p>
 			<p class="mt-2 font-medium text-surface-200">{m.help_customize_the_look()}</p>
 			<p class="mt-1">
-				{m.help_choose_from_12_color()}
+				{m.help_choose_a_color_scheme()}
 			</p>
 			<img src="/help/overview-main.png" alt={m.help_main_catalog_view_with()} class="mx-auto mb-1 mt-3 w-full max-w-[300px] rounded-lg border border-surface-700" />
 			<p class="mb-3 text-center text-[11px] text-surface-500">
@@ -210,6 +213,11 @@
 			<p class="mt-3 font-medium text-surface-200">{m.help_setting_up_translation()}</p>
 			<p class="mt-1">
 				{m.help_see_the_translations_section()}
+			</p>
+
+			<p class="mt-3 font-medium text-surface-200">{m.help_reading_from_the_web()}</p>
+			<p class="mt-1">
+				{m.help_reading_from_the_web_text()}
 			</p>
 
 			<p class="mt-3 font-medium text-surface-200">{m.onboarding_start_reading()}</p>
@@ -268,9 +276,9 @@
 			</p>
 			<img src="/help/library-sort-menu.png" alt={m.help_sort_dropdown_showing_sort()} class="mx-auto my-3 w-full max-w-[300px] rounded-lg border border-surface-700" />
 
-			<p class="mt-3 font-medium text-surface-200">{m.help_tag_filtering()}</p>
+			<p class="mt-3 font-medium text-surface-200">{m.help_filters()}</p>
 			<p class="mt-1">
-				{m.help_filter_volumes_by_tags()}
+				{m.help_filters_text()}
 			</p>
 
 			<p class="mt-3 font-medium text-surface-200">{m.help_folders_local_libraries_only()}</p>
@@ -285,9 +293,9 @@
 			</p>
 			<img src="/help/library-select-move.png" alt={m.help_selection_mode_with_two()} class="mx-auto my-3 w-full max-w-[300px] rounded-lg border border-surface-700" />
 
-			<p class="mt-3 font-medium text-surface-200">{m.help_recently_read()}</p>
+			<p class="mt-3 font-medium text-surface-200">{m.help_continue_reading()}</p>
 			<p class="mt-1">
-				{m.help_when_at_the_root()}
+				{m.help_continue_reading_text()}
 			</p>
 
 			<p class="mt-3 font-medium text-surface-200">{m.help_remote_server_folders()}</p>
@@ -339,6 +347,11 @@
 			</p>
 			<img src="/help/reader-single-page.png" alt={m.help_reader_view_showing_a()} class="mx-auto my-3 w-full max-w-[300px] rounded-lg border border-surface-700" />
 
+			<p class="mt-3 font-medium text-surface-200">{m.help_landscape_rotation()}</p>
+			<p class="mt-1">
+				{m.help_landscape_rotation_text()}
+			</p>
+
 			<p class="mt-3 font-medium text-surface-200">{m.help_zoom_pan()}</p>
 			<p class="mt-1">
 				{m.help_in_paged_mode_pinch()}
@@ -354,6 +367,98 @@
 				{m.help_open_the_globe_menu()}
 			</p>
 			<img src="/help/reader-draw-region.png" alt={m.help_region_drawing_mode_with()} class="mx-auto my-3 w-full max-w-[300px] rounded-lg border border-surface-700" />
+		</div>
+	{/if}
+
+	<!-- ============================================================ -->
+	<!-- Section: Tabs View -->
+	<!-- ============================================================ -->
+	<button
+		data-help-section="tabs" onclick={() => toggleSection('tabs')}
+		aria-expanded={expandedSection === 'tabs'}
+		class:hidden={!sectionVisible('tabs')}
+		class="flex w-full items-center justify-between rounded-lg bg-surface-800 px-4 py-3 text-left transition-colors hover:bg-surface-700"
+	>
+		<span class="text-sm font-medium text-surface-200">{m.help_tabs_view()}</span>
+		<svg
+			class="h-4 w-4 shrink-0 text-surface-400 transition-transform duration-200 {expandedSection === 'tabs' ? 'rotate-180' : ''}"
+			viewBox="0 0 20 20" fill="currentColor"
+		>
+			<path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+		</svg>
+	</button>
+	{#if expandedSection === 'tabs'}
+		<div class="px-4 pb-4 pt-2 text-xs leading-relaxed text-surface-300" transition:slide={{ duration: motionDuration(200) }}>
+			<p class="font-medium text-surface-200">{m.help_opening_a_tab()}</p>
+			<p class="mt-1">
+				{m.help_opening_a_tab_text()}
+			</p>
+			<p class="mt-3 font-medium text-surface-200">{m.help_working_with_tabs()}</p>
+			<p class="mt-1">
+				{m.help_working_with_tabs_text()}
+			</p>
+			<p class="mt-1">
+				{m.help_tabs_continue_text()}
+			</p>
+			<img src="/help/tabs-view.png" alt={m.help_tabs_view_with_comic_and_web()} class="mx-auto my-3 w-full max-w-[300px] rounded-lg border border-surface-700" />
+			<p class="mt-3 font-medium text-surface-200">{m.help_web_tabs()}</p>
+			<p class="mt-1">
+				{m.help_web_tabs_text()}
+			</p>
+		</div>
+	{/if}
+
+	<!-- ============================================================ -->
+	<!-- Section: Web Browser -->
+	<!-- ============================================================ -->
+	<button
+		data-help-section="web-browser" onclick={() => toggleSection('web-browser')}
+		aria-expanded={expandedSection === 'web-browser'}
+		class:hidden={!sectionVisible('web-browser')}
+		class="flex w-full items-center justify-between rounded-lg bg-surface-800 px-4 py-3 text-left transition-colors hover:bg-surface-700"
+	>
+		<span class="text-sm font-medium text-surface-200">{m.help_web_browser()}</span>
+		<svg
+			class="h-4 w-4 shrink-0 text-surface-400 transition-transform duration-200 {expandedSection === 'web-browser' ? 'rotate-180' : ''}"
+			viewBox="0 0 20 20" fill="currentColor"
+		>
+			<path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+		</svg>
+	</button>
+	{#if expandedSection === 'web-browser'}
+		<div class="px-4 pb-4 pt-2 text-xs leading-relaxed text-surface-300" transition:slide={{ duration: motionDuration(200) }}>
+			<p class="font-medium text-surface-200">{m.help_browser_opening()}</p>
+			<p class="mt-1">
+				{m.help_browser_opening_text()}
+			</p>
+			<p class="mt-1">
+				{m.help_browser_settings_note()}
+			</p>
+			<p class="mt-3 font-medium text-surface-200">{m.help_browser_reading()}</p>
+			<p class="mt-1">
+				{m.help_browser_reading_text()}
+			</p>
+			<img src="/help/browser-page-bar.png" alt={m.help_browser_page_with_bar()} class="mx-auto my-3 w-full max-w-[300px] rounded-lg border border-surface-700" />
+			<p class="mt-3 font-medium text-surface-200">{m.help_browser_saving()}</p>
+			<p class="mt-1">
+				{m.help_browser_saving_text()}
+			</p>
+			<p class="mt-1">
+				{m.help_browser_saving_pages_text()}
+			</p>
+			<img src="/help/browser-start-page.png" alt={m.help_browser_start_page_alt()} class="mx-auto my-3 w-full max-w-[300px] rounded-lg border border-surface-700" />
+			<p class="mt-3 font-medium text-surface-200">{m.help_browser_bookmarks()}</p>
+			<p class="mt-1">
+				{m.help_browser_bookmarks_text()}
+			</p>
+			<p class="mt-3 font-medium text-surface-200">{m.help_browser_checks()}</p>
+			<p class="mt-1">
+				{m.help_browser_checks_text()}
+			</p>
+			<p class="mt-3 font-medium text-surface-200">{m.help_browser_ads()}</p>
+			<p class="mt-1">
+				{m.help_browser_ads_text()}
+			</p>
 		</div>
 	{/if}
 
@@ -563,9 +668,17 @@
 						</p>
 						<p class="mt-2 text-surface-300">{m.help_text_recognition()}</p>
 						<p class="mt-1">{m.help_pp_ocrv6_native_onnx()}</p>
+						<p class="mt-1">{m.help_vision_models_download()}</p>
 						<p class="mt-2 text-surface-300">{m.help_translation()}</p>
-						<p class="mt-1"><RichMessage message={m.help_hy_mt2_blurb({ hyMt218b: m.settings_translation_hy_mt2_1_8b() })} emClass="text-surface-300" /></p>
-						<p class="mt-2 text-surface-300">{m.help_setup_for_hy_mt2()}</p>
+						<ul class="mt-1 list-disc space-y-1 pl-4">
+							<li><RichMessage message={m.help_model_fumetotranslate_li({ name: m.model_variant_fumetotranslate_title() })} emClass="text-surface-300" /></li>
+							<li><RichMessage message={m.help_model_v3_li({ name: m.model_variant_manga_v3_title() })} emClass="text-surface-300" /></li>
+							<li><RichMessage message={m.help_model_v5_li({ name: m.model_variant_manga_v5_title() })} emClass="text-surface-300" /></li>
+							<li><RichMessage message={m.help_model_index_li({ name: m.model_variant_index_manga_v1_title() })} emClass="text-surface-300" /></li>
+							<li><RichMessage message={m.help_model_custom_li({ name: m.model_variant_custom_title() })} emClass="text-surface-300" /></li>
+						</ul>
+						<p class="mt-1">{m.help_model_older_note()}</p>
+						<p class="mt-2 text-surface-300">{m.help_setting_it_up()}</p>
 						<p class="mt-1">
 							{m.help_settings_translation_on_device()}
 					</p>
@@ -589,6 +702,7 @@
 				</button>
 				{#if expandedTranslationSub === 'trans-modes'}
 					<div class="px-3 pb-3 pt-1 text-xs leading-relaxed text-surface-400" transition:slide={{ duration: motionDuration(150) }}>
+						<p class="mb-2">{m.help_modes_intro()}</p>
 						<ul class="list-disc space-y-2 pl-4">
 							<li><RichMessage message={m.help_mode_1_li({ mode1Isolated: m.settings_translation_mode_1_isolated() })} emClass="text-surface-300" /></li>
 							<li><RichMessage message={m.help_mode_2_li({ mode2PageContext: m.settings_translation_mode_2_page_context() })} emClass="text-surface-300" /></li>
@@ -700,6 +814,7 @@
 						<ul class="mt-1 list-disc space-y-1 pl-4">
 							<li><RichMessage message={m.help_teal_balloon_li()} emClass="text-teal-300" /></li>
 							<li><RichMessage message={m.help_unplaced_marker_li()} emClass="rounded bg-surface-800 px-1 text-surface-200" /></li>
+							<li><RichMessage message={m.help_uncertain_marker_li()} emClass="rounded bg-surface-800 px-1 text-sky-300" /></li>
 						</ul>
 						<img src="/help/translation-overlay-edit.png" alt={m.help_overlay_box_selected_for()} class="mx-auto my-3 w-full max-w-[300px] rounded-lg border border-surface-700" />
 					</div>
@@ -732,6 +847,7 @@
 						<p class="mt-2">
 							{m.help_each_revision_creates_a()}
 						</p>
+						<p class="mt-2">{m.help_revision_needs_off_device()}</p>
 					</div>
 				{/if}
 			</div>
@@ -759,6 +875,13 @@
 		<div class="px-4 pb-4 pt-2 text-xs leading-relaxed text-surface-300" transition:slide={{ duration: motionDuration(200) }}>
 			<p class="font-medium text-surface-200">{m.help_version_line({ version: APP_VERSION })}</p>
 			<ul class="mt-1 list-disc space-y-1 pl-4">
+				<li>{m.help_browser_tabs_new()}</li>
+				<li>{m.help_saved_chapters_open_new()}</li>
+				<li>{m.help_viewers_gathered_new()}</li>
+				<li>{m.help_fixed_browser_back()}</li>
+				<li>{m.help_fixed_challenge_keeps()}</li>
+				<li>{m.help_sites_no_app_name()}</li>
+				<li>{m.help_fixed_small_reader()}</li>
 				<li>{m.help_fixed_importing_a_large_comic()}</li>
 				<li>{m.help_new_a_built_in_web()}</li>
 				<li>{m.help_fixed_deleting_a_comic_or()}</li>
@@ -840,6 +963,8 @@
 				<li><RichMessage message={m.help_remove_library_li()} emClass="text-surface-200" /></li>
 				<li><RichMessage message={m.help_erase_rescan_li()} emClass="text-surface-200" /></li>
 				<li><RichMessage message={m.help_deleting_model_li()} emClass="text-surface-200" /></li>
+				<li><RichMessage message={m.help_delete_chapter_li()} emClass="text-surface-200" /></li>
+				<li><RichMessage message={m.help_clear_browsing_li()} emClass="text-surface-200" /></li>
 			</ul>
 			<p class="mt-3 font-medium text-surface-200">{m.help_backup()}</p>
 			<p class="mt-1">
@@ -939,6 +1064,7 @@
 				<li><RichMessage message={m.help_perm_foreground_li()} emClass="text-surface-200" /></li>
 				<li><RichMessage message={m.help_perm_wake_lock_li()} emClass="text-surface-200" /></li>
 				<li><RichMessage message={m.help_perm_notifications_li()} emClass="text-surface-200" /></li>
+				<li><RichMessage message={m.help_perm_vibrate_li()} emClass="text-surface-200" /></li>
 			</ul>
 
 			<p class="mt-3 font-medium text-surface-200">{m.help_third_party_services()}</p>

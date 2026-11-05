@@ -16,7 +16,7 @@
 		},
 		{
 			id: 'chip',
-			label: '3-dot menu',
+			label: m.help_fig_more_options(),
 			description: m.help_fig_per_comic_actions_open()
 		},
 		{
@@ -45,6 +45,16 @@
 					onclick={() => select('title-strip')}
 				>
 					<span class="block truncate text-[10px] font-medium leading-tight text-surface-100">{m.help_fig_my_manga_vol_1()}</span>
+					<span class="block truncate text-[8px] text-surface-300">24p · LTR</span>
+				</button>
+				<button
+					type="button"
+					class="absolute bottom-0 left-0 flex h-6 w-[60%] items-end transition-shadow {selected === 'meta' ? 'ring-2 ring-inset ring-teal-400' : ''}"
+					aria-pressed={selected === 'meta'}
+					aria-label={m.help_fig_progress_line()}
+					onclick={() => select('meta')}
+				>
+					<span class="block h-[3px] w-full bg-primary-500"></span>
 				</button>
 				<button
 					type="button"
@@ -56,14 +66,6 @@
 					<svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="3.25" r="1.25"/><circle cx="8" cy="8" r="1.25"/><circle cx="8" cy="12.75" r="1.25"/></svg>
 				</button>
 			</div>
-			<button
-				type="button"
-				class="block w-full px-2 py-1.5 text-left transition-shadow {selected === 'meta' ? 'ring-2 ring-inset ring-teal-400' : ''}"
-				aria-pressed={selected === 'meta'}
-				onclick={() => select('meta')}
-			>
-				<span class="block text-[9px] text-surface-500">{m.help_fig_24_pages_page_3()}</span>
-			</button>
 		</div>
 	{/snippet}
 </HelpInteractiveFigure>
