@@ -1167,7 +1167,7 @@ dependencies = [
 
 [[package]]
 name = "fumeto-reader-plus"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "cmake",
  "log",
