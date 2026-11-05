@@ -2250,9 +2250,16 @@
 
 {#if isMobile && $activeRegionDrawSession}
 	<div class="fixed inset-x-0 top-0 z-[89] grid h-[calc(56px+var(--sat,0px))] grid-cols-[48px_minmax(0,1fr)_48px] items-end gap-2 px-2 pb-1" style="padding-top: var(--sat, 0px); padding-left: calc(8px + var(--sal,0px)); padding-right: calc(8px + var(--sar,0px));" data-region-draw-controls>
-		<ReaderIconButton label={m.reader_undo_newest_region()} class="bg-surface-900/90 text-surface-100 shadow-lg disabled:opacity-40" disabled={$activeRegionDrawSession.createdRegionIds.length === 0} onclick={() => void undoNewestDrawnRegion()}>
-			<svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v1"/></svg>
-		</ReaderIconButton>
+		{#if $activeRegionDrawSession.createdRegionIds.length === 0}
+			<!-- Nothing to undo yet: the corner where the person looks for a way out is the way out. -->
+			<ReaderIconButton label={m.common_back()} class="bg-surface-900/90 text-surface-100 shadow-lg" onclick={() => void finishRegionDrawSession({ enterReview: true })}>
+				<svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+			</ReaderIconButton>
+		{:else}
+			<ReaderIconButton label={m.reader_undo_newest_region()} class="bg-surface-900/90 text-surface-100 shadow-lg" onclick={() => void undoNewestDrawnRegion()}>
+				<svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v1"/></svg>
+			</ReaderIconButton>
+		{/if}
 		<div class="min-w-0 justify-self-center rounded-full bg-surface-900/85 px-3 py-1 text-center text-xs font-medium text-surface-100 shadow" role="status">
 			{m.reader_draw_regions_saved({ n: $activeRegionDrawSession.createdRegionIds.length })}
 		</div>

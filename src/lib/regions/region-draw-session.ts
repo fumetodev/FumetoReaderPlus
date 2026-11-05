@@ -100,8 +100,8 @@ export async function finishRegionDrawSession(
 	mobileReaderUi.setToolMode('navigate');
 	// The post-draw review strip renders in the chrome-tied bottom section
 	// whenever highlightedDrawRegionIds is non-empty; drawing hid the chrome,
-	// so bring it back for the review.
-	if (options.enterReview && targetMatches(current) && created.length > 0) {
+	// so bring it back, for the review or to leave the reader as drawing found it.
+	if (options.enterReview && targetMatches(current)) {
 		highlightedDrawRegionIds.set(new Set(created));
 		if (mobileReaderUi.inspect().chrome === 'hidden') mobileReaderUi.toggleChrome();
 	} else {
