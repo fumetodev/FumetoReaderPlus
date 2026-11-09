@@ -726,13 +726,17 @@
 	},
 	"catalog_filter_translated": {
 		"sourceHash": "9038577a29293fd5",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-27T23:53:43.131Z"
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-05T17:48:31.398Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-05T17:48:31.640Z"
 	},
 	"catalog_filter_unread": {
 		"sourceHash": "b880e3dbc82e587d",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-27T23:53:43.131Z"
+		"model": "claude-opus-5.5 (in-session, hand-drafted)",
+		"draftedAt": "2026-11-05T17:48:31.398Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-05T17:48:31.640Z"
 	},
 	"catalog_folder": {
 		"sourceHash": "fd0d5c691292943a",

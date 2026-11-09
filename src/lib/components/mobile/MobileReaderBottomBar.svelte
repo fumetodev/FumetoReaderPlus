@@ -288,7 +288,7 @@
 			<svg class="mx-auto h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
 			<span role="status" aria-live="polite">{m.job_badge_cancelled()}</span>
 		{:else}
-			<!-- あ⇄A: source-to-target glyph replacing the old unreadable icon. -->
+			<!-- あA over an arrow: source-to-target glyph replacing the old unreadable icon. -->
 			<Icon name="translate" class="mx-auto h-5 w-5" /><span>{m.reader_translate_label({ suffix: autoTranslate ? ` ${m.reader_auto()}` : '' })}</span>
 		{/if}
 	</button>

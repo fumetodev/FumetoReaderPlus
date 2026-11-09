@@ -2,6 +2,7 @@
 	import { fadeOnDecode } from '$lib/util/fade-on-decode.js';
 	import { motionDuration, exitDuration } from '$lib/util/motion.js';
 	import { slidingSelection } from '$lib/util/sliding-selection.js';
+	import Icon, { type IconName } from '$lib/components/ui/Icon.svelte';
 	import { onMount, tick, untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import { fade, scale, slide } from 'svelte/transition';
@@ -376,12 +377,12 @@
 	// ── Category filter (the pill filter row) ─────────────────────────
 	type CatalogFilter = 'all' | 'favorites' | 'recent' | 'translated' | 'unread';
 	type TranslatedSubFilter = 'all' | 'translating' | 'done';
-	const CATALOG_FILTERS: Array<{ id: CatalogFilter; label: () => string }> = [
-		{ id: 'all', label: () => m.catalog_filter_all() },
-		{ id: 'favorites', label: () => m.catalog_filter_favorites() },
-		{ id: 'recent', label: () => m.catalog_filter_recent() },
-		{ id: 'translated', label: () => m.catalog_filter_translated() },
-		{ id: 'unread', label: () => m.catalog_filter_unread() }
+	const CATALOG_FILTERS: Array<{ id: CatalogFilter; label: () => string; icon: IconName }> = [
+		{ id: 'all', label: () => m.catalog_filter_all(), icon: 'dots-9' },
+		{ id: 'favorites', label: () => m.catalog_filter_favorites(), icon: 'star' },
+		{ id: 'recent', label: () => m.catalog_filter_recent(), icon: 'clock' },
+		{ id: 'translated', label: () => m.catalog_filter_translated(), icon: 'translate' },
+		{ id: 'unread', label: () => m.catalog_filter_unread(), icon: 'book-unread' }
 	];
 	let catalogFilter = $state<CatalogFilter>('all');
 	/** Single authority for "a category filter is narrowing the catalog" — the
@@ -2754,24 +2755,27 @@
 				</div>
 			{/if}
 			{#if $selectedLibraryId || $currentSubfolder !== '' || $currentRemoteFolderId !== null}
-				<!-- Category filter: five equal pills; Translated reveals its
-				     sub-segment with live counts. The green pill is a single
-				     sliding indicator (slidingSelection), not a per-button bg. -->
-				<div class="relative mt-2 grid grid-cols-5 gap-1 rounded-full bg-surface-container-high p-1" role="radiogroup" aria-label={m.catalog_library_filter()} data-library-filters use:slidingSelection>
+				<!-- Category filter: five equal segments, an icon over one word;
+				     Translated reveals its sub-segment with live counts. The green
+				     pill is a single sliding indicator (slidingSelection), not a
+				     per-button bg, and its corners are 18px because a label as wide
+				     as its segment ran past the curve of a full pill. -->
+				<div class="relative mt-2 grid grid-cols-5 rounded-[22.5px] bg-surface-container-high p-1 [--segment-radius:18px]" role="radiogroup" aria-label={m.catalog_library_filter()} data-library-filters use:slidingSelection>
 					{#each CATALOG_FILTERS as filter (filter.id)}
 						<button
 							type="button"
 							role="radio"
 							aria-checked={catalogFilter === filter.id}
-							class="press-morph relative flex h-11 min-w-0 items-center justify-center whitespace-normal break-words rounded-full px-0.5 text-[11px] font-semibold leading-tight {catalogFilter === filter.id ? 'text-on-accent-strong' : 'text-surface-400 active:bg-surface-800'}"
+							class="press-morph relative flex h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl text-[10px] font-semibold {catalogFilter === filter.id ? 'text-on-accent-strong' : 'text-surface-400 active:bg-surface-800'}"
 							onclick={() => { playReaderHaptic('selection'); catalogFilter = filter.id; }}
 						>
-							{filter.label()}
+							<span class="leading-none" aria-hidden="true"><Icon name={filter.icon} size={22} /></span>
+							<span class="max-w-full truncate">{filter.label()}</span>
 						</button>
 					{/each}
 				</div>
 				{#if catalogFilter === 'translated'}
-					<div class="relative mt-1.5 grid grid-cols-3 gap-1 rounded-full bg-surface-container-high p-1" role="radiogroup" aria-label={m.catalog_translated_filter()} data-translated-subfilter transition:slide={{ duration: motionDuration(160) }} use:slidingSelection>
+					<div class="relative mt-1.5 grid grid-cols-3 gap-1 rounded-[22.5px] bg-surface-container-high p-1 [--segment-radius:18px]" role="radiogroup" aria-label={m.catalog_translated_filter()} data-translated-subfilter transition:slide={{ duration: motionDuration(160) }} use:slidingSelection>
 						{#each [
 							{ id: 'all', label: m.catalog_subfilter_all({ n: translatedCounts.all }) },
 							{ id: 'translating', label: m.catalog_subfilter_translating({ n: translatedCounts.translating }) },
@@ -2781,7 +2785,7 @@
 								type="button"
 								role="radio"
 								aria-checked={translatedSubFilter === sub.id}
-								class="press-morph relative flex h-11 min-w-0 items-center justify-center whitespace-normal break-words rounded-full px-0.5 text-[11px] font-semibold leading-tight {translatedSubFilter === sub.id ? 'text-on-accent-strong' : 'text-surface-400 active:bg-surface-800'}"
+								class="press-morph relative flex h-11 min-w-0 items-center justify-center whitespace-normal break-words rounded-2xl px-0.5 text-[11px] font-semibold leading-tight {translatedSubFilter === sub.id ? 'text-on-accent-strong' : 'text-surface-400 active:bg-surface-800'}"
 								onclick={() => { playReaderHaptic('selection'); translatedSubFilter = sub.id; }}
 							>
 								{sub.label}

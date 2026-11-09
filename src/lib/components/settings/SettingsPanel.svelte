@@ -21,15 +21,16 @@
 	import DisplayTab from './DisplayTab.svelte';
 	import LibrariesTab from './LibrariesTab.svelte';
 	import HelpTab from './HelpTab.svelte';
+	import Icon, { type IconName } from '$lib/components/ui/Icon.svelte';
 
 	type SettingsTabId = 'translation' | 'overlay' | 'display' | 'libraries' | 'help';
 	// Labels are getters so a language switch re-renders them in place.
-	const TABS: Array<{ id: SettingsTabId; label: () => string }> = [
-		{ id: 'translation', label: () => m.settings_tab_translation() },
-		{ id: 'overlay', label: () => m.settings_tab_overlay() },
-		{ id: 'display', label: () => m.settings_tab_display() },
-		{ id: 'libraries', label: () => m.settings_tab_libraries() },
-		{ id: 'help', label: () => m.settings_tab_help() }
+	const TABS: Array<{ id: SettingsTabId; label: () => string; icon: IconName }> = [
+		{ id: 'translation', label: () => m.settings_tab_translation(), icon: 'translate' },
+		{ id: 'overlay', label: () => m.settings_tab_overlay(), icon: 'layers' },
+		{ id: 'display', label: () => m.settings_tab_display(), icon: 'monitor' },
+		{ id: 'libraries', label: () => m.settings_tab_libraries(), icon: 'library' },
+		{ id: 'help', label: () => m.settings_tab_help(), icon: 'help' }
 	];
 	const tabLabel = (id: SettingsTabId): string => TABS.find((tab) => tab.id === id)?.label() ?? id;
 
@@ -159,19 +160,20 @@
 
 <!-- Tab bar: pill segmented control (tab semantics preserved) -->
 <div class="px-3 pb-1 pt-2 sm:px-6">
-	<div class="relative grid grid-cols-5 rounded-full bg-surface-container-high p-1" role="tablist" aria-label={m.settings_sections_aria()} use:slidingSelection>
+	<div class="relative grid grid-cols-5 rounded-[22.5px] bg-surface-container-high p-1 [--segment-radius:18px]" role="tablist" aria-label={m.settings_sections_aria()} use:slidingSelection>
 		{#each TABS as tab (tab.id)}
 			<button
 				role="tab"
 				data-settings-tab={tab.id}
 				aria-selected={settingsTab === tab.id}
-				class="press-morph relative flex min-h-11 min-w-0 items-center justify-center rounded-full px-1 text-center text-[11px] font-semibold leading-tight [overflow-wrap:anywhere] hyphens-auto
+				class="press-morph relative flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl text-[10px] font-semibold
 					{settingsTab === tab.id
 						? 'text-on-accent-strong'
 						: 'text-surface-400 hover:text-surface-200 active:bg-surface-800'}"
 				onclick={() => (settingsTab = tab.id)}
 			>
-				{tab.label()}
+				<span class="leading-none" aria-hidden="true"><Icon name={tab.icon} size={22} /></span>
+				<span class="max-w-full truncate">{tab.label()}</span>
 			</button>
 		{/each}
 	</div>

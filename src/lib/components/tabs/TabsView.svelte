@@ -569,22 +569,24 @@
 		{/if}
 	</header>
 	{#if allTabs.length > 1}
-		<!-- Mirrors the Library filter row's metrics (mt-2, 44px pills in a
-		     4px-padded track) so the secondary rows match across views. -->
-		<div class="relative mx-3 mb-1 mt-2 grid grid-cols-3 gap-1 rounded-full bg-surface-container-high p-1" role="radiogroup" aria-label={m.tabs_sort_tabs()} data-tabs-sort use:slidingSelection>
+		<!-- Mirrors the Library filter row's metrics (mt-2, 44px segments in a
+		     4px-padded track, an icon over one word) so the secondary rows match
+		     across views. -->
+		<div class="relative mx-3 mb-1 mt-2 grid grid-cols-3 rounded-[22.5px] bg-surface-container-high p-1 [--segment-radius:18px]" role="radiogroup" aria-label={m.tabs_sort_tabs()} data-tabs-sort use:slidingSelection>
 			{#each [
-				{ id: 'recent', label: m.tabs_sort_recent() },
-				{ id: 'added', label: m.tabs_sort_added() },
-				{ id: 'series', label: m.tabs_sort_series() }
+				{ id: 'recent', label: m.tabs_sort_recent(), icon: 'clock' },
+				{ id: 'added', label: m.tabs_sort_added(), icon: 'calendar' },
+				{ id: 'series', label: m.tabs_sort_series(), icon: 'books' }
 			] as const as mode (mode.id)}
 				<button
 					type="button"
 					role="radio"
 					aria-checked={tabsSort === mode.id}
-					class="press-morph relative h-11 min-w-0 truncate rounded-full text-[11px] font-semibold {tabsSort === mode.id ? 'text-on-accent-strong' : 'text-surface-400 active:bg-surface-800'}"
+					class="press-morph relative flex h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl text-[10px] font-semibold {tabsSort === mode.id ? 'text-on-accent-strong' : 'text-surface-400 active:bg-surface-800'}"
 					onclick={() => setTabsSort(mode.id)}
 				>
-					{mode.label}
+					<span class="leading-none" aria-hidden="true"><Icon name={mode.icon} size={22} /></span>
+					<span class="max-w-full truncate">{mode.label}</span>
 				</button>
 			{/each}
 		</div>

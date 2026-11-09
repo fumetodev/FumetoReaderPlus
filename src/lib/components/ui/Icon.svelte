@@ -48,19 +48,39 @@
 		download: '<path d="M12 3v12M7 10l5 5 5-5M4.5 20.5h15"/>',
 		trash:
 			'<path d="M4 7h16M9 7V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2M6.5 7l1 12a2 2 0 0 0 2 1.8h5a2 2 0 0 0 2-1.8l1-12"/><path d="M10 11v6M14 11v6"/>',
-		// あ⇄A, source to target. The one glyph here that is not stroke-drawn:
-		// the two letters are filled text, so they opt out of the inherited
-		// stroke, and the arrows carry their own lighter weight to sit beside
-		// them. The reader bar and the region strip both mean the same action
-		// by it, which is why it lives in the set rather than in either.
+		// あ and A over one arrow, source to target. The one glyph here that is
+		// not stroke-drawn: the two letters are filled text, so they opt out of
+		// the inherited stroke, and the arrow carries its own lighter weight to
+		// sit beside them. The reader bar, the region strip, Settings and the
+		// Library's filter all mean translation by it, which is why it lives in
+		// the set rather than in any of them. Letters at each corner with an
+		// arrow between them came out as four small marks, taller than the
+		// icons beside them and nearly on the label under them.
 		translate:
-			'<text x="0.5" y="11" font-size="10.5" font-weight="600" fill="currentColor" stroke="none">あ</text><text x="14.5" y="22.5" font-size="11" font-weight="700" fill="currentColor" stroke="none">A</text><path d="M14 5h6m0 0-2.2-2.2M20 5l-2.2 2.2M10 19H4m0 0 2.2-2.2M4 19l2.2 2.2" stroke-width="1.4"/>',
+			'<text x="0.5" y="13.5" font-size="13" font-weight="600" fill="currentColor" stroke="none">あ</text><text x="14.4" y="13.5" font-size="13" font-weight="700" fill="currentColor" stroke="none">A</text><path d="M4 19.5h16m0 0-2.4-2.4M20 19.5l-2.4 2.4" stroke-width="1.6"/>',
 		// A stack of three sheets with a plus where the lower two would have
 		// run on: every sheet is the same 18×9 rhombus on a 4.5 pitch, and the
 		// lower two stop 1.4 past the centre line so the plus keeps a clear
 		// unit of air on its left arm at 22 px.
 		'layers-plus':
-			'<path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 1.4-.7"/><path d="M3 16.5l9 4.5 1.4-.7"/><path d="M19 14v6M16 17h6"/>'
+			'<path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 1.4-.7"/><path d="M3 16.5l9 4.5 1.4-.7"/><path d="M19 14v6M16 17h6"/>',
+		// The same three sheets, run on: what the region strip adds to is what
+		// Settings' Overlay tab sets up.
+		layers:
+			'<path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5l9 4.5 9-4.5"/>',
+		monitor: '<rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M12 16.5V20M8 20h8"/>',
+		help: '<circle cx="12" cy="12" r="9"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-2.92 3-2.92 3"/><path d="M12 17h.01"/>',
+		// The Library's "All". Not four squares: its view button beside that
+		// filter already shows those, and means something else by them.
+		'dots-9':
+			'<path d="M5.5 5.5h.01M12 5.5h.01M18.5 5.5h.01M5.5 12h.01M12 12h.01M18.5 12h.01M5.5 18.5h.01M12 18.5h.01M18.5 18.5h.01" stroke-width="3"/>',
+		// `library` opened, shut: a closed cover with the dot that means unread.
+		'book-unread':
+			'<path d="M5 18.5v-13A2.5 2.5 0 0 1 7.5 3H19v18H7.5a2.5 2.5 0 0 1 0-5H19"/><path d="M12 9.5h.01" stroke-width="3.8"/>',
+		// A series as a shelf of its volumes. Each book is closed, and the first
+		// two share a wall: two rounded rectangles leave a notch at its foot.
+		books:
+			'<path d="M8.5 20.5H4.7a1.2 1.2 0 0 1-1.2-1.2V4.7a1.2 1.2 0 0 1 1.2-1.2h2.6a1.2 1.2 0 0 1 1.2 1.2z"/><path d="M8.5 20.5h3.8a1.2 1.2 0 0 0 1.2-1.2V7.2A1.2 1.2 0 0 0 12.3 6H8.5"/><path d="M13.7 8.7l4.2-1.2 3.3 11.9-4.2 1.2z"/>'
 	} as const;
 
 	export type IconName = keyof typeof ICONS;
