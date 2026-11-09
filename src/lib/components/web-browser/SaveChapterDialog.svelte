@@ -20,12 +20,14 @@
 	let series = $state(seriesTitle);
 </script>
 
-<!-- Portalled: the reader's header, which hosts the menu that opens this, is transformed, and a fixed element inside
+<!-- Above the soft keyboard: edge-to-edge Android never resizes the viewport for it, and the native inset bridge
+     reports it as --kb. Without this the fields being typed into sat under the keyboard.
+     Portalled: the reader's header, which hosts the menu that opens this, is transformed, and a fixed element inside
      a transformed one is placed relative to it, not to the screen. -->
 <div use:portal class="fixed inset-0 z-[110] flex items-end justify-center bg-black/50 p-4" role="presentation" onclick={onclose}>
 	<div
 		class="w-full max-w-md rounded-3xl bg-surface-container-high p-5 shadow-dock"
-		style="margin-bottom: var(--sab, 0px);"
+		style="margin-bottom: max(var(--sab, 0px), var(--kb, 0px)); max-height: calc(var(--viewport-height, 100dvh) - max(var(--sab, 0px), var(--kb, 0px)) - var(--sat, 0px) - 2rem); overflow-y: auto;"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="save-chapter-title"
