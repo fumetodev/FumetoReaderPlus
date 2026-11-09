@@ -6,7 +6,7 @@
 	import Switch from '$lib/components/ui/Switch.svelte';
 	import { slidingSelection } from '$lib/util/sliding-selection.js';
 	import { randomUUID } from '$lib/util/uuid.js';
-	import { ggufDownloadState, downloadHyMT2Model, cancelModelDownload as cancelGgufDownload, deleteHyMT2Model, isModelDownloaded, variantUsesFixedSampling, variantCannotTranslatePair, HYMT2_VARIANTS, BUNDLED_HYMT2_VARIANTS, ENCDEC_HYMT2_VARIANTS, bundledSpec, type HyMT2Variant, type BundledHyMT2Variant } from '$lib/translation/gguf-model-manager.js';
+	import { ggufDownloadState, downloadHyMT2Model, cancelModelDownload as cancelGgufDownload, deleteHyMT2Model, isModelDownloaded, variantUsesFixedSampling, translatesOnlyJapaneseToEnglish, onDeviceLanguagesFor, HYMT2_VARIANTS, BUNDLED_HYMT2_VARIANTS, ENCDEC_HYMT2_VARIANTS, bundledSpec, type HyMT2Variant, type BundledHyMT2Variant } from '$lib/translation/gguf-model-manager.js';
 	import { modelMemoryAdvice, readDeviceMemory } from '$lib/device/device-memory.js';
 	import { encdecModelDownloadStates, downloadEncDecModel, cancelEncDecModelDownload, encdecModelTotalBytes, ENCDEC_MODELS } from '$lib/translation/encdec-model-manager.js';
 	import { encdecAvailable, releaseEncDec } from '$lib/translation/encdec-translator.js';
@@ -352,6 +352,16 @@
 	let selectedIsEncDec = $derived(HYMT2_VARIANTS[draft.hyMT2Variant]?.kind === 'encdec');
 	// The encoder-decoder translator runs only where its native bridge is (Android); elsewhere it is not offered.
 	const encdecRuns = encdecAvailable();
+	// A model that translates one pair offers only that pair. The pair chosen for the others stays in the draft, so
+	// switching back to a multilingual model brings it back; translation resolves it the same way (onDeviceLanguagesFor).
+	let languagesFixedByModel = $derived(translatesOnlyJapaneseToEnglish(draft.hyMT2Variant));
+	let shownLanguages = $derived(onDeviceLanguagesFor(draft.hyMT2Variant, draft.onDeviceSourceLang, draft.onDeviceTargetLang));
+	let sourceLanguageOptions = $derived(
+		ON_DEVICE_SOURCE_LANGUAGES.filter((lang) => !languagesFixedByModel || lang.code === shownLanguages.sourceLang)
+	);
+	let targetLanguageOptions = $derived(
+		ON_DEVICE_TARGET_LANGUAGES.filter((lang) => !languagesFixedByModel || lang.code === shownLanguages.targetLang)
+	);
 	// Follows the pair being edited, so the badge moves the moment the target language changes.
 	let recommendedVariant = $derived(recommendedHyMT2Variant(draft.onDeviceSourceLang, draft.onDeviceTargetLang, encdecRuns));
 	// Deprecated models are not offered for download; their card shows only to someone who has one or has it selected.
@@ -1631,10 +1641,13 @@
 				<label for="on-device-source-language" class="w-28 shrink-0 text-xs text-surface-400">{m.settings_translation_translate_from_2()}</label>
 				<select
 					id="on-device-source-language"
-					bind:value={draft.onDeviceSourceLang}
+					value={shownLanguages.sourceLang}
+					onchange={(event) => {
+						if (!languagesFixedByModel) draft.onDeviceSourceLang = event.currentTarget.value;
+					}}
 					class="flex-1 rounded-md border border-surface-600 bg-surface-700 px-2 py-1.5 text-xs text-surface-200 focus:border-primary-500 focus:outline-none"
 				>
-					{#each ON_DEVICE_SOURCE_LANGUAGES as lang (lang.code)}
+					{#each sourceLanguageOptions as lang (lang.code)}
 						<option value={lang.code}>{getLanguageDisplayName(lang.code)}</option>
 					{/each}
 				</select>
@@ -1643,22 +1656,24 @@
 				<label for="on-device-target-language" class="w-28 shrink-0 text-xs text-surface-400">{m.settings_translation_translate_to_2()}</label>
 				<select
 					id="on-device-target-language"
-					bind:value={draft.onDeviceTargetLang}
+					value={shownLanguages.targetLang}
+					onchange={(event) => {
+						if (!languagesFixedByModel) draft.onDeviceTargetLang = event.currentTarget.value;
+					}}
 					class="flex-1 rounded-md border border-surface-600 bg-surface-700 px-2 py-1.5 text-xs text-surface-200 focus:border-primary-500 focus:outline-none"
 				>
-					{#each ON_DEVICE_TARGET_LANGUAGES as lang (lang.code)}
+					{#each targetLanguageOptions as lang (lang.code)}
 						<option value={lang.code}>{getLanguageDisplayName(lang.code)}</option>
 					{/each}
 				</select>
 			</div>
-			<p class="text-[11px] text-surface-500">
-				{m.settings_translation_hy_mt2_is_multilingual()}
+			<p class="text-[11px] text-surface-500" data-on-device-language-hint>
+				{#if languagesFixedByModel}
+					{m.settings_translation_model_japanese_to_english_only({ model: m.model_variant_manga_v3_title() })}
+				{:else}
+					{m.settings_translation_hy_mt2_is_multilingual()}
+				{/if}
 			</p>
-			{#if variantCannotTranslatePair(draft.hyMT2Variant, draft.onDeviceSourceLang, draft.onDeviceTargetLang)}
-				<p class="text-[11px] text-amber-400/90" data-on-device-language-pair-warning>
-					{m.settings_translation_selected_model_ja_en_only()}
-				</p>
-			{/if}
 		</div>
 	</div>
 

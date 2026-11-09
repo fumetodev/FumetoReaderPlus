@@ -7504,6 +7504,13 @@
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-10-19T23:20:04.627Z"
 	},
+	"settings_translation_model_japanese_to_english_only": {
+		"sourceHash": "eb3842a9af16fb5c",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T18:05:28.797Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T18:05:29.125Z"
+	},
 	"settings_translation_model_recommended": {
 		"sourceHash": "c15bc779fb222cbb",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
@@ -7678,11 +7685,6 @@
 		"sourceHash": "80376a5178717044",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:48:27.616Z"
-	},
-	"settings_translation_selected_model_ja_en_only": {
-		"sourceHash": "baa15c0b4b4fe86d",
-		"model": "claude-opus-5.5 (in-session, hand-drafted)",
-		"draftedAt": "2026-10-19T23:02:07.000Z"
 	},
 	"settings_translation_sends_page_images_to": {
 		"sourceHash": "4bdacbacb27b53a2",

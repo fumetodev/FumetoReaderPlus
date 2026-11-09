@@ -25,6 +25,7 @@ import {
 	loadActiveHyMT2Model,
 	HYMT2_VARIANTS,
 	isModelDownloaded,
+	onDeviceLanguagesFor,
 	type HyMT2Variant
 } from './gguf-model-manager.js';
 import { encdecAvailable, translatePageWithEncDec, translateWithEncDec } from './encdec-translator.js';
@@ -666,8 +667,14 @@ export async function translatePageOnDevice(
 
 	// Read language settings
 	const currentSettings = get(settings);
-	const sourceLang = options?.runtimeOverrides?.sourceLang ?? currentSettings.onDeviceSourceLang ?? 'auto';
-	const targetLang = options?.runtimeOverrides?.targetLang ?? currentSettings.onDeviceTargetLang ?? 'en';
+	// Read once: the label stored with this page and the engine that translates it must be the same model.
+	const pageVariant = activeHyMT2Variant();
+	// A model that translates one pair is asked for that pair, whatever was chosen for the others.
+	const { sourceLang, targetLang } = onDeviceLanguagesFor(
+		pageVariant,
+		options?.runtimeOverrides?.sourceLang ?? currentSettings.onDeviceSourceLang ?? 'auto',
+		options?.runtimeOverrides?.targetLang ?? currentSettings.onDeviceTargetLang ?? 'en'
+	);
 	const effectiveSourceLang = sourceLang === 'auto' ? 'ja' : sourceLang;
 	const ocrProvider = options?.runtimeOverrides?.ocrProvider ?? currentSettings.onDeviceOCRProvider ?? 'ppocr';
 	const translationBackend = options?.runtimeOverrides?.translationBackend
@@ -689,8 +696,6 @@ export async function translatePageOnDevice(
 		id: randomUUID(),
 		createdAt: new Date().toISOString()
 	};
-	// Read once: the label stored with this page and the engine that translates it must be the same model.
-	const pageVariant = activeHyMT2Variant();
 	const pageUsesEncDec = isEncDecVariant(pageVariant);
 	const pageEncDecMode = options?.runtimeOverrides?.encdecMode ?? currentSettings.encdecMode ?? 'page';
 	// A page model in page mode translates the page's blocks in one call, each with the rest of the page in view.
@@ -1266,12 +1271,16 @@ export async function translateRegionOnDevice(
 	const model = onDeviceModelLabel(variant, ocrProvider, encdecMode);
 	if (HYMT2_VARIANTS[variant].replacedBy) void offerEncDecReplacement();
 
+	// A model that translates one pair is asked for that pair, whatever was chosen for the others.
+	const { sourceLang, targetLang } = onDeviceLanguagesFor(
+		variant,
+		currentSettings.onDeviceSourceLang ?? 'auto',
+		currentSettings.onDeviceTargetLang ?? 'en'
+	);
 	let blocks: RecognizedBlock[];
 	blocks = (await recognizeWithPPOCR(imageFile, {
 		signal,
-		locale: currentSettings.onDeviceSourceLang === 'auto'
-			? 'ja'
-			: currentSettings.onDeviceSourceLang,
+		locale: sourceLang === 'auto' ? 'ja' : sourceLang,
 		useBubbleSeg: false,
 		// One user-drawn region: no regrouping runs, so this only satisfies the
 		// boundary. Passing the reader's live direction keeps it honest anyway.
@@ -1305,8 +1314,6 @@ export async function translateRegionOnDevice(
 	// Translate through the backend selected in settings. The serialized
 	// `translategemma` value is retained for migration compatibility, but now
 	// dispatches to Hy-MT2 just like the full-page pipeline above.
-	const sourceLang = currentSettings.onDeviceSourceLang ?? 'auto';
-	const targetLang = currentSettings.onDeviceTargetLang ?? 'en';
 	let translatedText: string;
 
 	const sfxResult = lookupSfx(recognizedText);

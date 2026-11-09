@@ -619,18 +619,23 @@ export async function isActiveHyMT2ModelLoaded(): Promise<boolean> {
 	return isModelLoadedAs(await getModelPath(variant), loadOptionsFor(variant));
 }
 
+/** True for a model that translates Japanese to English and nothing else: Settings offers it only that pair. */
+export function translatesOnlyJapaneseToEnglish(variant: HyMT2Variant): boolean {
+	return HYMT2_VARIANTS[variant]?.japaneseToEnglishOnly === true;
+}
+
 /**
- * True when the model cannot serve this on-device language pair. `auto` is
- * Japanese here, as it is everywhere the on-device pipeline resolves it.
+ * The on-device language pair a translation with this model uses. A model that translates one pair is always asked
+ * for that pair: the source language also decides how a page's text is recognised and in what order it is read, so a
+ * stored choice the model cannot serve would misread the page as well as mistranslate it. The stored choice itself is
+ * left as it is, and every other model uses it, so switching back to a multilingual model brings it back.
  */
-export function variantCannotTranslatePair(
+export function onDeviceLanguagesFor(
 	variant: HyMT2Variant,
 	sourceLang: string,
 	targetLang: string
-): boolean {
-	if (!HYMT2_VARIANTS[variant].japaneseToEnglishOnly) return false;
-	const source = sourceLang === 'auto' ? 'ja' : sourceLang;
-	return source !== 'ja' || targetLang !== 'en';
+): { sourceLang: string; targetLang: string } {
+	return translatesOnlyJapaneseToEnglish(variant) ? { sourceLang: 'ja', targetLang: 'en' } : { sourceLang, targetLang };
 }
 
 /** True when the selected model ignores the on-device temperature setting. */
