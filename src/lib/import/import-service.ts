@@ -56,6 +56,13 @@ interface ImportArchiveOptions {
 	 * pressure right after writing a volume's worth of page blobs.
 	 */
 	importRecord?: Omit<LibraryImport, 'volume_uuid'>;
+	/**
+	 * Written with the volume, in its one transaction: a comic opened from another app is `'internal'` from its
+	 * first moment, so no view can list it while it is read (`opened-file.ts`).
+	 */
+	visibility?: VolumeMetadata['visibility'];
+	/** Stops the import between pages; its page rows are removed and the import throws an AbortError. */
+	signal?: AbortSignal;
 }
 
 /** Generate a UUID v4 */
@@ -375,7 +382,13 @@ async function runImportArchive(
 		});
 	};
 
+	const signal = options?.signal;
+	// Not AbortSignal.throwIfAborted: a WebView older than Chrome 100 has no such method.
+	const stopIfAborted = () => {
+		if (signal?.aborted) throw new DOMException('The import was stopped.', 'AbortError');
+	};
 	const persistStreamedPage = async ({ index, filename, file: pageFile }: StreamedPage) => {
+		stopIfAborted();
 		let dims = { width: 0, height: 0 };
 		try {
 			dims = await getPageMediaDimensions(pageFile);
@@ -393,28 +406,36 @@ async function runImportArchive(
 	};
 
 	let extraction: { imageCount: number; skippedCount: number };
-	switch (archiveType) {
-		case 'rar': {
-			if (isMobile) {
-				throw new Error('RAR/CBR files are not supported on mobile. Please use ZIP/CBZ format.');
+	try {
+		switch (archiveType) {
+			case 'rar': {
+				if (isMobile) {
+					throw new Error('RAR/CBR files are not supported on mobile. Please use ZIP/CBZ format.');
+				}
+				const { streamRarArchivePages } = await import('./archive-extraction-rar.js');
+				extraction = await streamRarArchivePages(file, persistStreamedPage, extractionProgress);
+				break;
 			}
-			const { streamRarArchivePages } = await import('./archive-extraction-rar.js');
-			extraction = await streamRarArchivePages(file, persistStreamedPage, extractionProgress);
-			break;
+			case 'pdf': {
+				const { streamPdfArchivePages } = await import('./archive-extraction-pdf.js');
+				extraction = await streamPdfArchivePages(file, persistStreamedPage, extractionProgress);
+				break;
+			}
+			case 'epub': {
+				const { streamEpubArchivePages } = await import('./archive-extraction-epub.js');
+				extraction = await streamEpubArchivePages(file, persistStreamedPage, extractionProgress);
+				break;
+			}
+			case 'zip':
+				extraction = await streamZipArchivePages(file, persistStreamedPage, extractionProgress);
+				break;
 		}
-		case 'pdf': {
-			const { streamPdfArchivePages } = await import('./archive-extraction-pdf.js');
-			extraction = await streamPdfArchivePages(file, persistStreamedPage, extractionProgress);
-			break;
-		}
-		case 'epub': {
-			const { streamEpubArchivePages } = await import('./archive-extraction-epub.js');
-			extraction = await streamEpubArchivePages(file, persistStreamedPage, extractionProgress);
-			break;
-		}
-		case 'zip':
-			extraction = await streamZipArchivePages(file, persistStreamedPage, extractionProgress);
-			break;
+		stopIfAborted();
+	} catch (error) {
+		// Only a caller that can stop the import cleans up after it here; every other import keeps its old
+		// behaviour, and the launch sweep removes rows no volume owns.
+		if (signal) await db.volume_pages.where('volume_uuid').equals(streamKey).delete();
+		throw error;
 	}
 
 	if (extraction.imageCount === 0 || pages.length === 0) {
@@ -473,6 +494,7 @@ async function runImportArchive(
 			options?.readingDirection ?? existingMetadata?.reading_direction ?? epubDirection,
 		library_id: libraryId ?? existingMetadata?.library_id,
 		folder_path: folderPath ?? existingMetadata?.folder_path ?? '',
+		...(options?.visibility ? { visibility: options.visibility } : {}),
 		// This function writes COMIC pages, so the result is a comic — but the
 		// spread above carried `media_kind` forward from the old record. A file
 		// that was a reflowable EPUB and is re-imported at the same path as

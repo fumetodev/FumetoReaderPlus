@@ -1,5 +1,6 @@
 package com.fumeto.reader
 
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -37,6 +38,9 @@ class MainActivity : TauriActivity() {
   private var encdecBridge: EncDecBridge? = null
   private var browserBridge: BrowserBridge? = null
   private var baseTextZoom = 100
+  /** A comic another app asked this one to open, until the frontend takes it (`takeOpenedFile`). */
+  private val openedFileLock = Any()
+  private var openedFile: String? = null
   private var baseFontScale = 1f
   private var stopped = false
 
@@ -131,6 +135,17 @@ class MainActivity : TauriActivity() {
       } catch (_: Exception) {
         "{}"
       }
+    }
+
+    /**
+     * The comic another app last asked this one to open ("Open with"), once: JSON `{"uri","name"}`, or "" when none
+     * is waiting. The frontend asks at start and again on every `fumeto:opened-file` event.
+     */
+    @JavascriptInterface
+    fun takeOpenedFile(): String = synchronized(openedFileLock) {
+      val taken = openedFile ?: ""
+      openedFile = null
+      taken
     }
 
     @JavascriptInterface
@@ -258,6 +273,39 @@ class MainActivity : TauriActivity() {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
     TranslationForegroundService.onStopped = ::onTranslationServiceStopped
+    // A recreated Activity is handed the intent it already acted on.
+    if (savedInstanceState == null) acceptOpenedFile(intent)
+  }
+
+  // launchMode singleTask: a running app gets the next "Open with" here.
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    acceptOpenedFile(intent)
+  }
+
+  /**
+   * Keeps a comic another app handed over for the frontend to open. The read grant that came with the intent lasts
+   * while this Activity does, and the frontend copies the file at once. Reopening the app from Recents hands the
+   * same intent back, with its grant long gone and the comic long read: that is not a request to open it again.
+   */
+  private fun acceptOpenedFile(intent: Intent?) {
+    if (intent == null || intent.action != Intent.ACTION_VIEW) return
+    if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return
+    val uri = intent.data ?: return
+    if (uri.scheme != "content") return
+    val name = try {
+      contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+        if (it.moveToFirst()) it.getString(0) else null
+      }
+    } catch (_: Exception) {
+      null
+    }?.takeIf { it.isNotBlank() } ?: uri.lastPathSegment?.substringAfterLast('/').orEmpty()
+    val opened = JSONObject().put("uri", uri.toString()).put("name", name).toString()
+    synchronized(openedFileLock) { openedFile = opened }
+    if (::wv.isInitialized) {
+      wv.post { wv.evaluateJavascript("window.dispatchEvent(new CustomEvent('fumeto:opened-file'));", null) }
+    }
   }
 
   /**

@@ -26,6 +26,11 @@ declare global {
 			 * holds `'user'` while it is on screen (`reader-orientation.ts`).
 			 */
 			setOrientationPolicy?(policy: 'portrait' | 'user'): void;
+			/**
+			 * The comic another app last asked this one to open ("Open with"), once: JSON `{"uri","name"}`, or ""
+			 * when none is waiting (`opened-file.ts`).
+			 */
+			takeOpenedFile?(): string;
 		};
 		__fumeto_back_handler?: () => boolean;
 	}

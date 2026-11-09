@@ -11,6 +11,7 @@
 	import { open } from '@tauri-apps/plugin-dialog';
 	import { filePathToFile } from '$lib/import/tauri-file-bridge.js';
 	import { triagePicks } from '$lib/import/pick-triage.js';
+	import { libraryAuthors, librarySeriesFor } from '$lib/import/library-folders.js';
 	import { isMobile } from '$lib/util/platform.js';
 	import { settings, isLocalLibrary } from '$lib/settings/settings.js';
 	import { recallLocalTarget, rememberLocalTarget, selectedLibraryId } from '$lib/stores/catalog-state.js';
@@ -73,34 +74,12 @@
 
 	/** Load existing authors from library volumes (from folder_path first segment + author field). */
 	async function loadExistingAuthors() {
-		const volumes = await db.volumes.toArray();
-		const authors = new Set<string>();
-		for (const v of volumes) {
-			if (v.author) authors.add(v.author);
-			// Also extract author from folder_path (set by scanner: "AuthorName/SeriesName")
-			if (v.folder_path) {
-				const first = v.folder_path.split('/')[0];
-				if (first) authors.add(first);
-			}
-		}
-		existingAuthors = [...authors].sort((a, b) => a.localeCompare(b));
+		existingAuthors = await libraryAuthors();
 	}
 
 	/** Load existing series for a given author (from folder_path second segment). */
 	async function loadSeriesForAuthor(author: string) {
-		if (!author) { existingSeriesForAuthor = []; return; }
-		const volumes = await db.volumes.toArray();
-		const series = new Set<string>();
-		for (const v of volumes) {
-			if (!v.folder_path) continue;
-			const parts = v.folder_path.split('/');
-			// Match author via folder_path first segment OR the author field
-			const matchesAuthor = parts[0] === author || v.author === author;
-			if (matchesAuthor && parts.length >= 2) {
-				series.add(parts[1]);
-			}
-		}
-		existingSeriesForAuthor = [...series].sort((a, b) => a.localeCompare(b));
+		existingSeriesForAuthor = await librarySeriesFor(author);
 	}
 
 	/** Mobile: open file picker and go to assignment step. */

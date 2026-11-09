@@ -24,6 +24,8 @@
 	import { isBookVolume } from '$lib/book/media-kind.js';
 	import PageThumbnailScrubber from '$lib/components/reader/PageThumbnailScrubber.svelte';
 	import ImportDialog from '$lib/components/import/ImportDialog.svelte';
+	import OpenedFileSheet from '$lib/components/import/OpenedFileSheet.svelte';
+	import { cancelOpeningFile, installOpenedFiles } from '$lib/import/opened-file.js';
 	import SettingsDialog from '$lib/components/settings/SettingsDialog.svelte';
 	import SettingsView from '$lib/components/settings/SettingsView.svelte';
 	import OnboardingTour from '$lib/components/onboarding/OnboardingTour.svelte';
@@ -93,6 +95,7 @@
 	let uninstallOrientationPolicy: (() => void) | null = null;
 	let uninstallNativeResultWake: (() => void) | null = null;
 	let uninstallBrowserController: (() => void) | null = null;
+	let uninstallOpenedFiles: (() => void) | null = null;
 	let uninstallTranslationConfigGuard: (() => void) | null = null;
 	let uninstallMobileUiFixtureHost: (() => void) | null = null;
 	let stopCatalogMigration: (() => void) | null = null;
@@ -309,6 +312,8 @@
 			installWebChapterLifecycle();
 			uninstallBrowserController = installBrowserController();
 		}
+		// A comic another app hands over ("Open with") is read without being added to a library.
+		if (isMobile) uninstallOpenedFiles = installOpenedFiles();
 		if (includesDebugMobileUiFixtures && isMobile && window.__fumeto_android?.isDebugBuild?.() === true) {
 			const { installMobileUiFixtureHost } = await import('$lib/debug/mobile-ui-fixture-host.js');
 			uninstallMobileUiFixtureHost = installMobileUiFixtureHost();
@@ -358,6 +363,7 @@
 				// A root-level modal takes Back ahead of every view branch:
 				// otherwise the press switches the view underneath the open
 				// dialog, and from the catalog root it would exit the app.
+				if (cancelOpeningFile()) return false;
 				if (dismissOcrModelPrompt()) return false;
 				// Close overlays in priority order
 				if (get(appView) === 'reader') {
@@ -632,6 +638,8 @@
 		uninstallNativeResultWake = null;
 		uninstallBrowserController?.();
 		uninstallBrowserController = null;
+		uninstallOpenedFiles?.();
+		uninstallOpenedFiles = null;
 		uninstallMobileUiFixtureHost?.();
 		uninstallMobileUiFixtureHost = null;
 		uninstallOcrBenchmarkHost?.();
@@ -780,6 +788,9 @@
 		{/if}
 	{/if}
 	<OcrModelSheet />
+	{#if isMobile}
+		<OpenedFileSheet />
+	{/if}
 	{#if isMobile && ($appView === 'catalog' || $appView === 'tabs' || $appView === 'settings' || $appView === 'browser')}
 		<!-- One dock, three destinations. Settings is a peer view now — the
 		     dialog-era second bar instance is gone. -->

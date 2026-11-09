@@ -914,10 +914,13 @@ export async function resumeInterruptedTranslations(): Promise<void> {
 		.toArray();
 	const due = selectInterruptedJobs(jobs, { now: Date.now(), isActive: isJobActive });
 	if (due.length === 0 || !(await areOcrModelsReady())) return;
+	const { isOpenedFile } = await import('$lib/import/opened-file.js');
 	for (const job of due) {
 		// A web chapter's pages come from a site through the browser: its batch continues only when the person
-		// opens the chapter there again, never by contacting the site at launch.
-		if ((await db.volumes.get(job.volume_uuid))?.source?.type === 'web') continue;
+		// opens the chapter there again, never by contacting the site at launch. A file opened from another app is
+		// gone once its reader closed (opened-file.ts), and the launch removes what is left of it.
+		const volume = await db.volumes.get(job.volume_uuid);
+		if (volume?.source?.type === 'web' || isOpenedFile(volume)) continue;
 		await db.volume_translation_jobs.update(job.id, { auto_resumed_at: resumePosition(job) });
 		console.warn(`[volume-translation] Resuming ${job.volume_uuid} at ${resumePosition(job)} after the app was closed under it`);
 		startVolumeTranslation(job.volume_uuid).catch((error: unknown) => {

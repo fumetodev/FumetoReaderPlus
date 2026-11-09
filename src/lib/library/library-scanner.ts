@@ -275,6 +275,22 @@ const exclusiveGates = new Map<string, Promise<void>>();
  */
 const importsInFlight = new Set<string>();
 
+/**
+ * Puts a file into a library folder together with its import record, with every scan's hands off that path in
+ * between: a scan that met the file before its record would import it a second time, under a fresh uuid. The claim is
+ * the one the import loops already honour; a scan importing that path itself makes this throw instead of waiting.
+ */
+export async function withLibraryFileClaim<T>(filePath: string, operation: () => Promise<T>): Promise<T> {
+	const claim = canonicalPath(filePath);
+	if (importsInFlight.has(claim)) throw new Error('A scan is importing this file now.');
+	importsInFlight.add(claim);
+	try {
+		return await operation();
+	} finally {
+		importsInFlight.delete(claim);
+	}
+}
+
 function scanScopeKey(libKey: string, subfolder?: string): string {
 	return `${libKey}\u0000${subfolder ?? ''}`;
 }
@@ -622,6 +638,10 @@ async function _scanLibraryImpl(
 	// planner). Never infer deletion from a partial subfolder view.
 	for (const missing of plan.deleted) {
 		try {
+			// Missing when the folder was read is not missing now: a file put there with its record since (a comic
+			// opened from another app and then added, opened-file.ts) is listed as gone by a scan that read the
+			// folder before it arrived and the records after. Only a file still absent loses its volume.
+			if (await exists(missing.file_path).catch(() => false)) continue;
 			await deleteVolume(missing.volume_uuid, { deletePhysicalFile: false });
 			deleted++;
 		} catch (err) {

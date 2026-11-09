@@ -52,7 +52,7 @@
 	// Section registry powers the Help search box and deep links.
 	const HELP_SECTIONS: Array<{ id: string; title: () => string; keywords: () => string; keywordsEn: string[] }> = [
 		{ id: 'overview', title: () => m.help_overview(), keywords: () => m.help_keywords_overview(), keywordsEn: ['about', 'features', 'what is'] },
-		{ id: 'getting-started', title: () => m.help_getting_started(), keywords: () => m.help_keywords_getting_started(), keywordsEn: ['setup', 'first', 'import', 'add library', 'remote'] },
+		{ id: 'getting-started', title: () => m.help_getting_started(), keywords: () => m.help_keywords_getting_started(), keywordsEn: ['setup', 'first', 'import', 'add library', 'remote', 'open with', 'file manager'] },
 		{ id: 'library-view', title: () => m.settings_display_library_view(), keywords: () => m.help_keywords_library_view(), keywordsEn: ['catalog', 'search', 'sort', 'folders', 'filters', 'favorites', 'move'] },
 		{ id: 'reader-view', title: () => m.help_reader_view(), keywords: () => m.help_keywords_reader_view(), keywordsEn: ['pages', 'zoom', 'navigation', 'regions', 'draw', 'controls', 'filmstrip', 'go to page', 'long-press', 'info', 'rotate', 'landscape'] },
 		{ id: 'tabs', title: () => m.help_tabs_view(), keywords: () => m.help_keywords_tabs(), keywordsEn: ['open', 'close', 'sort', 'continue reading', 'web tabs'] },
@@ -202,6 +202,9 @@
 			<p class="font-medium text-surface-200">{m.help_local_library()}</p>
 			<p class="mt-1">
 				{m.help_a_local_comics_library()}
+			</p>
+			<p class="mt-2">
+				{m.help_opening_from_another_app()}
 			</p>
 
 			<p class="mt-3 font-medium text-surface-200">{m.help_adding_a_remote_library()}</p>

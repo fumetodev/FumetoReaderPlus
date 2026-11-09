@@ -23,6 +23,7 @@
 	import { createPageSource } from '$lib/reader/page-source-factory.js';
 	import { playReaderHaptic } from '$lib/reader/reader-haptics.js';
 	import { isWebChapter, openWebChapterId, prefetchWebChapter, saveOpenChapter } from '$lib/web-browser/web-chapter.js';
+	import { isOpenedFile, openedFileId } from '$lib/import/opened-file.js';
 	import { activeTranslationJobs } from '$lib/stores/volume-translation-state.js';
 	import { isJobActive, startVolumeTranslation } from '$lib/translation/volume-translation-service.js';
 	import { areOcrModelsReady } from '$lib/detection/ocr-model-manager.js';
@@ -79,7 +80,9 @@
 		});
 	}
 
-	// A web chapter is never in the Library, whose menu starts a whole-volume translation; the reader offers it.
+	// A web chapter, like a file opened from another app, is never in the Library, whose menu starts a whole-volume
+	// translation; the reader offers it.
+	const offersWholeTranslation = $derived(isWebChapter($currentVolume) || isOpenedFile($currentVolume));
 	const chapterJob = $derived($currentVolume ? $activeTranslationJobs.get($currentVolume.volume_uuid) : undefined);
 	const chapterTranslating = $derived(!!chapterJob && (chapterJob.status === 'translating' || chapterJob.status === 'reviewing') && !chapterJob.paused);
 
@@ -132,9 +135,13 @@
 		}
 		if (get(settings).overlayEnabled && !get(isOverlayMode)) isOverlayMode.set(true);
 		try {
-			await prefetchWebChapter(volume);
-			// Left while its pages were being fetched: the chapter was closed, and no batch is wanted on it.
-			if (openWebChapterId() !== volume.volume_uuid) return;
+			if (isWebChapter(volume)) {
+				await prefetchWebChapter(volume);
+				// Left while its pages were being fetched: the chapter was closed, and no batch is wanted on it.
+				if (openWebChapterId() !== volume.volume_uuid) return;
+			} else if (openedFileId() !== volume.volume_uuid) {
+				return;
+			}
 			const job = await startVolumeTranslation(volume.volume_uuid);
 			const leftover = job.failed_pages?.length ?? 0;
 			pushToast({
@@ -296,7 +303,7 @@
 				<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="9" width="8" height="6" rx="1"/></svg>
 				{m.reader_select_regions()}
 			</button>
-			{#if isWebChapter($currentVolume)}
+			{#if offersWholeTranslation}
 				<button
 					type="button"
 					class="mt-1 flex h-[48px] w-full items-center gap-3 rounded-lg px-3 text-sm text-surface-100 active:bg-surface-800 disabled:opacity-50"
@@ -313,6 +320,8 @@
 						{/if}
 					</span>
 				</button>
+			{/if}
+			{#if isWebChapter($currentVolume)}
 				<button
 					type="button"
 					class="mt-1 flex h-[48px] w-full items-center gap-3 rounded-lg px-3 text-sm text-surface-100 active:bg-surface-800 disabled:opacity-60"

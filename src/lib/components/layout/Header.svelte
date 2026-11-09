@@ -36,6 +36,8 @@
 	import { OverlayBoxLongPressRecognizer } from '$lib/reader/overlay-box-long-press.js';
 	import MobileTranslateMenu from '$lib/components/mobile/MobileTranslateMenu.svelte';
 	import VolumeInfoDialog from '$lib/components/reader/VolumeInfoDialog.svelte';
+	import AddToLibraryDialog from '$lib/components/reader/AddToLibraryDialog.svelte';
+	import { isOpenedFile } from '$lib/import/opened-file.js';
 	let moreButtonEl = $state<HTMLButtonElement | null>(null);
 	// Long-strip mode: zoom and page-turn controls target the paged panzoom
 	// surface and don't apply while the reader scrolls continuously.
@@ -43,6 +45,8 @@
 
 	// Long-press on the reader title opens the volume-info dialog.
 	let volumeInfoOpen = $state(false);
+	// A comic opened from another app is read without being added; the ⋮ menu offers to add it.
+	let addToLibraryOpen = $state(false);
 	const titleLongPress = new OverlayBoxLongPressRecognizer<string>({
 		onRecognized: () => {
 			if (!isMobile || get(appView) !== 'reader') return;
@@ -661,6 +665,10 @@
 	<VolumeInfoDialog volume={$currentVolume} onclose={() => (volumeInfoOpen = false)} />
 {/if}
 
+{#if isMobile && $appView === 'reader' && addToLibraryOpen && $currentVolume && isOpenedFile($currentVolume)}
+	<AddToLibraryDialog name={$currentVolume.filename || $currentVolume.title} onclose={() => (addToLibraryOpen = false)} />
+{/if}
+
 {#if isMobile && $appView === 'reader' && $mobileReaderUi.disclosure === 'more'}
 	<button
 		type="button"
@@ -725,6 +733,17 @@
 		>
 			<span class="truncate">{m.header_reader_mode()}</span><span class="shrink-0">{longStrip ? m.header_long_strip() : m.settings_display_paged()}</span>
 		</button>
+		{#if isOpenedFile($currentVolume)}
+			<button
+				type="button"
+				class="mt-2 flex h-[48px] w-full min-w-0 items-center gap-3 rounded-lg bg-surface-800 px-3 text-sm text-surface-100 active:bg-surface-700"
+				data-reader-add-to-library
+				onclick={() => { mobileReaderUi.closeDisclosure(); addToLibraryOpen = true; }}
+			>
+				<Icon name="library" size={20} />
+				<span class="truncate">{m.reader_add_to_library()}</span>
+			</button>
+		{/if}
 		<fieldset class="mt-2 min-w-0 {longStrip ? 'opacity-50' : ''}" data-reader-page-turn-fieldset disabled={longStrip}>
 			<legend class="px-1 text-[10px] font-semibold uppercase tracking-wider text-surface-400">{m.header_page_turn()}</legend>
 			<div class="mt-1 grid grid-cols-3 gap-2">

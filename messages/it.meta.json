@@ -2740,9 +2740,11 @@
 		"draftedAt": "2026-08-28T00:03:39.893Z"
 	},
 	"help_keywords_getting_started": {
-		"sourceHash": "50d12575219f7298",
-		"model": "anthropic/claude-sonnet-5",
-		"draftedAt": "2026-08-28T00:03:39.893Z"
+		"sourceHash": "e35d3663676c8acf",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T17:40:45.182Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T17:40:46.169Z"
 	},
 	"help_keywords_library_view": {
 		"sourceHash": "5135ee283a1d5130",
@@ -3008,6 +3010,13 @@
 		"sourceHash": "351fb6d55845d1ec",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-05T04:58:39.355Z"
+	},
+	"help_opening_from_another_app": {
+		"sourceHash": "e37ecc6ed07dd694",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T18:20:22.357Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T18:20:23.307Z"
 	},
 	"help_openrouter_provides_access_to": {
 		"sourceHash": "cde0100fd35dcffa",
@@ -3899,6 +3908,41 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:58:25.252Z"
 	},
+	"import_opened_failed": {
+		"sourceHash": "95e97f7ad2823221",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T17:39:29.520Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T17:39:33.822Z"
+	},
+	"import_opened_no_pages": {
+		"sourceHash": "a0a9087c65d528ec",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T17:39:29.520Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T17:39:33.822Z"
+	},
+	"import_opened_not_kept": {
+		"sourceHash": "2de26361e8042a4b",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T18:20:22.357Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T18:20:23.307Z"
+	},
+	"import_opened_unsupported": {
+		"sourceHash": "cf7f204ce1415cca",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T17:39:29.520Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T17:39:33.822Z"
+	},
+	"import_opening_file": {
+		"sourceHash": "5e250c59e68e2af7",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T17:39:29.520Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T17:39:33.822Z"
+	},
 	"import_progress_copying": {
 		"sourceHash": "f9161291e2fc7713",
 		"model": "anthropic/claude-sonnet-5",
@@ -4774,15 +4818,57 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:54:26.074Z"
 	},
+	"reader_add_to_library": {
+		"sourceHash": "e4497158df792a00",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T18:20:22.357Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T18:20:23.307Z"
+	},
+	"reader_add_to_library_body": {
+		"sourceHash": "6d7b87f81b2ace66",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T18:20:22.357Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T18:20:23.307Z"
+	},
+	"reader_add_to_library_confirm": {
+		"sourceHash": "b071c943d8da1500",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T18:20:22.357Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T18:20:23.307Z"
+	},
+	"reader_add_to_library_failed": {
+		"sourceHash": "b8b97e4cde3cd28c",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T18:20:22.357Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T18:20:23.307Z"
+	},
 	"reader_add_to_overlay_translatedcount": {
 		"sourceHash": "4b50ecd126a0c704",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:54:26.074Z"
 	},
+	"reader_added_to_library": {
+		"sourceHash": "a539e89f14d63fef",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T18:20:22.357Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T18:20:23.307Z"
+	},
 	"reader_adding": {
 		"sourceHash": "0e147a62fe8048f3",
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-27T23:54:26.074Z"
+	},
+	"reader_adding_to_library": {
+		"sourceHash": "0e147a62fe8048f3",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T18:20:22.357Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T18:20:23.307Z"
 	},
 	"reader_adding_to_overlay_failed": {
 		"sourceHash": "3a5f284c2bd2048c",

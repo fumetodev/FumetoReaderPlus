@@ -55,6 +55,44 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- "Open with" for a comic another app hands over (a file manager, a download): read
+                 in the reader without being added to a library (opened-file.ts). Offered, never the
+                 default. content: only — a file: address needs a storage permission the app does
+                 not hold. Android's own type table calls .cbz application/x-cbz, IANA calls it
+                 application/vnd.comicbook+zip, and every table knows .zip. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/x-cbz" />
+                <data android:mimeType="application/vnd.comicbook+zip" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
+            </intent-filter>
+            <!-- A provider whose table does not know .cbz (Android 8 and 9 among them) sends it as
+                 application/octet-stream; the name is matched instead, where its address carries
+                 one. A separate filter: in one, these paths would hold for the types above as well.
+                 pathPattern does not backtrack, so `.*\\.cbz` alone misses a name with a dot
+                 earlier in it: one pattern per earlier dot. pathSuffix would do it in one, but
+                 Android 8-11 ignore it and would then match every unknown file. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:host="*" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:pathPattern=".*\\.cbz" />
+                <data android:pathPattern=".*\\..*\\.cbz" />
+                <data android:pathPattern=".*\\..*\\..*\\.cbz" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.cbz" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.cbz" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.cbz" />
+                <data android:pathPattern=".*\\.CBZ" />
+                <data android:pathPattern=".*\\..*\\.CBZ" />
+                <data android:pathPattern=".*\\..*\\..*\\.CBZ" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.CBZ" />
+            </intent-filter>
         </activity>
 
         <provider
