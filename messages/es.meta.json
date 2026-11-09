@@ -2079,6 +2079,13 @@
 		"model": "anthropic/claude-sonnet-5",
 		"draftedAt": "2026-08-28T14:58:49.759Z"
 	},
+	"help_bar_icons_new": {
+		"sourceHash": "fd2381f0ada68146",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T18:32:43.855Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T18:32:44.295Z"
+	},
 	"help_batch_translation_progress_indicator": {
 		"sourceHash": "83390a94ec514801",
 		"model": "anthropic/claude-sonnet-5",
@@ -2629,6 +2636,13 @@
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-10-30T17:10:03.749Z"
 	},
+	"help_fixed_save_dialog_keyboard": {
+		"sourceHash": "921e2d9209bfae18",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T18:32:43.855Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T18:32:44.295Z"
+	},
 	"help_fixed_small_reader": {
 		"sourceHash": "90b723d6ed1d318a",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
@@ -2805,6 +2819,13 @@
 		"sourceHash": "c4cd0ee520b55d4a",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-05T04:58:39.355Z"
+	},
+	"help_language_pair_new": {
+		"sourceHash": "2e171a1c920dd585",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T18:32:43.855Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T18:32:44.295Z"
 	},
 	"help_library_polish_library_names": {
 		"sourceHash": "e140a9d9b6540b0d",
@@ -3000,6 +3021,13 @@
 		"sourceHash": "331db1992ef2c08e",
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-11-05T04:58:39.355Z"
+	},
+	"help_open_with_new": {
+		"sourceHash": "43ee9e5aebe99b40",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-09T18:32:43.855Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-09T18:32:44.295Z"
 	},
 	"help_opening_a_tab": {
 		"sourceHash": "5673c4d65cd0d59a",

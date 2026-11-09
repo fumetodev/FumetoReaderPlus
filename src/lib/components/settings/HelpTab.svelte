@@ -878,6 +878,10 @@
 		<div class="px-4 pb-4 pt-2 text-xs leading-relaxed text-surface-300" transition:slide={{ duration: motionDuration(200) }}>
 			<p class="font-medium text-surface-200">{m.help_version_line({ version: APP_VERSION })}</p>
 			<ul class="mt-1 list-disc space-y-1 pl-4">
+				<li>{m.help_open_with_new()}</li>
+				<li>{m.help_bar_icons_new()}</li>
+				<li>{m.help_language_pair_new()}</li>
+				<li>{m.help_fixed_save_dialog_keyboard()}</li>
 				<li>{m.help_browser_tabs_new()}</li>
 				<li>{m.help_saved_chapters_open_new()}</li>
 				<li>{m.help_viewers_gathered_new()}</li>
