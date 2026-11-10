@@ -709,6 +709,7 @@
 	"help_fixed_importing_a_large_comic": "Fixed: importing a large comic could fail or close the app, and a file of around 500 MB or more in your library could crash the app at every launch. Large files now import normally, and an app stuck this way recovers on its own after updating.",
 	"help_fixed_nothing_in_the": "Fixed: nothing in the reader's \"Boxes on this page\" list responded to taps, and Settings → Translation opened on Off-Device even while on-device translation was running",
 	"help_fixed_overlay_text_could": "Fixed: overlay text could shrink to a tiny size in a large balloon. A sentence spread over a two-part balloon now uses both parts, split where the sentence breaks, and lettering already in English is left as drawn",
+	"help_fixed_reading_order_rows_columns": "Fixed: when a balloon held two rows of text, or a column of text was broken at a punctuation mark, the text could be read in the wrong order, which mixed up its translation",
 	"help_fixed_save_dialog_keyboard": "Fixed: the keyboard covered the fields of the dialog that saves a web chapter",
 	"help_fixed_small_reader": "Fixed: Select regions had no way back with no regions drawn. Tab cards have a larger close button, and the globe button no longer covers the last card's",
 	"help_folder_context_menu_and": "Folder context menu and folder creation",

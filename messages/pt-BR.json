@@ -709,6 +709,7 @@
 	"help_fixed_importing_a_large_comic": "Corrigido: importar um quadrinho grande podia falhar ou fechar o aplicativo, e um arquivo de cerca de 500 MB ou mais na biblioteca podia fazer o aplicativo travar a cada abertura. Agora arquivos grandes são importados normalmente, e um aplicativo preso dessa forma se recupera sozinho após a atualização.",
 	"help_fixed_nothing_in_the": "Corrigido: nada na lista \"Caixas nesta página\" do leitor respondia ao toque, e Configurações → Tradução abria em Fora do dispositivo mesmo com a tradução no dispositivo ativa",
 	"help_fixed_overlay_text_could": "Corrigido: o texto sobreposto podia ficar minúsculo em um balão grande. Uma frase espalhada por um balão de duas partes agora usa as duas, dividida onde a frase termina, e letreiros que já estão em inglês ficam como foram desenhados",
+	"help_fixed_reading_order_rows_columns": "Corrigido: quando um balão tinha duas fileiras de texto, ou uma coluna de texto era cortada num sinal de pontuação, o texto podia ser lido na ordem errada, embaralhando a tradução",
 	"help_fixed_save_dialog_keyboard": "Corrigido: o teclado cobria os campos da janela que salva um capítulo da web",
 	"help_fixed_small_reader": "Corrigido: Selecionar regiões não tinha como voltar sem regiões desenhadas. Os cartões de aba têm um botão de fechar maior, e o botão do globo não cobre mais o do último cartão",
 	"help_folder_context_menu_and": "Menu de contexto da pasta e criação de pasta",

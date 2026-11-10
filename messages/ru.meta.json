@@ -2640,6 +2640,13 @@
 		"model": "claude-opus-5.5 (in-session, hand-drafted)",
 		"draftedAt": "2026-10-30T17:10:03.749Z"
 	},
+	"help_fixed_reading_order_rows_columns": {
+		"sourceHash": "7446efa4c5857e4e",
+		"model": "hand-drafted",
+		"draftedAt": "2026-11-10T16:45:37.898Z",
+		"reviewed": true,
+		"reviewedAt": "2026-11-10T16:45:39.190Z"
+	},
 	"help_fixed_save_dialog_keyboard": {
 		"sourceHash": "921e2d9209bfae18",
 		"model": "hand-drafted",

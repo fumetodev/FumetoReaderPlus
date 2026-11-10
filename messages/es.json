@@ -709,6 +709,7 @@
 	"help_fixed_importing_a_large_comic": "Corregido: importar un cómic grande podía fallar o cerrar la app, y un archivo de unos 500 MB o más en la biblioteca podía hacer que la app fallara en cada inicio. Ahora los archivos grandes se importan con normalidad, y una app bloqueada de este modo se recupera sola al actualizar.",
 	"help_fixed_nothing_in_the": "Corregido: nada de la lista «Cuadros en esta página» del lector respondía al tocarlo, y Ajustes → Traducción se abría en Fuera del dispositivo aunque la traducción en el dispositivo estuviera activa",
 	"help_fixed_overlay_text_could": "Corregido: el texto superpuesto podía quedar diminuto en un bocadillo grande. Una frase repartida en un bocadillo de dos partes ahora usa ambas, dividida donde termina la frase, y las letras que ya están en inglés se dejan como están dibujadas",
+	"help_fixed_reading_order_rows_columns": "Corregido: cuando un bocadillo tenía dos filas de texto, o una columna de texto se cortaba en un signo de puntuación, el texto podía leerse en el orden equivocado y su traducción salía desordenada",
 	"help_fixed_save_dialog_keyboard": "Corregido: el teclado tapaba los campos del diálogo que guarda un capítulo web",
 	"help_fixed_small_reader": "Corregido: Seleccionar regiones no tenía forma de volver atrás sin regiones dibujadas. Las tarjetas de pestaña tienen un botón de cerrar más grande, y el botón del globo ya no cubre el de la última tarjeta",
 	"help_folder_context_menu_and": "Menú contextual de carpeta y creación de carpetas",

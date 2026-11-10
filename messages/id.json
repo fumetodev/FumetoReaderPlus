@@ -701,6 +701,7 @@
 	"help_fixed_importing_a_large_comic": "Diperbaiki: mengimpor komik besar bisa gagal atau menutup aplikasi, dan file berukuran sekitar 500 MB atau lebih di pustaka bisa membuat aplikasi mogok setiap kali dibuka. File besar kini diimpor seperti biasa, dan aplikasi yang tersangkut seperti ini pulih sendiri setelah diperbarui.",
 	"help_fixed_nothing_in_the": "Diperbaiki: tidak ada isi daftar \"Kotak pada halaman ini\" di pembaca yang merespons ketukan, dan Pengaturan → Terjemahan terbuka di Luar Perangkat meskipun terjemahan di perangkat sedang berjalan",
 	"help_fixed_overlay_text_could": "Diperbaiki: teks lapisan bisa menjadi sangat kecil di balon besar. Kalimat yang tersebar di balon dua bagian kini memakai kedua bagiannya, dipisah di akhir kalimat, dan tulisan yang sudah berbahasa Inggris dibiarkan seperti aslinya",
+	"help_fixed_reading_order_rows_columns": "Diperbaiki: saat balon berisi dua baris teks, atau satu kolom teks terpotong di tanda baca, teks bisa terbaca dengan urutan yang salah sehingga terjemahannya teracak",
 	"help_fixed_save_dialog_keyboard": "Diperbaiki: keyboard menutupi kolom dialog yang menyimpan bab web",
 	"help_fixed_small_reader": "Diperbaiki: Pilih wilayah tidak punya jalan kembali saat belum ada wilayah yang digambar. Kartu tab punya tombol tutup yang lebih besar, dan tombol globe tidak lagi menutupi tombol tutup kartu terakhir",
 	"help_folder_context_menu_and": "Menu konteks folder dan pembuatan folder",

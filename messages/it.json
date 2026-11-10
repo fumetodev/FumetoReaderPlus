@@ -709,6 +709,7 @@
 	"help_fixed_importing_a_large_comic": "Corretto: importare un fumetto grande poteva non riuscire o chiudere l'app, e un file di circa 500 MB o più nella libreria poteva far bloccare l'app a ogni avvio. Ora i file grandi si importano normalmente, e un'app bloccata in questo modo si riprende da sola dopo l'aggiornamento.",
 	"help_fixed_nothing_in_the": "Corretto: nella lista «Riquadri in questa pagina» del lettore nulla rispondeva al tocco, e Impostazioni → Traduzione si apriva su Fuori dispositivo anche con la traduzione sul dispositivo attiva",
 	"help_fixed_overlay_text_could": "Corretto: il testo in overlay poteva diventare minuscolo in un fumetto grande. Una frase distribuita su un fumetto in due parti ora le usa entrambe, divisa dove finisce la frase, e le scritte già in inglese restano come sono disegnate",
+	"help_fixed_reading_order_rows_columns": "Corretto: quando una nuvoletta conteneva due file di testo, o una colonna di testo era spezzata da un segno di punteggiatura, il testo poteva essere letto nell'ordine sbagliato, mescolandone la traduzione",
 	"help_fixed_save_dialog_keyboard": "Corretto: la tastiera copriva i campi della finestra che salva un capitolo web",
 	"help_fixed_small_reader": "Corretto: Seleziona le aree non aveva modo di tornare indietro se non c'erano aree disegnate. Le schede hanno un pulsante di chiusura più grande, e il pulsante del globo non copre più quello dell'ultima scheda",
 	"help_folder_context_menu_and": "Menu contestuale della cartella e creazione di cartelle",

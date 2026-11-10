@@ -709,6 +709,7 @@
 	"help_fixed_importing_a_large_comic": "Behoben: Der Import eines großen Comics konnte fehlschlagen oder die App schließen, und eine Datei ab etwa 500 MB in der Bibliothek konnte die App bei jedem Start abstürzen lassen. Große Dateien werden jetzt normal importiert, und eine so blockierte App erholt sich nach dem Update von selbst.",
 	"help_fixed_nothing_in_the": "Behoben: In der Liste „Felder auf dieser Seite“ im Reader reagierte nichts auf Antippen, und Einstellungen → Übersetzung öffnete sich auf Off-Device, obwohl die Übersetzung auf dem Gerät lief",
 	"help_fixed_overlay_text_could": "Behoben: Overlay-Text konnte in einer großen Sprechblase winzig werden. Ein Satz, der über eine zweiteilige Sprechblase verteilt ist, nutzt jetzt beide Teile und wird dort geteilt, wo der Satz endet, und Schrift, die schon auf Englisch ist, bleibt wie gezeichnet",
+	"help_fixed_reading_order_rows_columns": "Behoben: Enthielt eine Sprechblase zwei Textreihen oder war eine Textspalte an einem Satzzeichen unterbrochen, konnte der Text in falscher Reihenfolge gelesen werden, was seine Übersetzung durcheinanderbrachte",
 	"help_fixed_save_dialog_keyboard": "Behoben: Die Tastatur verdeckte die Felder des Dialogs, der ein Webkapitel speichert",
 	"help_fixed_small_reader": "Behoben: „Bereiche auswählen“ hatte keinen Weg zurück, wenn keine Bereiche gezeichnet waren. Tab-Karten haben eine größere Schließen-Schaltfläche, und die Globus-Schaltfläche verdeckt die der letzten Karte nicht mehr",
 	"help_folder_context_menu_and": "Ordner-Kontextmenü und Ordnererstellung",
