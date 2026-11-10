@@ -17,7 +17,6 @@
 
 <p align="center">
   <a href="https://github.com/fumetodev/FumetoReaderPlus/releases/latest"><b>Download the APK</b></a> ·
-  <a href="https://play.google.com/store/apps/details?id=com.fumeto.reader">Google Play</a> ·
   <a href="#install-with-obtainium">Obtainium</a> ·
   <a href="https://fumetodev.github.io/privacy-policy/">Privacy policy</a>
 </p>
@@ -107,8 +106,9 @@ Six colour schemes and menus in eight languages: English, German, Spanish, Frenc
 updated: add `https://github.com/fumetodev/FumetoReaderPlus` as an app and set its APK filter to
 `arm64\.apk$`.
 
-Builds from Google Play and from GitHub are signed with different keys, so moving from one to the
-other means uninstalling first (local library data is lost in the process).
+FumetoReaderPlus is not on Google Play at the moment. A copy installed from Google Play is signed
+with a different key from the GitHub builds, so moving to GitHub means uninstalling it first, which
+deletes its local library: export any translated volumes as CBZ before you do.
 
 ## Building
 
