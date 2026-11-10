@@ -1135,18 +1135,150 @@ export function widestColumnRowGap(components: readonly Rect[], glyph: number): 
 }
 
 /**
- * Row index of each component (input order), rows separated by a clean
- * horizontal line at least `COLUMN_ROW_GAP_GLYPHS` wide.
+ * How far apart the tops of a row's columns may start, in glyphs, for the row
+ * to count as set from one line (`columnRowOf`). The same allowance as a text
+ * block's leading edge: an opening bracket or a one-glyph indent.
  */
+const COLUMN_ROW_TOP_ALIGNMENT_GLYPHS = 1.5;
+
+/** A column of a row is at least this long: a mark or a one-glyph remainder is not a line of text. */
+const ROW_LINE_MIN_LENGTH_GLYPHS = 1.25;
+
+/**
+ * The columns of a row set from one line (indexes into `byTop`, which is
+ * sorted by top edge): pieces at least `ROW_LINE_MIN_LENGTH_GLYPHS` long
+ * starting within the alignment allowance of the row's first top, side by
+ * side. A piece under one already counted is the rest of that column, not
+ * another column: two short pieces of one cut column start within the
+ * allowance of each other too.
+ */
+function rowLineStarts(byTop: readonly Rect[], from: number, to: number, glyph: number): number[] {
+	const starts: number[] = [];
+	for (let index = from; index < to; index += 1) {
+		if (byTop[index].y - byTop[from].y > COLUMN_ROW_TOP_ALIGNMENT_GLYPHS * glyph) break;
+		if (byTop[index].height < ROW_LINE_MIN_LENGTH_GLYPHS * glyph) continue;
+		if (starts.some((start) => continuesColumnPiece(byTop[index], byTop[start], glyph))) continue;
+		starts.push(index);
+	}
+	return starts;
+}
+
+/**
+ * A column-cut leaves the rest of its column directly under it: on the same
+ * centre line (real remainders measured 0.02–0.15 glyph off it), after a
+ * punctuation-sized gap (0.15–0.7 glyph; padded boxes can overlap by up to a
+ * quarter glyph instead). The centre line is what matters: a piece of another
+ * text that merely lies under a column's span — the lower lobe of a
+ * three-lobe balloon was 0.38 glyph off centre, a short line of the next
+ * balloon 0.46 — is not that column's remainder, and reading it as one put it
+ * inside the wrong sentence. Measured on 3,048 pages (2026-11-10) against a
+ * zero-overlap bound, the quarter-glyph allowance fixed 13 more groups and
+ * misread one: the first line of a skewed narration block drifting into the
+ * lane under the line beside it, which no geometry here can tell from a cut.
+ * The gap a row's guard accepts is the narrower 0.6 glyph it was validated
+ * with (`columnRemainders`).
+ */
+const COLUMN_CONTINUATION_OFFSET_GLYPHS = 0.3;
+const COLUMN_CONTINUATION_GAP_GLYPHS = 1.0;
+const COLUMN_CONTINUATION_OVERLAP_GLYPHS = 0.25;
+const ROW_GUARD_CONTINUATION_GAP_GLYPHS = 0.6;
+/**
+ * A piece this much thinner than the one above it, and longer than a mark,
+ * is a reading set beside a line (furigana), not the rest of a column: one
+ * starting where a one-glyph piece ends took that piece's column, and the
+ * column's real remainder was left to stand alone.
+ */
+const FURIGANA_WIDTH_RATIO = 0.6;
+
+function continuesColumnPiece(
+	piece: Rect,
+	above: Rect,
+	glyph: number,
+	maxGapGlyphs = COLUMN_CONTINUATION_GAP_GLYPHS
+): boolean {
+	const gap = piece.y - bottom(above);
+	if (gap < -COLUMN_CONTINUATION_OVERLAP_GLYPHS * glyph || gap > maxGapGlyphs * glyph) return false;
+	if (piece.width < FURIGANA_WIDTH_RATIO * above.width && piece.height > ROW_LINE_MIN_LENGTH_GLYPHS * glyph) return false;
+	return Math.abs(above.x + above.width / 2 - (piece.x + piece.width / 2)) <= COLUMN_CONTINUATION_OFFSET_GLYPHS * glyph;
+}
+
+/**
+ * Which pieces below the line at `line` are the rest of a column cut above
+ * it (`byTop` sorted by top edge, the row starting at `rowStart`): a piece
+ * that is the cut remainder of a piece above the line, or of a piece below it
+ * that is itself such a remainder. A column cut twice continues through its
+ * middle piece.
+ */
+function columnRemainders(
+	byTop: readonly Rect[],
+	rowStart: number,
+	line: number,
+	through: number,
+	glyph: number
+): boolean[] {
+	const remainder = new Array<boolean>(byTop.length).fill(false);
+	for (let index = line; index <= through; index += 1) {
+		for (let above = rowStart; above < index; above += 1) {
+			if ((above < line || remainder[above]) && continuesColumnPiece(byTop[index], byTop[above], glyph, ROW_GUARD_CONTINUATION_GAP_GLYPHS)) {
+				remainder[index] = true;
+				break;
+			}
+		}
+	}
+	return remainder;
+}
+
+/**
+ * Row index of each component (input order). Rows are separated by a clean
+ * horizontal line — one that crosses no column — at least
+ * `COLUMN_ROW_GAP_GLYPHS` wide, or by a narrower clean line with a row on each
+ * side: two or more columns above it and two or more below it, each pair
+ * starting on one line, where the lower columns are not simply the rest of the
+ * upper ones.
+ *
+ * The second test exists because a gap's width alone does not separate rows
+ * from column-cuts. Two stacked rows in one balloon were measured at 0.84 and
+ * 0.42 glyph (2026-11-10), inside the column-cut range, and each was read
+ * across both rows, interleaving two sentences. A column-cut breaks ONE column
+ * at a punctuation mark, so what lies below its line is that column's
+ * remainder; when every column of a row happens to be cut at one height, every
+ * piece below the line continues a piece above it, and that is still one row.
+ */
+/**
+ * The narrow-gap row test compares pieces with each other; past this many in
+ * one group (no balloon or text block holds a fraction of it — only a page of
+ * detector noise does) rows are separated by width alone.
+ */
+const ROW_LINE_TEST_MAX_PIECES = 400;
+
 export function columnRowOf(components: readonly Rect[], glyph: number): number[] {
 	const order = components.map((_, index) => index)
 		.sort((left, rightValue) => components[left].y - components[rightValue].y || components[left].x - components[rightValue].x);
+	const byTop = order.map((index) => components[index]);
+	const unit = Math.max(1, glyph);
 	const rowOf = new Array<number>(components.length).fill(0);
 	let row = 0;
+	let rowStart = 0;
 	let upperBottom = -Infinity;
 	for (let position = 0; position < order.length; position += 1) {
-		const component = components[order[position]];
-		if (position > 0 && component.y - upperBottom >= COLUMN_ROW_GAP_GLYPHS * Math.max(1, glyph)) row += 1;
+		const component = byTop[position];
+		const gap = component.y - upperBottom;
+		if (position > 0 && gap > 0) {
+			const wide = gap >= COLUMN_ROW_GAP_GLYPHS * unit;
+			const lowerStarts = rowLineStarts(byTop, position, byTop.length, unit);
+			const rowOnEachSide = !wide
+				&& byTop.length <= ROW_LINE_TEST_MAX_PIECES
+				&& rowLineStarts(byTop, rowStart, position, unit).length >= 2
+				&& lowerStarts.length >= 2
+				&& !(() => {
+					const remainder = columnRemainders(byTop, rowStart, position, Math.max(...lowerStarts), unit);
+					return lowerStarts.every((index) => remainder[index]);
+				})();
+			if (wide || rowOnEachSide) {
+				row += 1;
+				rowStart = position;
+			}
+		}
 		rowOf[order[position]] = row;
 		upperBottom = Math.max(upperBottom, bottom(component));
 	}
@@ -1340,9 +1472,63 @@ function clusterValid(
 }
 
 /**
- * Reading order within one group. Vertical text reads columns right to left
- * and rows of columns top to bottom (`COLUMN_ROW_GAP_GLYPHS`); horizontal and
- * rotated text keep the plain sweep.
+ * Reading order of vertical text (indexes into `components`): rows top to
+ * bottom (`columnRowOf`), each row's columns right to left, and each column's
+ * pieces top to bottom.
+ *
+ * The detector cuts a column at punctuation, so one column can arrive as two
+ * or three pieces. Sorting a row's pieces by their centres alone read them in
+ * whatever order their padded boxes' centres fell: the lower piece was read
+ * first whenever it sat a pixel further right, and a neighbouring column's
+ * piece could fall between them (468 of 1,757 same-column pairs on 3,048
+ * pages, 2026-11-10). So a row's pieces are first gathered into columns, top
+ * down: a piece joins the one column whose lowest piece it is the cut
+ * remainder of (`continuesColumnPiece`: on its centre line, after a
+ * punctuation-sized gap). A piece that could continue two columns is
+ * neither's and stands as a column of its own, or it would join the two into
+ * one and interleave them. Pieces side by side, furigana beside its line among
+ * them, overlap along the column and never join. Everything that does not
+ * join is placed by its centre as before, so only true remainders move.
+ * Columns are ordered by their centre line, weighted by the pieces' lengths.
+ */
+export function verticalReadingOrder(
+	components: readonly (Rect & { componentId?: number })[],
+	glyph: number
+): number[] {
+	const unit = Math.max(1, glyph);
+	const rows = columnRowOf(components, unit);
+	const key = (index: number) => components[index].componentId ?? index;
+	const order: number[] = [];
+	for (const row of [...new Set(rows)].sort((left, rightValue) => left - rightValue)) {
+		const members = components.map((_, index) => index)
+			.filter((index) => rows[index] === row)
+			.sort((left, rightValue) => components[left].y - components[rightValue].y
+				|| right(components[rightValue]) - right(components[left])
+				|| key(left) - key(rightValue));
+		const columns: number[][] = [];
+		for (const index of members) {
+			const matches = columns.filter((column) =>
+				continuesColumnPiece(components[index], components[column[column.length - 1]], unit));
+			if (matches.length === 1) matches[0].push(index);
+			else columns.push([index]);
+		}
+		const centre = (column: readonly number[]) => {
+			const length = column.reduce((sum, index) => sum + Math.max(1, components[index].height), 0);
+			return column.reduce((sum, index) =>
+				sum + (components[index].x + components[index].width / 2) * Math.max(1, components[index].height), 0) / length;
+		};
+		columns.sort((left, rightValue) => centre(rightValue) - centre(left)
+			|| components[left[0]].y - components[rightValue[0]].y
+			|| key(left[0]) - key(rightValue[0]));
+		for (const column of columns) order.push(...column);
+	}
+	return order;
+}
+
+/**
+ * Reading order within one group. Vertical text reads rows of columns top to
+ * bottom, columns right to left and each column's pieces top to bottom
+ * (`verticalReadingOrder`); horizontal and rotated text keep the plain sweep.
  */
 function orderComponentsForReading(
 	cluster: readonly PreparedComponent[],
@@ -1351,10 +1537,8 @@ function orderComponentsForReading(
 ): PreparedComponent[] {
 	const sweep = componentReadingOrder(direction, angle);
 	if (direction !== 'vertical' || cluster.length < 2) return [...cluster].sort(sweep);
-	const rows = columnRowOf(cluster, median(cluster.map((component) => component.glyphScale)));
-	const rowByIndex = new Map(cluster.map((component, index) => [component, rows[index]]));
-	return [...cluster].sort((left, rightValue) =>
-		rowByIndex.get(left)! - rowByIndex.get(rightValue)! || sweep(left, rightValue));
+	const glyph = median(cluster.map((component) => component.glyphScale));
+	return verticalReadingOrder(cluster, glyph).map((index) => cluster[index]);
 }
 
 function componentReadingOrder(direction: PPOcrGroupDirection, angle: number) {
