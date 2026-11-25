@@ -130,9 +130,8 @@ during the Gradle build.
 ## Tests
 
 The test and evaluation suites (unit, UI, device journeys, and the
-overlay/OCR evaluation harnesses) are maintained privately, together with the
-licensed evaluation corpora they run against. `npm run check` covers the
-static gates that ship here.
+overlay/OCR evaluation harnesses) are maintained privately. `npm run check`
+covers the static gates that ship here.
 
 ## Project notes
 

@@ -34,7 +34,7 @@ export const SFX_FILTER_SIDE_FEATURES = 21;
 /**
  * Calibration of the shipped model: the score threshold that keeps the share
  * of unenclosed dialogue/narration it hides at or below a budget, measured on
- * held-out labelled pages. Strength 0 is off; between anchors the threshold is
+ * pages kept apart from its training. Strength 0 is off; between anchors the threshold is
  * interpolated in logit space, so the slider moves smoothly.
  *
  * Regenerated with the model — a new model with stale anchors would silently

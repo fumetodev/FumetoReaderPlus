@@ -9,7 +9,7 @@
  * throughout, because a test that asserts "this fixture still splits" cannot
  * notice that nothing else ever does.
  *
- * A gate that never fires over a corpus of real pages is dead. A gate that
+ * A gate that never fires on real pages is dead. A gate that
  * never declines is not a gate. Both are mechanical to detect and neither needs
  * a judgement call, which is the point: this catches the whole class without
  * anyone having to suspect a particular constant.

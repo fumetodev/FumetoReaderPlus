@@ -22,7 +22,7 @@ async function yieldToBrowser(): Promise<void> {
 /**
  * Yield long candidate searches back to the browser without changing their
  * deterministic ordering. Server-side evaluation deliberately remains fully
- * synchronous so corpus and fuzz gates do not acquire timer overhead.
+ * synchronous so evaluation and fuzz gates do not acquire timer overhead.
  */
 export function createCooperativeYieldBudget(
 	timeBudgetMs = 8,

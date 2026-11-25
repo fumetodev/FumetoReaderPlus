@@ -128,8 +128,8 @@ export interface PPOcrGroupingOptions {
 	 * Not the direction of the script inside a group, which stays a typography
 	 * property (see `componentReadingOrder`).
 	 *
-	 * Defaults to 'rtl': the manga order every corpus, gate and benchmark in this
-	 * repo was captured under. Production callers resolve the page direction with
+	 * Defaults to 'rtl', the manga reading order the gates and benchmarks
+	 * assume. Production callers resolve the page direction with
 	 * `effectiveReadingDirection()` and pass it explicitly.
 	 */
 	readingDirection?: 'rtl' | 'ltr';
@@ -755,8 +755,8 @@ function assignBubble(
  */
 
 /**
- * Fraction of the smaller instance that must lie inside the larger. The 16
- * corpus duplicates sit at 0.909–1.000; the two looser overlaps (0.820, 0.864)
+ * Fraction of the smaller instance that must lie inside the larger. Duplicates
+ * on real pages sit at 0.909–1.000; the two looser overlaps (0.820, 0.864)
  * were a ghost partly covering a neighbouring balloon, and those are decided
  * by the grouper's own ambiguity rule, not here.
  */
@@ -822,10 +822,10 @@ export function suppressNestedBalloonInstances(
  * leaning into the balloon (an SFX drawn across its edge) and keeps the
  * ordinary gap rules.
  *
- * Measured on the reviewed corpus (2026-08-26, 545 labelled balloon members):
- * 504 sit at 1.0, 35 at 0.9–1.0, 4 at 0.7–0.9; the two below are a lone
- * column at 0.51 and a handwritten はぁ across a balloon's rim at 0.18 — the
- * assignment floor. Half: the balloon owns more of the box than the page does.
+ * On real pages nearly every balloon member sits at 1.0 and almost all the
+ * rest above 0.7; the exceptions are a lone column at 0.51 and a handwritten
+ * はぁ across a balloon's rim at 0.18 — the assignment floor. Half: the balloon
+ * owns more of the box than the page does.
  */
 export const BALLOON_MEMBER_OVERLAP = 0.5;
 
@@ -858,12 +858,12 @@ function overlapLength(startA: number, endA: number, startB: number, endB: numbe
  * page's title was translated and set over it.
  *
  * Tighter than the filter, because here nothing has grouped the two yet:
- * measured on the reviewed pages, the filter's adjacency (0.8 of the base's
- * thickness) let fragments 100px from a sound effect's strokes and narrow
- * narration columns beside large speech text pass as ruby, and broke 7 of 325
- * labelled groups. Ruby touches its line from outside (a gap within its own
- * thickness, on the reading side), is a few kana long (at most 6 of its
- * thicknesses, under 0.6 of the line).
+ * on real pages, the filter's adjacency (0.8 of the base's thickness) let
+ * fragments 100px from a sound effect's strokes and narrow narration columns
+ * beside large speech text pass as ruby, and broke groups apart. Ruby
+ * touches its line from outside (a gap within its own thickness, on the
+ * reading side), is a few kana long (at most 6 of its thicknesses, under 0.6
+ * of the line).
  */
 const RUBY_THICKNESS_RATIO = 1.6;
 const RUBY_MAX_THICKNESS_RATIO = 4.5;
@@ -1102,18 +1102,15 @@ function looksLikeStackedHorizontalCjkBlock(
  * A right-to-left sweep across a balloon with a second row of columns below
  * the first interleaves the two sentences. A row break is visible in the
  * geometry: a horizontal line that crosses no column, with columns on both
- * sides, and a gap wider than any column-cut. Measured (2026-08-26): every
- * detector column-cut on the cached real pages (45 pages, 186 multi-column
- * balloons) is a punctuation gap of 0.25–0.5 glyph, and none of the 36
- * single-utterance balloons in the labelled real-page set has such a line at
- * all; stacked rows measure 1.20 (set-7/1), 1.27, 1.37, 1.47 (a reader's
- * pages) and 1.93 (a reviewed page). Plateau 0.5–1.2, value mid-plateau.
+ * sides, and a gap wider than any column-cut. On real pages every detector
+ * column-cut is a punctuation gap of 0.25–0.5 glyph, a single-utterance
+ * balloon has no such line at all, and stacked rows measure 1.20–1.93.
+ * Plateau 0.5–1.2, value mid-plateau.
  *
- * This decides ORDER, never membership: the rows stayed one group in every
- * reviewed label (the balloon on a reviewed page holds two rows of one
- * speech; 声♥ over 丸聞こえだったから is one sentence across two lobes), and a
- * split here — shipped for one day — cut them into boxes that fought for the
- * balloon.
+ * This decides ORDER, never membership: stacked rows in one balloon are one
+ * utterance (two rows of one speech, or one sentence running across two
+ * lobes), and a split here — shipped for one day — cut them into boxes that
+ * fought for the balloon.
  */
 export const COLUMN_ROW_GAP_GLYPHS = 0.85;
 
@@ -1298,9 +1295,9 @@ const TEXT_BLOCK_LEADING_EDGE_GLYPHS = 1.5;
 /**
  * How far two lines of a block may overlap across the line axis, as a share of
  * the narrower. Detector boxes are padded past the glyphs, so the boxes of two
- * tightly set columns overlap: on the reviewed pages, neighbouring columns of
- * one group overlap up to 0.35 in 379 of 402 pairs, and columns of different
- * groups never do between 0.05 and 0.43. At 0.15 a narration block whose middle
+ * tightly set columns overlap: on real pages, neighbouring columns of one
+ * group almost always overlap 0.35 or less, and columns of different groups
+ * never overlap between 0.05 and 0.43. At 0.15 a narration block whose middle
  * columns overlapped 0.19 lost its exemption, and the columns either side of
  * them were grouped with each other instead.
  */

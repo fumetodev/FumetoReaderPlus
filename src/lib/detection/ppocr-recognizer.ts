@@ -173,7 +173,7 @@ function cropAndResize(
 	// DB boxes hug the outermost glyph pixels. A fixed two-pixel source-space
 	// margin preserves dakuten, punctuation, and thin end strokes without
 	// pulling neighboring lines into the crop. This was especially important
-	// for small horizontal Japanese text in the live manga corpus.
+	// for small horizontal Japanese text on real manga pages.
 	const cropMargin = 2;
 	const sx = Math.max(0, region.x - cropMargin);
 	const sy = Math.max(0, region.y - cropMargin);

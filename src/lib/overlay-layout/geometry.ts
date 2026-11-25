@@ -371,8 +371,8 @@ export interface DemandBand {
  * 3px from it at 0.65.
  *
  * Ordinary single-body balloons produce NO neck at any of 0.34, 0.50, 0.65 or
- * 0.80 — checked over four drawn shapes and every non-splitting contour in the
- * corpus — so this is a gate on what can be considered, not the guard against
+ * 0.80 — checked over four drawn shapes and non-splitting contours from real
+ * pages — so this is a gate on what can be considered, not the guard against
  * considering it. `minLobeRatio` and the two-sided test are the guard, and they
  * are measured at 0.454-0.484 on real lobes against 0.22.
  */
@@ -610,8 +610,8 @@ export function polygonLobeSplit(
 	//
 	// This is a gate, not the guard. `minLobeRatio` and `twoSided` are what
 	// reject a single body: probed to 0.80, an ellipse, a circle, a tall oval, a
-	// balloon with a tail spliced into its outline, a teardrop and a corpus-style
-	// dent all still return null. Real lobes hold 0.454-0.484 of the area against
+	// balloon with a tail spliced into its outline, a teardrop and a real
+	// balloon's dent all still return null. Real lobes hold 0.454-0.484 of the area against
 	// the 0.22 this demands, so the guard has margin on both sides.
 	const maxNeckRatio = options?.maxNeckRatio ?? CONJOINED_NECK_RATIO;
 	const minLobeRatio = options?.minLobeRatio ?? 0.22;
@@ -642,7 +642,7 @@ export function polygonLobeSplit(
 	 *
 	 * Section width alone cannot tell them apart, and once the neck threshold
 	 * was loosened enough to see a smoothly drawn join it started reading a
-	 * corpus-style concave dent as two bodies. The dent's narrow sections stay
+	 * real balloon's concave dent as two bodies. The dent's narrow sections stay
 	 * flush with one edge of the shape while the other edge cuts in; a real join
 	 * pulls in from both. Comparing against the WIDEST section on each side —
 	 * the bodies themselves — also handles a staggered peanut, where each edge

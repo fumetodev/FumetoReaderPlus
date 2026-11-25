@@ -451,7 +451,7 @@ export function looksLikeMimeticSfx(source: string): boolean {
  * Whether a free-floating item is hidden as a sound effect while SFX overlays
  * are off. When the learned filter scored the item and the reader's strength
  * gives a threshold, its verdict REPLACES the rules' own SFX guesses (the
- * geometry type and the mimetic-text heuristic): measured on held-out labelled
+ * geometry type and the mimetic-text heuristic): measured on real
  * pages it hides several times more drawn SFX than those rules at a lower loss
  * of unenclosed dialogue, so OR-ing the two would only add the rules' false
  * hits back. A translation provider's own SFX label stays an independent
@@ -1213,7 +1213,7 @@ function candidateRects(item: OverlayItemV2, input: OverlayLayoutInput, writingM
 /**
  * A column is vertical text when it is this many times taller than it is wide.
  *
- * Measured against the labelled real pages, on
+ * Measured on real pages, on
  * the same quantity the code compares — the MEDIAN of the item's own per-column
  * height/width:
  *
@@ -1221,7 +1221,7 @@ function candidateRects(item: OverlayItemV2, input: OverlayLayoutInput, writingM
  *   should fire       n=34   1.178 .. 15.500
  *
  * 1.8 sat INSIDE the positive population, above two of its 34 members
- * (set-5/30 r0 at 1.178, and 'Short line in a big balloon' r0 at 1.787 — a
+ * (one at 1.178, and 'Short line in a big balloon' r0 at 1.787 — a
  * hair). That is the same structural defect policy-27 catalogued five of: a
  * threshold outside the range real material occupies, here on the wrong side of
  * its own positives. The direction of the fix rests on the 34-strong positive
@@ -1256,8 +1256,8 @@ const VERTICAL_COLUMN_ASPECT = 0.85;
  * The fallback measures the individual COLUMNS, not their union. The union was
  * the wrong quantity: one column of vertical text is always far taller than it
  * is wide, but a BLOCK of several columns is not — a nine-column balloon is
- * nearly square. Measured over the corpus's sixteen vertical regions, the union
- * aspect misses seven of them (0.59, 0.90, 0.97, 1.01, 1.61, 1.71 and one at
+ * nearly square. Measured on real pages, the union aspect
+ * misses many vertical regions (0.59, 0.90, 0.97, 1.01, 1.61, 1.71 and one at
  * 0.14), while the median column aspect clusters at 7.2–15.5 against 0.14 for
  * genuinely horizontal text. Same threshold, right measurement.
  */
@@ -1323,8 +1323,8 @@ export const FREE_COLUMN_ADJACENCY_RATIO = 2.5;
  * Side-by-side carve of a shared balloon (policy-30).
  *
  * Two neighbouring utterances are arranged along x when their centres are at
- * least this fraction of the narrower one's width apart. Measured on the
- * reviewed pages: the carved pair on a reviewed page sits at 1.6, and the
+ * least this fraction of the narrower one's width apart. On real pages the
+ * carved pair sits at 1.6, and the
  * grouper's own gutter gate keeps fragments of one utterance out of this path
  * altogether (see `continuesPrevious`). A cell must seat a short paragraph —
  * two floor line boxes tall, about five ems across — and hold its member's
@@ -1468,7 +1468,7 @@ function stackedColumnBands(
 	 * stacked and wrong when they sit side by side: the first utterance's band
 	 * then spans BOTH lobes of a conjoined balloon and the second is squeezed
 	 * under it. Lobe detection cannot rescue this on a real page — no shared
-	 * balloon in the reviewed corpus shows a neck on its detector contour at any
+	 * balloon measured on real pages shows a neck on its detector contour at any
 	 * ratio up to 0.95; the mask contour smooths the join away. The sources
 	 * already say where each utterance belongs: when the members' centres
 	 * spread more along x than y, the balloon is carved at each gap between
@@ -1796,22 +1796,21 @@ function stackedColumnBands(
 			//
 			// Read those three numbers for what they are, which the policy-27
 			// record did not. They are gaps between the four COLUMNS OF ONE ITEM.
-			// This gate compares gaps between separate ITEMS, and no page in the
-			// corpus has two free items to compare — every free region in it is
-			// alone on its page, so the gate has never run on real material at
+			// This gate compares gaps between separate ITEMS, and none of the
+			// measured pages has two free items to compare — every free region on
+			// them is alone on its page, so the gate has never run on real material at
 			// all. The proxy is defensible, because the case this exists for is
 			// several utterances over the columns of one run, where the item gaps
 			// ARE those column gaps. It is still a proxy, and the only value the
 			// gate has ever actually been shown is 0.565, from a synthetic scene.
-			// `gate-exemptions.json` carries this as the "separated free blocks"
-			// gap; closing it needs pages with two free runs on them.
+			// Closing that gap needs pages with two free runs on them.
 			const minWidth = Math.min(previous.source.width, entry.source.width);
 			const columnWidth = Math.min(previous.columnWidth, entry.columnWidth);
 			// Policy-30: speech beside narration is still one run of columns on
 			// the artwork, so style keys no longer have to match; and two runs
 			// whose boxes overlap are exactly the ones that must share a region
-			// rather than fight for it, so overlap counts as adjacency. On the
-			// reviewed pages three of the five adjacent free pairs mix types, and
+			// rather than fight for it, so overlap counts as adjacency. On real
+			// pages most adjacent free pairs mix types, and
 			// both tap-to-reveal demotions were runs whose boxes overlapped.
 			const adjacent = (carve || entry.item.styleKey === previous.item.styleKey)
 				&& (carve || gapX >= -0.2 * minWidth)
@@ -2679,7 +2678,7 @@ function tightInkRect(
 /**
  * Weight on the fraction of an unbounded item's source left showing.
  *
- * Swept at 0/5/10/20/40/80 against the committed pages: the outcome plateaus
+ * Swept at 0/5/10/20/40/80 on real pages: the outcome plateaus
  * from 10 and is flat by 40, so 20 sits mid-plateau. Comfortably above the 1-3
  * point noise floor of raggedness and displacement, three orders of magnitude
  * below the emergency-break term, and small enough never to drag a card across
@@ -2727,7 +2726,7 @@ const WIDTH_GROWTH_ASPECT_ALLOWANCE = 3.5;
 /**
  * Cost of one hyphenated line break.
  *
- * Tightening the hyphenation patterns took the corpus from 21 breaks to 6; this
+ * Tightening the hyphenation patterns took real pages from 21 breaks to 6; this
  * takes the remaining 6 to 2, and it does so for NO font size — mean font is
  * 46.34 without it and 46.54 with it, because the breaks it removes are
  * near-ties between two windows rather than the only way to fit.
@@ -2746,7 +2745,7 @@ const WIDTH_GROWTH_ASPECT_ALLOWANCE = 3.5;
  * which is the wrong trade. Three orders of magnitude below the emergency-break
  * term, because a chopped word is not a near-tie with anything.
  *
- * The gate on this number is the corpus-wide count in the bench baseline, not
+ * The gate on this number is the count over real pages, not
  * a lab fixture: the tie needs a source narrow enough to hyphenate in but wide
  * enough to be worth trying, and no synthetic page built for it reproduced that
  * — every attempt came out either comfortably feasible or outright infeasible.
@@ -2757,16 +2756,16 @@ const HYPHENATED_BREAK_WEIGHT = 6;
  * Feather width as a fraction of the page's short edge; plate padding and
  * corner radius as fractions of the font em.
  *
- * Rendered at four settings each over the committed pages and looked at.
+ * Rendered at four settings each over real pages and looked at.
  *
  * Feather (0, 0.008, 0.014, 0.022): zero leaves a visible rectangle edge
  * against tone; above about 0.02 the ramps from adjacent columns merge and the
  * gutters between them stop being artwork again. 0.014 is roughly 15px on a
  * 1055px page, which is under a quarter of a typical 65px gutter.
  *
- * Plate padding and radius (0.10/0.15, 0.22/0.30, 0.36/0.45, 0.22/0): on this
- * corpus the four are close to indistinguishable, because the erasure carries
- * most of the coverage and none of the committed pages sets text over genuinely
+ * Plate padding and radius (0.10/0.15, 0.22/0.30, 0.36/0.45, 0.22/0): on those
+ * pages the four are close to indistinguishable, because the erasure carries
+ * most of the coverage and none of them sets text over genuinely
  * dark artwork. So the choice is margin, not measurement: the functional
  * minimum is small — a line box is `lineHeight` tall with the baseline at one
  * em, so descenders reach about 0.02em past it, and side bearings want another
